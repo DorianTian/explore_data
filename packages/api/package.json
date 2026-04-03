@@ -20,7 +20,8 @@
     "pino": "^9.6.0",
     "zod": "^3.24.0",
     "@nl2sql/shared": "workspace:*",
-    "@nl2sql/db": "workspace:*"
+    "@nl2sql/db": "workspace:*",
+    "@nl2sql/engine": "workspace:*"
   },
   "devDependencies": {
     "@types/koa": "^2.15.0",

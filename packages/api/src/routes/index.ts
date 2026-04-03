@@ -4,3 +4,4 @@ export { createDatasourceRouter } from './datasources.js';
 export { createSchemaRouter } from './schema.js';
 export { createMetricRouter } from './metrics.js';
 export { createKnowledgeRouter } from './knowledge.js';
+export { createQueryRouter } from './query.js';

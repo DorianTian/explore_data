@@ -1,0 +1,26 @@
+{
+  "name": "@nl2sql/engine",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "openai": "^4.90.0",
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.16.0",
+    "@nl2sql/shared": "workspace:*",
+    "@nl2sql/db": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.1.0",
+    "typescript": "^5.8.0"
+  }
+}

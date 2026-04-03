@@ -11,6 +11,7 @@ import {
   createSchemaRouter,
   createMetricRouter,
   createKnowledgeRouter,
+  createQueryRouter,
 } from './routes/index.js';
 
 export function createApp(db: DbClient) {
@@ -32,6 +33,7 @@ export function createApp(db: DbClient) {
     createSchemaRouter(db),
     createMetricRouter(db),
     createKnowledgeRouter(db),
+    createQueryRouter(db),
   ];
 
   for (const router of routers) {
