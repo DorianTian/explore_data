@@ -2,7 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { Sidebar } from '@/components/sidebar';
-import { apiPost, apiFetch } from '@/lib/api';
+import { ToastProvider, useToast } from '@/components/toast';
+import { useProjectStore } from '@/stores/project-store';
+import { apiPost } from '@/lib/api';
 
 interface Metric {
   id: string;
@@ -14,20 +16,31 @@ interface Metric {
   dimensions: string[] | null;
 }
 
-export default function MetricsPage() {
+const METRIC_TYPES = [
+  { value: 'atomic', label: '原子指标' },
+  { value: 'derived', label: '派生指标' },
+  { value: 'composite', label: '复合指标' },
+] as const;
+
+function MetricsPageInner() {
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [expression, setExpression] = useState('');
   const [metricType, setMetricType] = useState<'atomic' | 'derived' | 'composite'>('atomic');
   const [metrics, setMetrics] = useState<Metric[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { currentProjectId } = useProjectStore();
+  const { toast } = useToast();
 
   const handleCreate = useCallback(async () => {
     if (!name.trim() || !expression.trim()) return;
-    setError(null);
+
+    if (!currentProjectId) {
+      toast('请先在左侧选择项目', 'error');
+      return;
+    }
 
     const res = await apiPost<Metric>('/api/metrics', {
-      projectId: '00000000-0000-0000-0000-000000000000',
+      projectId: currentProjectId,
       name,
       displayName: displayName || name,
       expression,
@@ -40,107 +53,142 @@ export default function MetricsPage() {
       setName('');
       setDisplayName('');
       setExpression('');
+      toast('指标创建成功', 'success');
     } else {
-      setError(res.error?.message ?? 'Failed to create metric');
+      toast(res.error?.message ?? '创建指标失败', 'error');
     }
-  }, [name, displayName, expression, metricType]);
+  }, [name, displayName, expression, metricType, currentProjectId, toast]);
 
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
-          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-            Metrics Manager
-          </h2>
-          <p className="text-xs text-zinc-500">
-            Define business metrics for accurate SQL composition
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <header className="border-b border-border px-6 py-3 shrink-0">
+          <h2 className="text-sm font-medium text-foreground">指标管理</h2>
+          <p className="text-xs text-muted">
+            定义业务指标，让 AI 生成更准确的 SQL
           </p>
         </header>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-2xl space-y-6">
-            <div className="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+          <div className="max-w-2xl space-y-8">
+            {/* Create form */}
+            <section className="rounded-xl border border-border p-5 space-y-4">
+              <h3 className="text-sm font-medium text-foreground">
+                创建新指标
+              </h3>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500 mb-1">Name (ID)</label>
+                  <label className="block text-xs font-medium text-muted mb-1.5">
+                    指标名 (ID)
+                  </label>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded border border-zinc-300 px-3 py-1.5 text-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                     placeholder="gmv"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500 mb-1">Display Name</label>
+                  <label className="block text-xs font-medium text-muted mb-1.5">
+                    显示名称
+                  </label>
                   <input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full rounded border border-zinc-300 px-3 py-1.5 text-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                     placeholder="成交总额"
                   />
                 </div>
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1">SQL Expression</label>
+                <label className="block text-xs font-medium text-muted mb-1.5">
+                  SQL 表达式
+                </label>
                 <input
                   value={expression}
                   onChange={(e) => setExpression(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-3 py-1.5 text-sm font-mono dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                   placeholder="SUM(order_amount)"
                 />
               </div>
+
               <div className="flex items-end gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500 mb-1">Type</label>
+                  <label className="block text-xs font-medium text-muted mb-1.5">
+                    指标类型
+                  </label>
                   <select
                     value={metricType}
-                    onChange={(e) => setMetricType(e.target.value as typeof metricType)}
-                    className="rounded border border-zinc-300 px-3 py-1.5 text-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
+                    onChange={(e) =>
+                      setMetricType(e.target.value as typeof metricType)
+                    }
+                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
                   >
-                    <option value="atomic">Atomic</option>
-                    <option value="derived">Derived</option>
-                    <option value="composite">Composite</option>
+                    {METRIC_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <button
                   onClick={handleCreate}
                   disabled={!name.trim() || !expression.trim()}
-                  className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Add Metric
+                  添加指标
                 </button>
               </div>
-              {error && <p className="text-xs text-red-500">{error}</p>}
-            </div>
+            </section>
 
+            {/* Metrics list */}
             {metrics.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Defined Metrics
+              <section className="space-y-3">
+                <h3 className="text-sm font-medium text-foreground">
+                  已定义的指标 ({metrics.length})
                 </h3>
-                {metrics.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-700"
-                  >
-                    <div>
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {m.displayName}
+                <div className="space-y-2">
+                  {metrics.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between rounded-xl border border-border px-4 py-3 hover:bg-surface/50 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {m.displayName}
+                          </span>
+                          <span className="text-xs text-muted font-mono">
+                            {m.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted font-mono mt-0.5 truncate">
+                          {m.expression}
+                        </p>
+                      </div>
+                      <span className="text-[11px] bg-surface px-2.5 py-1 rounded-md text-muted shrink-0">
+                        {METRIC_TYPES.find((t) => t.value === m.metricType)?.label ??
+                          m.metricType}
                       </span>
-                      <span className="ml-2 text-xs text-zinc-400 font-mono">{m.name}</span>
-                      <p className="text-xs text-zinc-500 font-mono mt-0.5">{m.expression}</p>
                     </div>
-                    <span className="text-xs bg-zinc-100 px-2 py-0.5 rounded dark:bg-zinc-800">
-                      {m.metricType}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function MetricsPage() {
+  return (
+    <ToastProvider>
+      <MetricsPageInner />
+    </ToastProvider>
   );
 }

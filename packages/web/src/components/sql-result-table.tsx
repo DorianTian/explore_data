@@ -9,25 +9,27 @@ interface SqlResultTableProps {
 export function SqlResultTable({ columns, rows, truncated }: SqlResultTableProps) {
   if (rows.length === 0) {
     return (
-      <div className="text-sm text-zinc-500 py-4 text-center">
-        No results returned
+      <div className="text-sm text-muted py-6 text-center border border-border rounded-xl bg-surface">
+        查询未返回结果
       </div>
     );
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden dark:border-zinc-700">
+    <div className="border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700">
+            <tr className="border-b border-border bg-surface">
               {columns.map((col) => (
                 <th
                   key={col.name}
-                  className="px-3 py-2 text-left font-medium text-zinc-600 dark:text-zinc-400"
+                  className="px-4 py-2.5 text-left font-medium text-muted text-xs"
                 >
                   {col.name}
-                  <span className="ml-1 text-xs text-zinc-400">({col.dataType})</span>
+                  <span className="ml-1.5 text-[11px] text-muted/60 font-normal">
+                    {col.dataType}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -36,10 +38,13 @@ export function SqlResultTable({ columns, rows, truncated }: SqlResultTableProps
             {rows.map((row, i) => (
               <tr
                 key={i}
-                className="border-b last:border-0 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                className="border-b border-border last:border-0 hover:bg-surface/50 transition-colors"
               >
                 {columns.map((col) => (
-                  <td key={col.name} className="px-3 py-2 text-zinc-900 dark:text-zinc-100">
+                  <td
+                    key={col.name}
+                    className="px-4 py-2.5 text-foreground font-mono text-xs"
+                  >
                     {formatValue(row[col.name])}
                   </td>
                 ))}
@@ -50,8 +55,8 @@ export function SqlResultTable({ columns, rows, truncated }: SqlResultTableProps
       </div>
 
       {truncated && (
-        <div className="px-3 py-2 text-xs text-amber-600 bg-amber-50 border-t dark:bg-amber-900/20 dark:border-zinc-700">
-          Results truncated. Add a LIMIT clause for fewer rows.
+        <div className="px-4 py-2.5 text-xs text-amber-600 bg-amber-50 border-t border-border dark:bg-amber-900/10 dark:text-amber-400">
+          结果已截断，可添加 LIMIT 子句查看更少行数
         </div>
       )}
     </div>

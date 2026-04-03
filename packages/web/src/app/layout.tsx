@@ -1,20 +1,9 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "NL2SQL Platform",
-  description: "Natural language to SQL query platform",
+  title: 'NL2SQL - 智能数据查询平台',
+  description: '用自然语言查询数据，AI 自动生成 SQL',
 };
 
 export default function RootLayout({
@@ -23,11 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="zh-CN" className="h-full" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col antialiased">{children}</body>
     </html>
   );
 }
