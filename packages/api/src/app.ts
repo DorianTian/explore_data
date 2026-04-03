@@ -12,6 +12,7 @@ import {
   createMetricRouter,
   createKnowledgeRouter,
   createQueryRouter,
+  createConversationRouter,
 } from './routes/index.js';
 
 export function createApp(db: DbClient) {
@@ -34,6 +35,7 @@ export function createApp(db: DbClient) {
     createMetricRouter(db),
     createKnowledgeRouter(db),
     createQueryRouter(db),
+    createConversationRouter(db),
   ];
 
   for (const router of routers) {

@@ -10,3 +10,4 @@ export {
   glossaryEntries,
   columnEmbeddings,
 } from './knowledge.js';
+export { conversations, messages, queryHistory } from './conversations.js';

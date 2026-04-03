@@ -5,3 +5,4 @@ export { createSchemaRouter } from './schema.js';
 export { createMetricRouter } from './metrics.js';
 export { createKnowledgeRouter } from './knowledge.js';
 export { createQueryRouter } from './query.js';
+export { createConversationRouter } from './conversations.js';

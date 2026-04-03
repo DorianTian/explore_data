@@ -4,3 +4,4 @@ export { SchemaService } from './schema-service.js';
 export { DdlParser } from './ddl-parser.js';
 export { MetricService } from './metric-service.js';
 export { KnowledgeService } from './knowledge-service.js';
+export { ConversationService } from './conversation-service.js';
