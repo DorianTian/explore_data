@@ -13,14 +13,17 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
-    "openai": "^4.90.0",
-    "drizzle-orm": "^0.44.0",
-    "pg": "^8.16.0",
+    "@nl2sql/db": "workspace:*",
     "@nl2sql/shared": "workspace:*",
-    "@nl2sql/db": "workspace:*"
+    "antlr4": "^4.13.2",
+    "drizzle-orm": "^0.44.0",
+    "node-sql-parser": "^5.4.0",
+    "openai": "^4.90.0",
+    "pg": "^8.16.0"
   },
   "devDependencies": {
-    "vitest": "^3.1.0",
-    "typescript": "^5.8.0"
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
   }
 }
