@@ -29,14 +29,19 @@ export class NL2SqlPipeline {
     private db: DbClient,
     config: {
       anthropicApiKey?: string;
+      anthropicBaseUrl?: string;
       openaiApiKey?: string;
+      openaiBaseUrl?: string;
     } = {},
   ) {
-    this.intentClassifier = new IntentClassifier(config.anthropicApiKey);
-    this.schemaLinker = new SchemaLinker(db, config.openaiApiKey);
-    this.sqlGenerator = new SqlGenerator(config.anthropicApiKey);
+    const anthropicBase = config.anthropicBaseUrl ?? process.env.ANTHROPIC_BASE_URL;
+    const openaiBase = config.openaiBaseUrl ?? process.env.OPENAI_BASE_URL;
+
+    this.intentClassifier = new IntentClassifier(config.anthropicApiKey, anthropicBase);
+    this.schemaLinker = new SchemaLinker(db, config.openaiApiKey, openaiBase);
+    this.sqlGenerator = new SqlGenerator(config.anthropicApiKey, anthropicBase);
     this.embeddingService = config.openaiApiKey
-      ? new EmbeddingService(config.openaiApiKey)
+      ? new EmbeddingService(config.openaiApiKey, openaiBase)
       : null;
   }
 
@@ -86,13 +91,29 @@ export class NL2SqlPipeline {
     if (projectMetrics.length === 0) return null;
 
     const queryLower = input.userQuery.toLowerCase();
-    const matchedMetric = projectMetrics.find(
+
+    // Find all matching metrics
+    const matchedMetrics = projectMetrics.filter(
       (m) =>
         queryLower.includes(m.name.toLowerCase()) ||
         queryLower.includes(m.displayName.toLowerCase()),
     );
 
-    if (!matchedMetric) return null;
+    // If multiple metrics match or none match, skip metric resolution
+    // Multi-metric queries need full NL2SQL for proper JOIN and grouping
+    if (matchedMetrics.length !== 1) return null;
+
+    // If query has complex intent indicators, prefer full NL2SQL
+    const complexIndicators = ['对比', '趋势', '同比', '环比', '占比', '分布', '关联', '和', '以及'];
+    const hasComplexIntent = complexIndicators.some((w) => queryLower.includes(w));
+
+    // If query mentions tables/entities not related to the metric, prefer full NL2SQL
+    const crossTableIndicators = ['用户', '商品', '产品', '分类', '品类', '品牌'];
+    const hasCrossTable = crossTableIndicators.some((w) => queryLower.includes(w));
+
+    if (hasComplexIntent || hasCrossTable) return null;
+
+    const matchedMetric = matchedMetrics[0];
 
     let sourceTableName = '{{source_table}}';
     if (matchedMetric.sourceTableId) {
@@ -109,7 +130,7 @@ export class NL2SqlPipeline {
 
     if (matchedMetric.dimensions) {
       for (const dim of matchedMetric.dimensions) {
-        if (queryLower.includes(dim.toLowerCase())) {
+        if (this.dimensionMatchesQuery(dim, queryLower)) {
           selectParts.push(dim);
           groupByParts.push(dim);
         }
@@ -140,6 +161,35 @@ export class NL2SqlPipeline {
       confidence: 0.9,
       tablesUsed: sourceTableName !== '{{source_table}}' ? [sourceTableName] : [],
     };
+  }
+
+  /** Match dimension name against query with Chinese alias support */
+  private dimensionMatchesQuery(dimension: string, query: string): boolean {
+    const dimLower = dimension.toLowerCase();
+
+    // Direct match
+    if (query.includes(dimLower)) return true;
+
+    // Chinese alias mapping for common dimension names
+    const aliases: Record<string, string[]> = {
+      channel: ['渠道', '来源', '入口'],
+      region: ['地区', '区域', '省份', '城市', '地域'],
+      category: ['分类', '类目', '品类'],
+      brand: ['品牌'],
+      status: ['状态'],
+      order_date: ['日期', '时间', '按天', '按日', '每天', '每日'],
+      month: ['月', '按月', '每月', '月份'],
+      week: ['周', '按周', '每周'],
+      year: ['年', '按年', '每年', '年份'],
+      device: ['设备', '终端', '客户端'],
+      gender: ['性别'],
+      city: ['城市'],
+      product: ['商品', '产品'],
+      user: ['用户'],
+    };
+
+    const dimAliases = aliases[dimLower] ?? [];
+    return dimAliases.some((alias) => query.includes(alias));
   }
 
   private async runFullPipeline(

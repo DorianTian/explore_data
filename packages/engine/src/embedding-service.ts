@@ -9,8 +9,11 @@ import OpenAI from 'openai';
 export class EmbeddingService {
   private client: OpenAI;
 
-  constructor(apiKey?: string) {
-    this.client = new OpenAI({ apiKey });
+  constructor(apiKey?: string, baseURL?: string) {
+    this.client = new OpenAI({
+      apiKey,
+      baseURL: baseURL ?? process.env.OPENAI_BASE_URL ?? undefined,
+    });
   }
 
   async embed(texts: string[]): Promise<number[][]> {

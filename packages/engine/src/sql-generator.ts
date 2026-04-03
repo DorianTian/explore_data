@@ -36,8 +36,11 @@ const SYSTEM_PROMPT = `你是一个专业的 SQL 生成专家。根据数据库 
 export class SqlGenerator {
   private client: Anthropic;
 
-  constructor(apiKey?: string) {
-    this.client = new Anthropic({ apiKey });
+  constructor(apiKey?: string, baseURL?: string) {
+    this.client = new Anthropic({
+      apiKey,
+      baseURL: baseURL ?? process.env.ANTHROPIC_BASE_URL ?? undefined,
+    });
   }
 
   async generate(context: GenerationContext): Promise<GenerationResult> {

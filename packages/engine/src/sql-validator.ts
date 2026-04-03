@@ -1,4 +1,5 @@
-import { Parser } from 'node-sql-parser';
+import pkg from 'node-sql-parser';
+const { Parser } = pkg;
 import { validateSql as antlr4Validate } from './antlr4-validator.js';
 import type { SchemaContext } from './types.js';
 
@@ -26,7 +27,7 @@ const MAX_JOIN_COUNT = 5;
  * where ANTLR4 fails (dialect-specific syntax, etc.).
  */
 export class SqlValidator {
-  private parser: Parser;
+  private parser: InstanceType<typeof Parser>;
 
   constructor(private dialect: string = 'postgresql') {
     this.parser = new Parser();

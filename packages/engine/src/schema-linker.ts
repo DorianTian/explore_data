@@ -22,8 +22,11 @@ export class SchemaLinker {
   constructor(
     private db: DbClient,
     openaiApiKey?: string,
+    openaiBaseUrl?: string,
   ) {
-    this.embeddingService = openaiApiKey ? new EmbeddingService(openaiApiKey) : null;
+    this.embeddingService = openaiApiKey
+      ? new EmbeddingService(openaiApiKey, openaiBaseUrl)
+      : null;
   }
 
   /** Load full schema for a datasource */
