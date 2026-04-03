@@ -1,4 +1,4 @@
-import { eq, desc, sql as drizzleSql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import {
   metrics,
   glossaryEntries,
@@ -9,7 +9,6 @@ import {
 import { IntentClassifier } from './intent-classifier.js';
 import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
-import { EmbeddingService } from './embedding-service.js';
 import type { PipelineInput, PipelineResult, ConversationTurn } from './types.js';
 
 /**
@@ -23,7 +22,6 @@ export class NL2SqlPipeline {
   private intentClassifier: IntentClassifier;
   private schemaLinker: SchemaLinker;
   private sqlGenerator: SqlGenerator;
-  private embeddingService: EmbeddingService | null;
 
   constructor(
     private db: DbClient,
@@ -40,9 +38,6 @@ export class NL2SqlPipeline {
     this.intentClassifier = new IntentClassifier(config.anthropicApiKey, anthropicBase);
     this.schemaLinker = new SchemaLinker(db, config.openaiApiKey, openaiBase);
     this.sqlGenerator = new SqlGenerator(config.anthropicApiKey, anthropicBase);
-    this.embeddingService = config.openaiApiKey
-      ? new EmbeddingService(config.openaiApiKey, openaiBase)
-      : null;
   }
 
   async run(input: PipelineInput): Promise<PipelineResult> {
@@ -115,14 +110,16 @@ export class NL2SqlPipeline {
 
     const matchedMetric = matchedMetrics[0];
 
-    let sourceTableName = '{{source_table}}';
-    if (matchedMetric.sourceTableId) {
-      const [table] = await this.db
-        .select()
-        .from(schemaTables)
-        .where(eq(schemaTables.id, matchedMetric.sourceTableId));
-      if (table) sourceTableName = table.name;
-    }
+    if (!matchedMetric.sourceTableId) return null;
+
+    const [sourceTable] = await this.db
+      .select()
+      .from(schemaTables)
+      .where(eq(schemaTables.id, matchedMetric.sourceTableId));
+
+    if (!sourceTable) return null;
+
+    const sourceTableName = sourceTable.name;
 
     const selectParts: string[] = [];
     const groupByParts: string[] = [];
@@ -145,7 +142,10 @@ export class NL2SqlPipeline {
         op: string;
         value: unknown;
       }>) {
-        const val = typeof f.value === 'string' ? `'${f.value}'` : String(f.value);
+        const val =
+          typeof f.value === 'string'
+            ? `'${String(f.value).replace(/'/g, "''")}'`
+            : String(f.value);
         whereParts.push(`${f.column} ${f.op} ${val}`);
       }
     }
@@ -159,7 +159,7 @@ export class NL2SqlPipeline {
       sql,
       explanation: `基于指标「${matchedMetric.displayName}」生成查询：${matchedMetric.expression}`,
       confidence: 0.9,
-      tablesUsed: sourceTableName !== '{{source_table}}' ? [sourceTableName] : [],
+      tablesUsed: [sourceTableName],
     };
   }
 

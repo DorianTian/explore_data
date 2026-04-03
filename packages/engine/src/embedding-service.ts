@@ -19,12 +19,20 @@ export class EmbeddingService {
   async embed(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) return [];
 
-    const response = await this.client.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: texts,
-    });
+    // OpenAI embedding API has a batch limit of 2048
+    const BATCH_SIZE = 512;
+    const allEmbeddings: number[][] = [];
 
-    return response.data.map((d) => d.embedding);
+    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+      const batch = texts.slice(i, i + BATCH_SIZE);
+      const response = await this.client.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: batch,
+      });
+      allEmbeddings.push(...response.data.map((d) => d.embedding));
+    }
+
+    return allEmbeddings;
   }
 
   async embedSingle(text: string): Promise<number[]> {

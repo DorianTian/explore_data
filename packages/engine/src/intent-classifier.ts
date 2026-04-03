@@ -52,12 +52,15 @@ export class IntentClassifier {
       });
     }
 
-    const response = await this.client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
-      system: INTENT_PROMPT,
-      messages,
-    });
+    const response = await this.client.messages.create(
+      {
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
+        system: INTENT_PROMPT,
+        messages,
+      },
+      { timeout: 15_000 },
+    );
 
     const text =
       response.content[0].type === 'text' ? response.content[0].text : '';

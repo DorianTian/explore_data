@@ -133,8 +133,9 @@ export class SchemaLinker {
         .from(schemaColumns)
         .where(eq(schemaColumns.tableId, table.id));
 
+      const tableContext = table.comment ? `[${table.comment}]` : '';
       const texts = columns.map((col) => {
-        let text = `${table.name}.${col.name}`;
+        let text = `${table.name}${tableContext}.${col.name}`;
         if (col.comment) text += ` — ${col.comment}`;
         if (col.dataType) text += ` (${col.dataType})`;
         if (col.sampleValues && col.sampleValues.length > 0) {
@@ -174,14 +175,26 @@ export class SchemaLinker {
 
     const queryEmbedding = await this.embeddingService.embedSingle(userQuery);
 
-    // Load stored column embeddings
+    // Load stored column embeddings for this datasource's columns only
+    const dsColumns = await this.db
+      .select({ id: schemaColumns.id })
+      .from(schemaColumns)
+      .innerJoin(schemaTables, eq(schemaColumns.tableId, schemaTables.id))
+      .where(eq(schemaTables.datasourceId, datasourceId));
+
+    const dsColumnIds = new Set(dsColumns.map((c) => c.id));
+
     const storedEmbeddings = await this.db
       .select()
       .from(columnEmbeddings);
 
-    if (storedEmbeddings.length === 0) return fullSchema;
+    const filteredEmbeddings = storedEmbeddings.filter(
+      (e) => dsColumnIds.has(e.columnId),
+    );
 
-    const items = storedEmbeddings
+    if (filteredEmbeddings.length === 0) return fullSchema;
+
+    const items = filteredEmbeddings
       .filter((e) => e.embedding !== null)
       .map((e, index) => ({
         embedding: e.embedding as number[],

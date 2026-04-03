@@ -46,12 +46,15 @@ export class SqlGenerator {
   async generate(context: GenerationContext): Promise<GenerationResult> {
     const userPrompt = this.buildPrompt(context);
 
-    const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    const response = await this.client.messages.create(
+      {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+      },
+      { timeout: 30_000 },
+    );
 
     return this.parseResponse(response);
   }
@@ -63,12 +66,15 @@ export class SqlGenerator {
   ): Promise<GenerationResult> {
     const userPrompt = this.buildPrompt(context, previousSql, modificationHint);
 
-    const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    const response = await this.client.messages.create(
+      {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+      },
+      { timeout: 30_000 },
+    );
 
     return this.parseResponse(response);
   }
