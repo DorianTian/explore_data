@@ -1,14 +1,20 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { IntentResult, ConversationTurn } from './types.js';
 
-const INTENT_PROMPT = `You are an intent classifier for a NL2SQL system. Classify the user's message into one of these categories:
+const INTENT_PROMPT = `你是一个 NL2SQL 系统的意图分类器。将用户的消息分类为以下类别之一：
 
-- sql_query: The user wants to query data (asking about numbers, lists, comparisons, aggregations, etc.)
-- follow_up: The user is modifying or refining a previous query (e.g., "按月拆分", "加上去年的对比", "排除测试数据")
-- clarification: The user is asking about the schema, available data, or needs help formulating their question
-- off_topic: Not related to data querying
+- sql_query: 用户想查询数据（问数字、列表、对比、聚合、趋势等）
+- follow_up: 用户在修改或细化上一条查询（如"按月拆分"、"加上同比"、"去掉测试数据"、"改成柱状图"）
+- clarification: 用户在询问有哪些数据、字段含义，或需要帮助构建查询
+- off_topic: 与数据查询无关的闲聊
 
-Respond in JSON format: { "type": "sql_query|follow_up|clarification|off_topic", "confidence": 0.0-1.0, "modificationHint": "optional, only for follow_up" }`;
+判断规则：
+1. 如果有对话历史且用户消息很短（如"按月看"、"排个序"），大概率是 follow_up
+2. 包含"什么是"、"有哪些表"、"字段含义"等词时是 clarification
+3. 包含数据相关关键词（销售额、用户数、订单、增长率等）时是 sql_query
+4. 有疑问句式（多少、哪些、什么时候）且涉及数据时是 sql_query
+
+返回 JSON: { "type": "sql_query|follow_up|clarification|off_topic", "confidence": 0.0-1.0, "modificationHint": "仅 follow_up 时填写，描述修改意图" }`;
 
 export class IntentClassifier {
   private client: Anthropic;
@@ -26,17 +32,20 @@ export class IntentClassifier {
     if (conversationHistory.length > 0) {
       const historyText = conversationHistory
         .slice(-4)
-        .map((t) => `${t.role}: ${t.content}${t.sql ? `\n[SQL: ${t.sql}]` : ''}`)
+        .map(
+          (t) =>
+            `${t.role === 'user' ? '用户' : '系统'}: ${t.content}${t.sql ? `\n[SQL: ${t.sql}]` : ''}`,
+        )
         .join('\n');
 
       messages.push({
         role: 'user',
-        content: `Previous conversation:\n${historyText}\n\nNew message to classify: "${userQuery}"`,
+        content: `对话历史:\n${historyText}\n\n需要分类的新消息: "${userQuery}"`,
       });
     } else {
       messages.push({
         role: 'user',
-        content: `Classify this message: "${userQuery}"`,
+        content: `分类这条消息: "${userQuery}"`,
       });
     }
 
@@ -56,7 +65,7 @@ export class IntentClassifier {
         return JSON.parse(jsonMatch[0]) as IntentResult;
       }
     } catch {
-      // fallback
+      // parse error, fallback
     }
 
     return { type: 'sql_query', confidence: 0.5 };

@@ -5,4 +5,5 @@ export { SqlGenerator } from './sql-generator.js';
 export { SqlValidator } from './sql-validator.js';
 export { QueryExecutor } from './query-executor.js';
 export { ChartRecommender } from './chart-recommender.js';
+export { EmbeddingService } from './embedding-service.js';
 export * from './types.js';

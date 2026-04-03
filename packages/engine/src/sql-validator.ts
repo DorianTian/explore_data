@@ -1,4 +1,5 @@
 import { Parser } from 'node-sql-parser';
+import { validateSql as antlr4Validate } from './antlr4-validator.js';
 import type { SchemaContext } from './types.js';
 
 export interface ValidationResult {
@@ -20,9 +21,9 @@ const MAX_JOIN_COUNT = 5;
 /**
  * SQL Validator — safety checks, schema validation, and danger pattern detection.
  *
- * Uses node-sql-parser for AST analysis.
- * ANTLR4 jar is available at packages/engine/tools/ for future grammar upgrades
- * when more precise multi-dialect parsing is needed.
+ * Uses ANTLR4 grammar-based parser as the primary validator for syntax checking
+ * and table/column extraction. Falls back to node-sql-parser for edge cases
+ * where ANTLR4 fails (dialect-specific syntax, etc.).
  */
 export class SqlValidator {
   private parser: Parser;
@@ -40,43 +41,33 @@ export class SqlValidator {
       return { valid: false, errors: preCheckErrors, tablesReferenced: [], columnsReferenced: [] };
     }
 
-    // Parse to verify syntax and extract metadata
-    const dbType = this.mapDialect();
+    // Primary: ANTLR4 grammar-based validation
     let tablesReferenced: string[] = [];
     let columnsReferenced: string[] = [];
 
-    try {
-      this.parser.astify(sql, { database: dbType });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      errors.push({
-        code: 'PARSE_ERROR',
-        message: `SQL syntax error: ${message}`,
-        severity: 'error',
-      });
+    const antlr4Result = antlr4Validate(sql);
+
+    if (antlr4Result.valid) {
+      tablesReferenced = antlr4Result.tables;
+      columnsReferenced = antlr4Result.columns;
+    } else if (antlr4Result.statementType !== 'select' && antlr4Result.statementType !== 'unknown') {
+      // ANTLR4 detected non-SELECT — reject immediately
+      for (const errMsg of antlr4Result.errors) {
+        errors.push({ code: 'BLOCKED_STATEMENT', message: errMsg, severity: 'error' });
+      }
       return { valid: false, errors, tablesReferenced: [], columnsReferenced: [] };
-    }
-
-    // Extract table and column references using parser utilities
-    try {
-      const tableList = this.parser.tableList(sql, { database: dbType });
-      tablesReferenced = tableList.map((t: string) => {
-        // Format: "select::schema::table" or "select::null::table"
-        const parts = t.split('::');
-        return parts[parts.length - 1];
-      });
-    } catch {
-      // Extraction failed, continue with empty
-    }
-
-    try {
-      const columnList = this.parser.columnList(sql, { database: dbType });
-      columnsReferenced = columnList.map((c: string) => {
-        const parts = c.split('::');
-        return parts[parts.length - 1];
-      });
-    } catch {
-      // Extraction failed, continue with empty
+    } else {
+      // ANTLR4 had syntax errors — fall back to node-sql-parser
+      const fallbackResult = this.fallbackParse(sql);
+      if (!fallbackResult.valid) {
+        // Both parsers failed — report ANTLR4 errors (more precise grammar)
+        for (const errMsg of antlr4Result.errors) {
+          errors.push({ code: 'PARSE_ERROR', message: `SQL syntax error: ${errMsg}`, severity: 'error' });
+        }
+        return { valid: false, errors, tablesReferenced: [], columnsReferenced: [] };
+      }
+      tablesReferenced = fallbackResult.tables;
+      columnsReferenced = fallbackResult.columns;
     }
 
     // Check for dangerous patterns
@@ -93,6 +84,44 @@ export class SqlValidator {
       tablesReferenced: [...new Set(tablesReferenced)],
       columnsReferenced: [...new Set(columnsReferenced)],
     };
+  }
+
+  /**
+   * Fallback parser using node-sql-parser for dialect-specific SQL
+   * that the minimal ANTLR4 grammar doesn't cover.
+   */
+  private fallbackParse(sql: string): { valid: boolean; tables: string[]; columns: string[] } {
+    const dbType = this.mapDialect();
+    let tables: string[] = [];
+    let columns: string[] = [];
+
+    try {
+      this.parser.astify(sql, { database: dbType });
+    } catch {
+      return { valid: false, tables: [], columns: [] };
+    }
+
+    try {
+      const tableList = this.parser.tableList(sql, { database: dbType });
+      tables = tableList.map((t: string) => {
+        const parts = t.split('::');
+        return parts[parts.length - 1];
+      });
+    } catch {
+      // Extraction failed, continue with empty
+    }
+
+    try {
+      const columnList = this.parser.columnList(sql, { database: dbType });
+      columns = columnList.map((c: string) => {
+        const parts = c.split('::');
+        return parts[parts.length - 1];
+      });
+    } catch {
+      // Extraction failed, continue with empty
+    }
+
+    return { valid: true, tables, columns };
   }
 
   private preCheck(sql: string): ValidationError[] {

@@ -24,8 +24,23 @@ export function createSchemaRouter(db: DbClient): Router {
     }
 
     const result = await service.ingestDdl(parsed.data.datasourceId, parsed.data.ddl);
+
+    // Auto-generate column embeddings if OpenAI API key is available
+    let embeddingCount = 0;
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const { SchemaLinker } = await import('@nl2sql/engine');
+        const linker = new SchemaLinker(db, process.env.OPENAI_API_KEY);
+        embeddingCount = await linker.generateColumnEmbeddings(
+          parsed.data.datasourceId,
+        );
+      } catch {
+        // Embedding generation is best-effort, don't block ingest
+      }
+    }
+
     ctx.status = 201;
-    ctx.body = { success: true, data: result };
+    ctx.body = { success: true, data: { ...result, embeddingCount } };
   });
 
   router.get('/tables', async (ctx) => {
