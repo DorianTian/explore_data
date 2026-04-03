@@ -1,0 +1,36 @@
+{
+  "name": "@nl2sql/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.16.0",
+    "koa": "^2.16.0",
+    "@koa/router": "^13.1.0",
+    "@koa/cors": "^5.0.0",
+    "koa-bodyparser": "^4.4.0",
+    "pino": "^9.6.0",
+    "zod": "^3.24.0",
+    "@nl2sql/shared": "workspace:*",
+    "@nl2sql/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/koa__router": "^12.0.0",
+    "@types/koa__cors": "^5.0.0",
+    "@types/koa-bodyparser": "^4.3.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.1.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.0",
+    "typescript": "^5.8.0"
+  }
+}

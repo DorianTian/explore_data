@@ -1,0 +1,192 @@
+import { eq } from 'drizzle-orm';
+import {
+  schemaTables,
+  schemaColumns,
+  schemaRelationships,
+  type DbClient,
+} from '@nl2sql/db';
+import type { DdlParseResult } from '@nl2sql/shared';
+import { DdlParser } from './ddl-parser.js';
+
+interface IngestResult {
+  tables: Array<{
+    table: typeof schemaTables.$inferSelect;
+    columns: Array<typeof schemaColumns.$inferSelect>;
+  }>;
+  relationships: Array<typeof schemaRelationships.$inferSelect>;
+}
+
+/**
+ * Ingest-oriented schema service.
+ * Users feed DDL → platform parses and stores everything.
+ * Users only annotate (comment, PII, sample values) after ingest.
+ */
+export class SchemaService {
+  private ddlParser = new DdlParser();
+
+  constructor(private db: DbClient) {}
+
+  /** Ingest DDL — parse and store all tables, columns, and FK relationships */
+  async ingestDdl(datasourceId: string, ddl: string): Promise<IngestResult> {
+    const parsed = this.ddlParser.parseMultiple(ddl);
+    if (parsed.length === 0) {
+      const single = this.ddlParser.parse(ddl);
+      if (single) parsed.push(single);
+    }
+
+    if (parsed.length === 0) {
+      throw Object.assign(new Error('No valid CREATE TABLE statements found in DDL'), {
+        status: 400,
+      });
+    }
+
+    return this.db.transaction(async (tx) => {
+      const tables: IngestResult['tables'] = [];
+      const tableNameToId = new Map<string, string>();
+      const columnNameToId = new Map<string, string>();
+
+      for (const def of parsed) {
+        const { table, columns } = await this.insertTableWithColumns(
+          tx,
+          datasourceId,
+          def,
+          ddl,
+        );
+        tables.push({ table, columns });
+        tableNameToId.set(def.tableName.toLowerCase(), table.id);
+        for (const col of columns) {
+          columnNameToId.set(
+            `${def.tableName.toLowerCase()}.${col.name.toLowerCase()}`,
+            col.id,
+          );
+        }
+      }
+
+      const relationships: IngestResult['relationships'] = [];
+      for (const def of parsed) {
+        for (const fk of def.foreignKeys) {
+          const fromTableId = tableNameToId.get(def.tableName.toLowerCase());
+          const fromColId = columnNameToId.get(
+            `${def.tableName.toLowerCase()}.${fk.column.toLowerCase()}`,
+          );
+          const toTableId = tableNameToId.get(fk.referencedTable.toLowerCase());
+          const toColId = columnNameToId.get(
+            `${fk.referencedTable.toLowerCase()}.${fk.referencedColumn.toLowerCase()}`,
+          );
+
+          if (fromTableId && fromColId && toTableId && toColId) {
+            const [rel] = await tx
+              .insert(schemaRelationships)
+              .values({
+                datasourceId,
+                fromTableId,
+                fromColumnId: fromColId,
+                toTableId,
+                toColumnId: toColId,
+                relationshipType: 'fk',
+              })
+              .returning();
+            relationships.push(rel);
+          }
+        }
+      }
+
+      return { tables, relationships };
+    });
+  }
+
+  async listTables(datasourceId: string) {
+    return this.db
+      .select()
+      .from(schemaTables)
+      .where(eq(schemaTables.datasourceId, datasourceId))
+      .orderBy(schemaTables.name);
+  }
+
+  async getTableWithColumns(tableId: string) {
+    const [table] = await this.db
+      .select()
+      .from(schemaTables)
+      .where(eq(schemaTables.id, tableId));
+    if (!table) return null;
+
+    const columns = await this.db
+      .select()
+      .from(schemaColumns)
+      .where(eq(schemaColumns.tableId, tableId))
+      .orderBy(schemaColumns.ordinalPosition);
+
+    return { table, columns };
+  }
+
+  async annotateTable(tableId: string, input: { comment?: string }) {
+    const [row] = await this.db
+      .update(schemaTables)
+      .set(input)
+      .where(eq(schemaTables.id, tableId))
+      .returning();
+    return row ?? null;
+  }
+
+  async annotateColumn(
+    columnId: string,
+    input: { comment?: string; sampleValues?: string[]; isPii?: boolean },
+  ) {
+    const [row] = await this.db
+      .update(schemaColumns)
+      .set(input)
+      .where(eq(schemaColumns.id, columnId))
+      .returning();
+    return row ?? null;
+  }
+
+  async removeTable(tableId: string): Promise<boolean> {
+    const [row] = await this.db
+      .delete(schemaTables)
+      .where(eq(schemaTables.id, tableId))
+      .returning();
+    return row !== undefined;
+  }
+
+  async listRelationships(datasourceId: string) {
+    return this.db
+      .select()
+      .from(schemaRelationships)
+      .where(eq(schemaRelationships.datasourceId, datasourceId));
+  }
+
+  private async insertTableWithColumns(
+    tx: Parameters<Parameters<DbClient['transaction']>[0]>[0],
+    datasourceId: string,
+    def: DdlParseResult,
+    rawDdl: string,
+  ) {
+    const [table] = await tx
+      .insert(schemaTables)
+      .values({
+        datasourceId,
+        name: def.tableName,
+        comment: def.comment,
+        ddl: rawDdl,
+      })
+      .returning();
+
+    const columns = await tx
+      .insert(schemaColumns)
+      .values(
+        def.columns.map((col, index) => ({
+          tableId: table.id,
+          name: col.name,
+          dataType: col.dataType,
+          comment: col.comment,
+          isPrimaryKey: col.isPrimaryKey,
+          isNullable: col.isNullable,
+          isPii: false,
+          ordinalPosition: index + 1,
+        })),
+      )
+      .returning();
+
+    return { table, columns };
+  }
+}

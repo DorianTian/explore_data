@@ -1,0 +1,20 @@
+{
+  "name": "nl2sql",
+  "private": true,
+  "scripts": {
+    "dev:api": "pnpm --filter @nl2sql/api dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "format": "prettier --write \"packages/*/src/**/*.ts\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
+    "db:generate": "pnpm --filter @nl2sql/db generate",
+    "db:migrate": "pnpm --filter @nl2sql/db migrate"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

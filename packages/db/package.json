@@ -1,0 +1,24 @@
+{
+  "name": "@nl2sql/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.16.0",
+    "@nl2sql/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.0",
+    "@types/pg": "^8.11.0",
+    "typescript": "^5.8.0"
+  }
+}
