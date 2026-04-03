@@ -13,6 +13,10 @@ export interface ChatMessage {
     columns: Array<{ name: string; dataType: string }>;
     truncated: boolean;
   };
+  chartRecommendation?: {
+    chartType: string;
+    config: unknown;
+  };
 }
 
 interface ChatState {

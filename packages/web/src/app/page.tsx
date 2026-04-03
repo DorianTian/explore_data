@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/sidebar';
 import { ChatInput } from '@/components/chat-input';
 import { ChatMessage } from '@/components/chat-message';
 import { SqlResultTable } from '@/components/sql-result-table';
+import { ChartView } from '@/components/chart-view';
 import { ToastProvider, useToast } from '@/components/toast';
 import { useChatStore } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -179,6 +180,15 @@ function ChatPageInner() {
                       isStreaming={msg.isStreaming}
                       onFeedback={setFeedback}
                     />
+                    {msg.chartRecommendation &&
+                      msg.chartRecommendation.chartType !== 'table' && (
+                        <div className="mb-4 ml-1">
+                          <ChartView
+                            chartType={msg.chartRecommendation.chartType as any}
+                            config={msg.chartRecommendation.config as any}
+                          />
+                        </div>
+                      )}
                     {msg.executionResult && (
                       <div className="mb-4 ml-1">
                         <SqlResultTable

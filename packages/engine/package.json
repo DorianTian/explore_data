@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "antlr4:generate": "mkdir -p src/generated && java -jar tools/antlr-4.13.2-complete.jar -Dlanguage=JavaScript -visitor -no-listener grammars/SqlLexer.g4 && mv grammars/SqlLexer.js grammars/SqlLexer.tokens grammars/SqlLexer.interp src/generated/ && java -jar tools/antlr-4.13.2-complete.jar -Dlanguage=JavaScript -visitor -no-listener -lib src/generated grammars/SqlParser.g4 && mv grammars/SqlParser.js grammars/SqlParser.tokens grammars/SqlParser.interp grammars/SqlParserVisitor.js src/generated/",
-    "build": "tsc",
+    "build": "tsc && cp -r src/generated dist/generated",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest"

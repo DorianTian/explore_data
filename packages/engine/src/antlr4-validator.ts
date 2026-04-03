@@ -32,6 +32,27 @@ type AnyCtx = any;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
+ * Create an ANTLR4 error listener that collects syntax errors
+ * and stubs out the other required listener methods (reportAmbiguity, etc.).
+ */
+function createErrorCollector(errors: string[]) {
+  return {
+    syntaxError(
+      _recognizer: unknown,
+      _offendingSymbol: unknown,
+      line: number,
+      column: number,
+      msg: string,
+    ) {
+      errors.push(`line ${line}:${column} ${msg}`);
+    },
+    reportAmbiguity() { /* no-op */ },
+    reportAttemptingFullContext() { /* no-op */ },
+    reportContextSensitivity() { /* no-op */ },
+  };
+}
+
+/**
  * Validate SQL using the ANTLR4-generated parser.
  * Parses the input, detects statement type, and extracts table/column references.
  */
@@ -42,38 +63,14 @@ export function validateSql(sql: string): Antlr4ValidationResult {
   const chars = new antlr4.CharStream(sql);
   const lexer = new SqlLexer(chars);
   lexer.removeErrorListeners();
-
-  const lexerErrorListener = {
-    syntaxError(
-      _recognizer: unknown,
-      _offendingSymbol: unknown,
-      line: number,
-      column: number,
-      msg: string,
-    ) {
-      errors.push(`line ${line}:${column} ${msg}`);
-    },
-  };
-  lexer.addErrorListener(lexerErrorListener);
+  lexer.addErrorListener(createErrorCollector(errors));
 
   const tokens = new antlr4.CommonTokenStream(lexer);
 
   // Parse
   const parser = new SqlParser(tokens);
   parser.removeErrorListeners();
-
-  const parserErrorListener = {
-    syntaxError(
-      _recognizer: unknown,
-      _offendingSymbol: unknown,
-      line: number,
-      column: number,
-      msg: string,
-    ) {
-      errors.push(`line ${line}:${column} ${msg}`);
-    },
-  };
-  parser.addErrorListener(parserErrorListener);
+  parser.addErrorListener(createErrorCollector(errors));
 
   let tree;
   try {
@@ -131,14 +128,22 @@ export function validateSql(sql: string): Antlr4ValidationResult {
 
   /**
    * Extract column reference from ColumnRefContext.
-   * Uses grammar-labeled fields: .column, .table (optional).
+   * Grammar labels: .schemaName, .table, .column (all optional IdentifierContext).
+   * For `u.name`, ANTLR assigns schemaName=u, table=null, column=name.
+   * For `schema.table.col`, schemaName=schema, table=table, column=col.
+   * We reconstruct the qualified name from whichever prefixes are present.
    */
   visitor.visitColumnRef = function (ctx: AnyCtx) {
     if (ctx.column) {
       const col = stripQuotes(ctx.column.getText());
       if (col) {
-        const tbl = ctx.table ? stripQuotes(ctx.table.getText()) : null;
-        columns.push(tbl ? `${tbl}.${col}` : col);
+        // Build qualified prefix: schemaName.table or just schemaName (as alias)
+        const prefix = ctx.table
+          ? stripQuotes(ctx.table.getText())
+          : ctx.schemaName
+            ? stripQuotes(ctx.schemaName.getText())
+            : null;
+        columns.push(prefix ? `${prefix}.${col}` : col);
       }
     }
     return this.visitChildren(ctx);

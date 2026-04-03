@@ -9,7 +9,8 @@
     "format": "prettier --write \"packages/*/src/**/*.ts\"",
     "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
     "db:generate": "pnpm --filter @nl2sql/db generate",
-    "db:migrate": "pnpm --filter @nl2sql/db migrate"
+    "db:migrate": "pnpm --filter @nl2sql/db migrate",
+    "db:seed": "npx tsx packages/api/src/seed.ts"
   },
   "devDependencies": {
     "prettier": "^3.5.0",
