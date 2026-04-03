@@ -41,16 +41,40 @@ export class SchemaService {
     }
 
     return this.db.transaction(async (tx) => {
+      // Check for existing tables to avoid duplicates
+      const existingTables = await tx
+        .select()
+        .from(schemaTables)
+        .where(eq(schemaTables.datasourceId, datasourceId));
+      const existingNames = new Set(existingTables.map((t) => t.name.toLowerCase()));
+
       const tables: IngestResult['tables'] = [];
       const tableNameToId = new Map<string, string>();
       const columnNameToId = new Map<string, string>();
 
+      // Pre-populate maps with existing tables for cross-batch FK resolution
+      for (const existing of existingTables) {
+        tableNameToId.set(existing.name.toLowerCase(), existing.id);
+        const cols = await tx
+          .select()
+          .from(schemaColumns)
+          .where(eq(schemaColumns.tableId, existing.id));
+        for (const col of cols) {
+          columnNameToId.set(
+            `${existing.name.toLowerCase()}.${col.name.toLowerCase()}`,
+            col.id,
+          );
+        }
+      }
+
       for (const def of parsed) {
+        // Skip tables that already exist in this datasource
+        if (existingNames.has(def.tableName.toLowerCase())) continue;
+
         const { table, columns } = await this.insertTableWithColumns(
           tx,
           datasourceId,
           def,
-          ddl,
         );
         tables.push({ table, columns });
         tableNameToId.set(def.tableName.toLowerCase(), table.id);
@@ -159,7 +183,6 @@ export class SchemaService {
     tx: Parameters<Parameters<DbClient['transaction']>[0]>[0],
     datasourceId: string,
     def: DdlParseResult,
-    rawDdl: string,
   ) {
     const [table] = await tx
       .insert(schemaTables)
@@ -167,7 +190,6 @@ export class SchemaService {
         datasourceId,
         name: def.tableName,
         comment: def.comment,
-        ddl: rawDdl,
       })
       .returning();
 

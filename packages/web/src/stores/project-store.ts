@@ -11,7 +11,7 @@ interface Project {
 interface Datasource {
   id: string;
   name: string;
-  dbType: string;
+  dialect: string;
   projectId: string;
 }
 
@@ -30,6 +30,7 @@ interface ProjectActions {
   fetchProjects: () => Promise<void>;
   fetchDatasources: (projectId: string) => Promise<void>;
   createProject: (name: string, description?: string) => Promise<Project | null>;
+  createDatasource: (name: string, dialect: string) => Promise<Datasource | null>;
 }
 
 type ProjectStore = ProjectState & ProjectActions;
@@ -71,7 +72,7 @@ export const useProjectStore = create<ProjectStore>()(
         set({ loadingDatasources: true });
         try {
           const res = await apiFetch<Datasource[]>(
-            `/api/projects/${projectId}/datasources`,
+            `/api/datasources?projectId=${projectId}`,
           );
           if (res.success && res.data) {
             set({ datasources: res.data });
@@ -88,6 +89,21 @@ export const useProjectStore = create<ProjectStore>()(
         const res = await apiPost<Project>('/api/projects', { name, description });
         if (res.success && res.data) {
           set((state) => ({ projects: [...state.projects, res.data!] }));
+          return res.data;
+        }
+        return null;
+      },
+
+      createDatasource: async (name, dialect) => {
+        const projectId = get().currentProjectId;
+        if (!projectId) return null;
+        const res = await apiPost<Datasource>('/api/datasources', {
+          projectId,
+          name,
+          dialect,
+        });
+        if (res.success && res.data) {
+          set((state) => ({ datasources: [...state.datasources, res.data!] }));
           return res.data;
         }
         return null;

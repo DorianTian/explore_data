@@ -2,6 +2,8 @@ import type Koa from 'koa';
 import type { Logger } from 'pino';
 
 export function errorHandler(logger: Logger): Koa.Middleware {
+  const isDev = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production';
+
   return async (ctx, next) => {
     try {
       await next();
@@ -19,7 +21,9 @@ export function errorHandler(logger: Logger): Koa.Middleware {
         success: false,
         error: {
           code: status === 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR',
-          message: status === 500 ? 'Internal server error' : error.message,
+          message: status === 500
+            ? (isDev ? error.message : 'Internal server error')
+            : error.message,
         },
       };
     }

@@ -24,9 +24,13 @@ export function Sidebar() {
     setCurrentProject,
     setCurrentDatasource,
     createProject,
+    createDatasource,
   } = useProjectStore();
 
   const [showNewProject, setShowNewProject] = useState(false);
+  const [showNewDatasource, setShowNewDatasource] = useState(false);
+  const [newDsName, setNewDsName] = useState('');
+  const [newDsDialect, setNewDsDialect] = useState('postgresql');
   const [newProjectName, setNewProjectName] = useState('');
 
   useEffect(() => {
@@ -124,12 +128,62 @@ export function Sidebar() {
                 <option value="">选择数据源...</option>
                 {datasources.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.dbType})
+                    {d.name} ({d.dialect})
                   </option>
                 ))}
               </select>
               <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted pointer-events-none" />
             </div>
+
+            {showNewDatasource ? (
+              <div className="space-y-1.5">
+                <input
+                  value={newDsName}
+                  onChange={(e) => setNewDsName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowNewDatasource(false);
+                  }}
+                  placeholder="数据源名称"
+                  autoFocus
+                  className="w-full min-w-0 rounded-md border border-border bg-background px-2.5 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <div className="flex gap-1.5">
+                  <select
+                    value={newDsDialect}
+                    onChange={(e) => setNewDsDialect(e.target.value)}
+                    className="flex-1 min-w-0 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                  >
+                    <option value="postgresql">PostgreSQL</option>
+                    <option value="mysql">MySQL</option>
+                    <option value="hive">Hive</option>
+                    <option value="sparksql">SparkSQL</option>
+                    <option value="flinksql">FlinkSQL</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      if (!newDsName.trim()) return;
+                      const ds = await createDatasource(newDsName.trim(), newDsDialect);
+                      if (ds) {
+                        setCurrentDatasource(ds.id);
+                        setShowNewDatasource(false);
+                        setNewDsName('');
+                      }
+                    }}
+                    className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-hover transition-colors"
+                  >
+                    创建
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowNewDatasource(true)}
+                className="flex items-center gap-1.5 px-1 text-xs text-muted hover:text-foreground transition-colors"
+              >
+                <PlusIcon className="w-3 h-3" />
+                新建数据源
+              </button>
+            )}
           </div>
         )}
       </div>
