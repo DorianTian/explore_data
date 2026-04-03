@@ -11,27 +11,28 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.0",
-    "pg": "^8.16.0",
-    "koa": "^2.16.0",
-    "@koa/router": "^13.1.0",
     "@koa/cors": "^5.0.0",
-    "koa-bodyparser": "^4.4.0",
-    "pino": "^9.6.0",
-    "zod": "^3.24.0",
-    "@nl2sql/shared": "workspace:*",
+    "@koa/router": "^13.1.0",
     "@nl2sql/db": "workspace:*",
-    "@nl2sql/engine": "workspace:*"
+    "@nl2sql/engine": "workspace:*",
+    "@nl2sql/shared": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "is-generator-function": "^1.1.2",
+    "koa": "^3.2.0",
+    "koa-bodyparser": "^4.4.0",
+    "pg": "^8.16.0",
+    "pino": "^9.6.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/koa": "^2.15.0",
-    "@types/koa__router": "^12.0.0",
-    "@types/koa__cors": "^5.0.0",
     "@types/koa-bodyparser": "^4.3.0",
-    "tsx": "^4.19.0",
-    "vitest": "^3.1.0",
-    "supertest": "^7.0.0",
+    "@types/koa__cors": "^5.0.0",
+    "@types/koa__router": "^12.0.0",
     "@types/supertest": "^6.0.0",
-    "typescript": "^5.8.0"
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
   }
 }

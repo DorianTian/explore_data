@@ -7,6 +7,7 @@ import SqlParser from './generated/SqlParser.js';
 // @ts-expect-error -- generated JS without type declarations
 import SqlParserVisitor from './generated/SqlParserVisitor.js';
 
+/** Result returned by the ANTLR4-based SQL validator. */
 export interface Antlr4ValidationResult {
   valid: boolean;
   errors: string[];
@@ -14,6 +15,21 @@ export interface Antlr4ValidationResult {
   columns: string[];
   statementType: 'select' | 'dml' | 'ddl' | 'other' | 'unknown';
 }
+
+/** Strip surrounding quotes or backticks from an identifier. */
+function stripQuotes(raw: string): string {
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith('`') && raw.endsWith('`'))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type AnyCtx = any;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Validate SQL using the ANTLR4-generated parser.
@@ -73,42 +89,57 @@ export function validateSql(sql: string): Antlr4ValidationResult {
     };
   }
 
-  // Detect statement type + extract references using visitor
+  // Detect statement type + extract references via visitor
   const tables: string[] = [];
   const columns: string[] = [];
   const statementTypes: string[] = [];
 
   const visitor = Object.create(SqlParserVisitor.prototype);
 
-  visitor.visitSelectStmt = function (ctx: unknown) {
+  visitor.visitSelectStmt = function (ctx: AnyCtx) {
     statementTypes.push('select');
     return this.visitChildren(ctx);
   };
 
-  visitor.visitDmlStmt = function (ctx: unknown) {
+  visitor.visitDmlStmt = function (ctx: AnyCtx) {
     statementTypes.push('dml');
     return this.visitChildren(ctx);
   };
 
-  visitor.visitDdlStmt = function (ctx: unknown) {
+  visitor.visitDdlStmt = function (ctx: AnyCtx) {
     statementTypes.push('ddl');
     return this.visitChildren(ctx);
   };
 
-  visitor.visitTableRef = function (ctx: { getText(): string; children: unknown[] | null }) {
-    const text = ctx.getText();
-    const cleaned = text.replace(/["`]/g, '').split('.').pop() ?? text;
-    if (cleaned && cleaned !== '*') {
-      tables.push(cleaned);
+  visitor.visitOtherStmt = function (ctx: AnyCtx) {
+    statementTypes.push('other');
+    return this.visitChildren(ctx);
+  };
+
+  /**
+   * Extract table name from TableRefContext.
+   * Uses the grammar-labeled .tableName().table accessor.
+   */
+  visitor.visitTableRef = function (ctx: AnyCtx) {
+    const tableNameCtx = ctx.tableName();
+    if (tableNameCtx?.table) {
+      const name = stripQuotes(tableNameCtx.table.getText());
+      if (name) tables.push(name);
     }
     return this.visitChildren(ctx);
   };
 
-  visitor.visitColumnRef = function (ctx: { getText(): string; children: unknown[] | null }) {
-    const text = ctx.getText();
-    const cleaned = text.replace(/["`]/g, '');
-    if (cleaned && cleaned !== '*') {
-      columns.push(cleaned);
+  /**
+   * Extract column reference from ColumnRefContext.
+   * Uses grammar-labeled fields: .column, .table (optional).
+   */
+  visitor.visitColumnRef = function (ctx: AnyCtx) {
+    if (ctx.column) {
+      const col = stripQuotes(ctx.column.getText());
+      if (col) {
+        const tbl = ctx.table ? stripQuotes(ctx.table.getText()) : null;
+        columns.push(tbl ? `${tbl}.${col}` : col);
+      }
     }
     return this.visitChildren(ctx);
   };

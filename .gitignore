@@ -4,3 +4,6 @@ dist/
 *.log
 .DS_Store
 drizzle/
+
+# ANTLR4 generated parser (regenerate via: pnpm --filter @nl2sql/engine antlr4:generate)
+packages/engine/src/generated/
