@@ -161,13 +161,19 @@ export function createDashboardRouter(db: DbClient): Router {
   });
 
   router.delete('/:dashboardId/widgets/:placementId', async (ctx) => {
+    const dashboardIdResult = uuidSchema.safeParse(ctx.params.dashboardId);
+    if (!dashboardIdResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'dashboardId must be a valid UUID' } };
+      return;
+    }
     const placementResult = uuidSchema.safeParse(ctx.params.placementId);
     if (!placementResult.success) {
       ctx.status = 400;
       ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'placementId must be a valid UUID' } };
       return;
     }
-    const deleted = await service.removeWidget(placementResult.data);
+    const deleted = await service.removeWidget(dashboardIdResult.data, placementResult.data);
     if (!deleted) {
       ctx.status = 404;
       ctx.body = {

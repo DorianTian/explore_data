@@ -20,7 +20,6 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
   const loading = useDashboardStore((s) => s.loading);
 
   useEffect(() => {
-    useDashboardStore.setState({ currentDashboard: null });
     fetchDashboard(id);
   }, [id, fetchDashboard]);
 

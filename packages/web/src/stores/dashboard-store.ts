@@ -142,7 +142,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   fetchDashboard: async (id) => {
-    set({ loading: true });
+    set({ loading: true, currentDashboard: null });
     try {
       const res = await apiFetch<DashboardDetail>(`/api/dashboards/${id}`);
       if (res.success && res.data) {

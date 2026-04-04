@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { dashboards, dashboardWidgets, widgets, type DbClient } from '@nl2sql/db';
 
 interface CreateDashboardInput {
@@ -95,30 +95,30 @@ export class DashboardService {
     return row;
   }
 
-  async removeWidget(placementId: string): Promise<boolean> {
+  async removeWidget(dashboardId: string, placementId: string): Promise<boolean> {
     const [row] = await this.db
       .delete(dashboardWidgets)
-      .where(eq(dashboardWidgets.id, placementId))
+      .where(and(eq(dashboardWidgets.id, placementId), eq(dashboardWidgets.dashboardId, dashboardId)))
       .returning();
     return row !== undefined;
   }
 
   async updateLayout(dashboardId: string, items: LayoutItem[]) {
     return this.db.transaction(async (tx) => {
-      const results = await Promise.all(
-        items.map((item) =>
-          tx
-            .update(dashboardWidgets)
-            .set({
-              positionX: item.positionX,
-              positionY: item.positionY,
-              width: item.width,
-              height: item.height,
-            })
-            .where(eq(dashboardWidgets.id, item.id))
-            .returning(),
-        ),
-      );
+      const results: Array<(typeof dashboardWidgets.$inferSelect)[]> = [];
+      for (const item of items) {
+        const updated = await tx
+          .update(dashboardWidgets)
+          .set({
+            positionX: item.positionX,
+            positionY: item.positionY,
+            width: item.width,
+            height: item.height,
+          })
+          .where(eq(dashboardWidgets.id, item.id))
+          .returning();
+        results.push(updated);
+      }
 
       await tx
         .update(dashboards)

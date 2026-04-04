@@ -21,12 +21,10 @@ export function MessageFeedback({
 }: MessageFeedbackProps) {
   const setFeedback = useChatStore((s) => s.setFeedback);
   const setGolden = useChatStore((s) => s.setGolden);
-  const messages = useChatStore((s) => s.messages);
+  const message = useChatStore((s) => s.messages.find((m) => m.id === messageId));
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   if (!sql) return null;
-
-  const message = messages.find((m) => m.id === messageId);
 
   return (
     <>
