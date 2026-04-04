@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, real, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, real, jsonb, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { projects } from './projects.js';
 
 export const conversations = pgTable('conversations', {
@@ -38,5 +38,7 @@ export const queryHistory = pgTable('query_history', {
   wasAccepted: real('was_accepted'),
   tablesUsed: text('tables_used').array(),
   columnsUsed: text('columns_used').array(),
+  status: varchar('status', { length: 20 }).default('pending').notNull(),
+  isGolden: boolean('is_golden').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

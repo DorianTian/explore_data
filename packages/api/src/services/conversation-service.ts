@@ -89,6 +89,8 @@ export class ConversationService {
       generatedSql: string;
       correctedSql?: string;
       wasAccepted?: number;
+      status?: string;
+      isGolden?: boolean;
       tablesUsed?: string[];
       columnsUsed?: string[];
     },
@@ -101,10 +103,22 @@ export class ConversationService {
         generatedSql: input.generatedSql,
         correctedSql: input.correctedSql ?? null,
         wasAccepted: input.wasAccepted ?? null,
+        status: input.status ?? 'pending',
+        isGolden: input.isGolden ?? false,
         tablesUsed: input.tablesUsed ?? null,
         columnsUsed: input.columnsUsed ?? null,
       })
       .returning();
     return row;
+  }
+
+  /** List query history for a project */
+  async listQueryHistory(projectId: string) {
+    return this.db
+      .select()
+      .from(queryHistory)
+      .where(eq(queryHistory.projectId, projectId))
+      .orderBy(desc(queryHistory.createdAt))
+      .limit(100);
   }
 }

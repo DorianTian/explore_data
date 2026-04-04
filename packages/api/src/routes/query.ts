@@ -30,7 +30,9 @@ const feedbackSchema = z.object({
   naturalLanguage: z.string(),
   generatedSql: z.string(),
   correctedSql: z.string().optional(),
-  wasAccepted: z.number().min(0).max(1),
+  wasAccepted: z.number().min(0).max(1).optional(),
+  status: z.enum(['accepted', 'pending', 'rejected']).optional(),
+  isGolden: z.boolean().optional(),
 });
 
 function sendSSE(stream: PassThrough, event: string, data: unknown) {
@@ -280,9 +282,26 @@ export function createQueryRouter(db: DbClient): Router {
       generatedSql: parsed.data.generatedSql,
       correctedSql: parsed.data.correctedSql,
       wasAccepted: parsed.data.wasAccepted,
+      status: parsed.data.status,
+      isGolden: parsed.data.isGolden,
     });
 
     ctx.body = { success: true, data: record };
+  });
+
+  router.get('/history', async (ctx) => {
+    const projectId = ctx.query.projectId as string;
+    if (!projectId) {
+      ctx.status = 400;
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'projectId required' },
+      };
+      return;
+    }
+
+    const records = await conversationService.listQueryHistory(projectId);
+    ctx.body = { success: true, data: records };
   });
 
   return router;
