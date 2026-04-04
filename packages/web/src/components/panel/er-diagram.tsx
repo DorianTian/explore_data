@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   Position,
   Handle,
+  useNodesState,
+  useEdgesState,
   type Node,
   type Edge,
   type NodeTypes,
@@ -175,8 +177,8 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
     return ids;
   }, [relationships]);
 
-  /* Build nodes */
-  const nodes: Node<TableNodeData>[] = useMemo(() => {
+  /* Build initial nodes */
+  const initialNodes: Node<TableNodeData>[] = useMemo(() => {
     const positions = autoLayout(tables, relationships);
     const posMap = new Map(positions.map((p) => [p.tableId, p]));
 
@@ -204,8 +206,8 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
     });
   }, [tables, relationships, fkColumnIds]);
 
-  /* Build edges */
-  const edges: Edge[] = useMemo(() => {
+  /* Build initial edges */
+  const initialEdges: Edge[] = useMemo(() => {
     return relationships.map((rel) => ({
       id: rel.id,
       source: rel.fromTableId,
@@ -226,6 +228,14 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
     }));
   }, [relationships]);
 
+  /* Interactive state — useNodesState/useEdgesState enable drag/pan/zoom */
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  /* Sync when data changes */
+  useEffect(() => { setNodes(initialNodes); }, [initialNodes, setNodes]);
+  useEffect(() => { setEdges(initialEdges); }, [initialEdges, setEdges]);
+
   if (!tables.length) {
     return (
       <div className="flex items-center justify-center h-full text-muted text-sm">
@@ -238,11 +248,10 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
       nodeTypes={nodeTypes}
       fitView
-      nodesDraggable
-      panOnDrag
-      zoomOnScroll
       minZoom={0.2}
       maxZoom={1.5}
       proOptions={{ hideAttribution: true }}
