@@ -58,6 +58,7 @@ function ChatPageInner() {
   );
 
   const hasContext = currentProjectId && currentDatasourceId;
+  const isEmpty = messages.length === 0;
 
   /* Right panel priority: artifact > schema browser */
   const showSchema = panelIsOpen && !artifactOpen;
@@ -67,7 +68,7 @@ function ChatPageInner() {
     <AppShell>
       <ToastProvider>
         <div className="flex h-full overflow-hidden">
-          {/* Conversation column — always centered, flex-1 */}
+          {/* Conversation column */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Header */}
             <header className="flex items-center justify-between px-6 py-3 shrink-0 border-b border-border">
@@ -83,29 +84,54 @@ function ChatPageInner() {
               )}
             </header>
 
-            {/* Messages area — centered with max-width */}
-            <div className="flex-1 overflow-y-auto">
-              {messages.length === 0 ? (
-                <EmptyState
-                  hasContext={Boolean(hasContext)}
-                  onSelectQuery={handleSend}
-                />
-              ) : (
-                <div className="max-w-3xl mx-auto px-6 py-6">
-                  {messages.map((msg) => (
-                    <ChatMessage key={msg.id} message={msg} />
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </div>
+            {isEmpty ? (
+              /* Empty state — title + chips + input grouped together, vertically centered */
+              <div className="flex-1 flex flex-col items-center justify-center px-6">
+                <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
+                  有什么数据问题？
+                </h1>
+                <p className="text-sm text-muted mb-6">
+                  {hasContext
+                    ? '用自然语言描述你想查询的内容'
+                    : '请先在左侧选择项目和数据源'}
+                </p>
 
-            {/* Input bar */}
-            <div className="shrink-0 px-6 pb-4">
-              <div className="max-w-3xl mx-auto">
-                <ChatInput onSend={handleSend} disabled={loading || !hasContext} />
+                {hasContext && (
+                  <div className="flex flex-wrap gap-2 max-w-2xl mb-6">
+                    {EXAMPLE_QUERIES.map((query) => (
+                      <button
+                        key={query}
+                        onClick={() => handleSend(query)}
+                        className="text-[13px] px-3.5 py-2 rounded-full border border-border/60 text-muted hover:text-foreground hover:bg-surface-hover hover:border-border-strong transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        {query}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="w-full max-w-2xl">
+                  <ChatInput onSend={handleSend} disabled={loading || !hasContext} />
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Conversation mode — messages scroll + input pinned at bottom */
+              <>
+                <div className="flex-1 overflow-y-auto">
+                  <div className="max-w-3xl mx-auto px-6 py-6">
+                    {messages.map((msg) => (
+                      <ChatMessage key={msg.id} message={msg} />
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+                <div className="shrink-0 px-6 pb-4">
+                  <div className="max-w-3xl mx-auto">
+                    <ChatInput onSend={handleSend} disabled={loading || !hasContext} />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right panel — artifact (SQL/Result/Chart) or schema browser */}
@@ -143,42 +169,6 @@ function SchemaPanel({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto pt-3">
         <SchemaBrowser />
       </div>
-    </div>
-  );
-}
-
-/** Centered empty state with example query chips */
-function EmptyState({
-  hasContext,
-  onSelectQuery,
-}: {
-  hasContext: boolean;
-  onSelectQuery: (query: string) => void;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full max-w-2xl mx-auto px-6">
-      <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
-        有什么数据问题？
-      </h1>
-      <p className="text-sm text-muted mb-8">
-        {hasContext
-          ? '用自然语言描述你想查询的内容'
-          : '请先在左侧选择项目和数据源'}
-      </p>
-
-      {hasContext && (
-        <div className="flex flex-wrap gap-2 max-w-lg">
-          {EXAMPLE_QUERIES.map((query) => (
-            <button
-              key={query}
-              onClick={() => onSelectQuery(query)}
-              className="text-[13px] px-3.5 py-2 rounded-full border border-border/60 text-muted hover:text-foreground hover:bg-surface-hover hover:border-border-strong transition-all cursor-pointer whitespace-nowrap"
-            >
-              {query}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
