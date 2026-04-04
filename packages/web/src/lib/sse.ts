@@ -1,0 +1,79 @@
+export interface SSEEvent {
+  event: string;
+  data: unknown;
+}
+
+export type SSEHandler = (event: SSEEvent) => void;
+
+/**
+ * Connect to an SSE endpoint using fetch + ReadableStream.
+ * Returns an abort function.
+ */
+export function connectSSE(
+  url: string,
+  body: unknown,
+  onEvent: SSEHandler,
+  onError: (error: Error) => void,
+  onDone: () => void,
+): () => void {
+  const controller = new AbortController();
+
+  (async () => {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`SSE request failed: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        let currentEvent = '';
+        let currentData = '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            currentData = line.slice(6).trim();
+          } else if (line === '' && currentEvent && currentData) {
+            try {
+              const parsed = JSON.parse(currentData);
+              onEvent({ event: currentEvent, data: parsed });
+            } catch {
+              onEvent({ event: currentEvent, data: currentData });
+            }
+            currentEvent = '';
+            currentData = '';
+          }
+        }
+      }
+
+      onDone();
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      onError(err instanceof Error ? err : new Error(String(err)));
+    }
+  })();
+
+  return () => controller.abort();
+}
