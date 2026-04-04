@@ -38,7 +38,7 @@ describe('SchemaLinker', () => {
     expect(ddl).toContain("-- Full name, e.g. 'Alice', 'Bob'");
     expect(ddl).toContain('CREATE TABLE orders');
     expect(ddl).toContain("-- Order amount, e.g. '99.99', '150.00'");
-    expect(ddl).toContain('-- orders.user_id -> users.id');
+    expect(ddl).toContain('-- orders.user_id → users.id');
   });
 
   it('includes PRIMARY KEY in DDL output', () => {

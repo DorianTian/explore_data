@@ -14,6 +14,7 @@ interface IngestResult {
     columns: Array<typeof schemaColumns.$inferSelect>;
   }>;
   relationships: Array<typeof schemaRelationships.$inferSelect>;
+  embeddingCount?: number;
 }
 
 /**
@@ -40,7 +41,7 @@ export class SchemaService {
       });
     }
 
-    return this.db.transaction(async (tx) => {
+    const txResult = await this.db.transaction(async (tx) => {
       // Check for existing tables to avoid duplicates
       const existingTables = await tx
         .select()
@@ -117,6 +118,24 @@ export class SchemaService {
 
       return { tables, relationships };
     });
+
+    // Auto-generate column embeddings (best-effort, outside transaction)
+    let embeddingCount = 0;
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const { SchemaLinker } = await import('@nl2sql/engine');
+        const linker = new SchemaLinker(
+          this.db,
+          process.env.OPENAI_API_KEY,
+          process.env.OPENAI_BASE_URL,
+        );
+        embeddingCount = await linker.generateColumnEmbeddings(datasourceId);
+      } catch {
+        // Embedding generation is best-effort
+      }
+    }
+
+    return { ...txResult, embeddingCount };
   }
 
   async listTables(datasourceId: string) {

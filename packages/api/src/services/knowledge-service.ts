@@ -19,6 +19,16 @@ type UpdateGlossaryInput = z.infer<typeof updateGlossaryEntrySchema>;
 const CHUNK_SIZE = 500;
 const CHUNK_OVERLAP = 50;
 
+/** Try to get embedding service — returns null if no API key */
+async function getEmbeddingService() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const { EmbeddingService } = await import('@nl2sql/engine');
+  return new EmbeddingService(
+    process.env.OPENAI_API_KEY,
+    process.env.OPENAI_BASE_URL,
+  );
+}
+
 export class KnowledgeService {
   constructor(private db: DbClient) {}
 
@@ -37,11 +47,24 @@ export class KnowledgeService {
 
       const chunks = this.splitIntoChunks(input.content);
       if (chunks.length > 0) {
+        // Generate chunk embeddings if API key available
+        let chunkEmbeddings: Array<number[] | null> = chunks.map(() => null);
+        try {
+          const embService = await getEmbeddingService();
+          if (embService) {
+            const vectors = await embService.embed(chunks);
+            chunkEmbeddings = vectors;
+          }
+        } catch {
+          // Best-effort embedding
+        }
+
         await tx.insert(knowledgeChunks).values(
           chunks.map((content, index) => ({
             docId: doc.id,
             content,
             chunkIndex: index,
+            embedding: chunkEmbeddings[index] ?? null,
           })),
         );
       }
@@ -82,8 +105,23 @@ export class KnowledgeService {
     return row !== undefined;
   }
 
-  /** Glossary — business term to SQL expression mapping */
+  /** Glossary — business term to SQL expression mapping, auto-generates embedding */
   async createGlossaryEntry(input: CreateGlossaryInput) {
+    // Build embedding text: "活跃用户 — 30天内有登录行为的用户. SQL: WHERE last_login > ..."
+    let embeddingText = input.term;
+    if (input.description) embeddingText += ` — ${input.description}`;
+    embeddingText += `. SQL: ${input.sqlExpression}`;
+
+    let embedding: number[] | null = null;
+    try {
+      const embService = await getEmbeddingService();
+      if (embService) {
+        embedding = await embService.embedSingle(embeddingText);
+      }
+    } catch {
+      // Embedding generation is best-effort
+    }
+
     const [row] = await this.db
       .insert(glossaryEntries)
       .values({
@@ -91,6 +129,7 @@ export class KnowledgeService {
         term: input.term,
         sqlExpression: input.sqlExpression,
         description: input.description ?? null,
+        embedding,
       })
       .returning();
     return row;

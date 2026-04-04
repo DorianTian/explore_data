@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import {
   schemaTables,
   schemaColumns,
@@ -12,9 +12,11 @@ import type { SchemaContext } from './types.js';
 /**
  * Schema Linker — resolves which tables/columns are relevant to a user query.
  *
- * Two-stage approach:
- * Stage 1: Embedding similarity — recall top-K candidate columns
- * Stage 2: For small schemas (<50 columns), include all; for large ones, use embedding filter
+ * Two-stage embedding approach:
+ * Stage 1 (coarse): Table-level embedding recall — which tables are relevant?
+ * Stage 2 (fine): Column-level embedding recall — which columns within those tables?
+ *
+ * For small schemas (<50 columns), returns everything (LLM handles it).
  */
 export class SchemaLinker {
   private embeddingService: EmbeddingService | null;
@@ -29,7 +31,6 @@ export class SchemaLinker {
       : null;
   }
 
-  /** Load full schema for a datasource */
   async loadSchema(datasourceId: string): Promise<SchemaContext> {
     const tables = await this.db
       .select()
@@ -90,10 +91,6 @@ export class SchemaLinker {
     return schemaContext;
   }
 
-  /**
-   * Smart schema linking — for large schemas, use embeddings to filter relevant columns.
-   * For small schemas (<50 columns total), return everything.
-   */
   async linkSchema(
     datasourceId: string,
     userQuery: string,
@@ -105,16 +102,17 @@ export class SchemaLinker {
       0,
     );
 
-    // Small schema — return everything, LLM can handle it
     if (totalColumns <= 50 || !this.embeddingService) {
       return fullSchema;
     }
 
-    // Large schema — use embedding similarity to filter
-    return this.filterByEmbedding(fullSchema, datasourceId, userQuery);
+    return this.twoStageEmbeddingFilter(fullSchema, datasourceId, userQuery);
   }
 
-  /** Generate and store column embeddings for a datasource */
+  /**
+   * Generate and store column embeddings for a datasource.
+   * Uses natural language bilingual format for optimal matching.
+   */
   async generateColumnEmbeddings(datasourceId: string): Promise<number> {
     if (!this.embeddingService) {
       throw new Error('OpenAI API key required for embedding generation');
@@ -133,31 +131,34 @@ export class SchemaLinker {
         .from(schemaColumns)
         .where(eq(schemaColumns.tableId, table.id));
 
-      const tableContext = table.comment ? `[${table.comment}]` : '';
-      const texts = columns.map((col) => {
-        let text = `${table.name}${tableContext}.${col.name}`;
-        if (col.comment) text += ` — ${col.comment}`;
-        if (col.dataType) text += ` (${col.dataType})`;
-        if (col.sampleValues && col.sampleValues.length > 0) {
-          text += `, e.g. ${col.sampleValues.slice(0, 3).join(', ')}`;
-        }
-        return text;
-      });
+      // Build natural language bilingual text for embedding
+      const texts = columns.map((col) =>
+        EmbeddingService.buildColumnText({
+          tableName: table.name,
+          tableComment: table.comment,
+          columnName: col.name,
+          columnComment: col.comment,
+          dataType: col.dataType,
+          sampleValues: col.sampleValues,
+          isPrimaryKey: col.isPrimaryKey,
+        }),
+      );
 
       if (texts.length === 0) continue;
 
       const embeddings = await this.embeddingService.embed(texts);
 
       for (let i = 0; i < columns.length; i++) {
-        // Upsert column embedding
+        // Delete existing embedding for this column (upsert pattern)
         await this.db
-          .insert(columnEmbeddings)
-          .values({
-            columnId: columns[i].id,
-            textRepresentation: texts[i],
-            embedding: embeddings[i],
-          })
-          .onConflictDoNothing();
+          .delete(columnEmbeddings)
+          .where(eq(columnEmbeddings.columnId, columns[i].id));
+
+        await this.db.insert(columnEmbeddings).values({
+          columnId: columns[i].id,
+          textRepresentation: texts[i],
+          embedding: embeddings[i],
+        });
 
         count++;
       }
@@ -166,7 +167,14 @@ export class SchemaLinker {
     return count;
   }
 
-  private async filterByEmbedding(
+  /**
+   * Two-stage embedding filter using pgvector native distance queries.
+   * Scales to 2000+ tables / 20K+ columns.
+   *
+   * Stage 1: pgvector cosine distance query — find top-K relevant columns in DB
+   * Stage 2: Include FK-connected tables for complete context
+   */
+  private async twoStageEmbeddingFilter(
     fullSchema: SchemaContext,
     datasourceId: string,
     userQuery: string,
@@ -174,61 +182,62 @@ export class SchemaLinker {
     if (!this.embeddingService) return fullSchema;
 
     const queryEmbedding = await this.embeddingService.embedSingle(userQuery);
+    const vectorStr = `[${queryEmbedding.join(',')}]`;
 
-    // Load stored column embeddings for this datasource's columns only
-    const dsColumns = await this.db
-      .select({ id: schemaColumns.id })
-      .from(schemaColumns)
-      .innerJoin(schemaTables, eq(schemaColumns.tableId, schemaTables.id))
-      .where(eq(schemaTables.datasourceId, datasourceId));
+    // Stage 1: pgvector native cosine distance query
+    // Uses <=> operator for cosine distance (1 - cosine_similarity)
+    // Only searches columns belonging to this datasource via JOIN
+    const topColumns = await this.db.execute<{
+      column_id: string;
+      text_representation: string;
+      distance: number;
+    }>(sql`
+      SELECT ce.column_id, ce.text_representation,
+             ce.embedding <=> ${vectorStr}::vector AS distance
+      FROM column_embeddings ce
+      INNER JOIN schema_columns sc ON sc.id = ce.column_id
+      INNER JOIN schema_tables st ON st.id = sc.table_id
+      WHERE st.datasource_id = ${datasourceId}
+        AND ce.embedding IS NOT NULL
+      ORDER BY distance ASC
+      LIMIT 30
+    `);
 
-    const dsColumnIds = new Set(dsColumns.map((c) => c.id));
+    if (!topColumns.rows || topColumns.rows.length === 0) return fullSchema;
 
-    const storedEmbeddings = await this.db
-      .select()
-      .from(columnEmbeddings);
+    // Extract table names from top-K columns
+    const relevantTableNames = new Set<string>();
+    for (const row of topColumns.rows) {
+      const tableMatch = row.text_representation.match(/^Table:\s*(\S+)/);
+      if (tableMatch) {
+        relevantTableNames.add(tableMatch[1].toLowerCase());
+      }
+    }
 
-    const filteredEmbeddings = storedEmbeddings.filter(
-      (e) => dsColumnIds.has(e.columnId),
-    );
+    // Stage 2: Include FK-connected tables
+    for (const rel of fullSchema.relationships) {
+      if (relevantTableNames.has(rel.fromTable.toLowerCase())) {
+        relevantTableNames.add(rel.toTable.toLowerCase());
+      }
+      if (relevantTableNames.has(rel.toTable.toLowerCase())) {
+        relevantTableNames.add(rel.fromTable.toLowerCase());
+      }
+    }
 
-    if (filteredEmbeddings.length === 0) return fullSchema;
-
-    const items = filteredEmbeddings
-      .filter((e) => e.embedding !== null)
-      .map((e, index) => ({
-        embedding: e.embedding as number[],
-        index,
-        textRepresentation: e.textRepresentation,
-      }));
-
-    // Get top-30 most relevant columns
-    const topK = this.embeddingService.findTopK(
-      queryEmbedding,
-      items,
-      30,
-    );
-
-    const relevantTexts = new Set(
-      topK.map((k) => items[k.index].textRepresentation.split('.')[0].toLowerCase()),
-    );
-
-    // Filter schema to only include tables with relevant columns
     const filtered: SchemaContext = {
       tables: fullSchema.tables.filter((t) =>
-        relevantTexts.has(t.name.toLowerCase()),
+        relevantTableNames.has(t.name.toLowerCase()),
       ),
       relationships: fullSchema.relationships.filter(
         (r) =>
-          relevantTexts.has(r.fromTable.toLowerCase()) ||
-          relevantTexts.has(r.toTable.toLowerCase()),
+          relevantTableNames.has(r.fromTable.toLowerCase()) &&
+          relevantTableNames.has(r.toTable.toLowerCase()),
       ),
     };
 
     return filtered.tables.length > 0 ? filtered : fullSchema;
   }
 
-  /** Format schema as DDL for LLM prompt (most natural format for LLMs) */
   formatAsDdl(schema: SchemaContext): string {
     const parts: string[] = [];
 
@@ -254,7 +263,7 @@ export class SchemaLinker {
       parts.push('\n-- Relationships:');
       for (const rel of schema.relationships) {
         parts.push(
-          `-- ${rel.fromTable}.${rel.fromColumn} -> ${rel.toTable}.${rel.toColumn}`,
+          `-- ${rel.fromTable}.${rel.fromColumn} → ${rel.toTable}.${rel.toColumn}`,
         );
       }
     }
