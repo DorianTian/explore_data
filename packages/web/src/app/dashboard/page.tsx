@@ -15,19 +15,22 @@ function DashboardPageInner() {
   const fetchDashboards = useDashboardStore((s) => s.fetchDashboards);
   const fetchFavorites = useDashboardStore((s) => s.fetchFavorites);
   const createDashboard = useDashboardStore((s) => s.createDashboard);
-  const loading = useDashboardStore((s) => s.loading);
   const { toast } = useToast();
 
   const [showNewDashboard, setShowNewDashboard] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!currentProjectId) return;
-    fetchWidgets(currentProjectId);
-    fetchDashboards(currentProjectId);
-    fetchFavorites(currentProjectId);
+    setLoading(true);
+    void Promise.all([
+      fetchWidgets(currentProjectId),
+      fetchDashboards(currentProjectId),
+      fetchFavorites(currentProjectId),
+    ]).finally(() => setLoading(false));
   }, [currentProjectId, fetchWidgets, fetchDashboards, fetchFavorites]);
 
   const handleCreate = useCallback(async () => {

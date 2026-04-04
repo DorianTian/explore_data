@@ -111,26 +111,16 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   loading: false,
 
   fetchWidgets: async (projectId) => {
-    set({ loading: true });
-    try {
-      const res = await apiFetch<Widget[]>(`/api/widgets?projectId=${projectId}`);
-      if (res.success && res.data) {
-        set({ widgets: res.data });
-      }
-    } finally {
-      set({ loading: false });
+    const res = await apiFetch<Widget[]>(`/api/widgets?projectId=${projectId}`);
+    if (res.success && res.data) {
+      set({ widgets: res.data });
     }
   },
 
   fetchDashboards: async (projectId) => {
-    set({ loading: true });
-    try {
-      const res = await apiFetch<Dashboard[]>(`/api/dashboards?projectId=${projectId}`);
-      if (res.success && res.data) {
-        set({ dashboards: res.data });
-      }
-    } finally {
-      set({ loading: false });
+    const res = await apiFetch<Dashboard[]>(`/api/dashboards?projectId=${projectId}`);
+    if (res.success && res.data) {
+      set({ dashboards: res.data });
     }
   },
 

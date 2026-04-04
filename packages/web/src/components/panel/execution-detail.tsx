@@ -33,7 +33,7 @@ export function ExecutionDetail() {
     }
   }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasSqlChanged = message?.sql !== editedSql;
+  const hasSqlChanged = Boolean(message?.sql) && message?.sql !== editedSql;
 
   const handleCopySql = useCallback(async () => {
     if (!editedSql) return;

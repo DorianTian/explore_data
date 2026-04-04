@@ -21,11 +21,11 @@ const createWidgetSchema = z.object({
 });
 
 const updateWidgetSchema = z.object({
-  title: z.string().max(200).optional(),
+  title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
   naturalLanguage: z.string().min(1).optional(),
   sql: z.string().min(1).optional(),
-  chartType: z.string().max(30).optional(),
+  chartType: z.string().min(1).max(30).optional(),
   chartConfig: z.unknown().optional(),
   dataSnapshot: z.unknown().optional(),
   datasourceId: z.string().uuid().optional(),

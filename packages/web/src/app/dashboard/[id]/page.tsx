@@ -80,17 +80,10 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
                   const widget = item.widget;
                   if (!widget) return null;
 
-                  const raw = widget.chartConfig as {
-                    xAxis?: { type?: string; data?: unknown[] };
-                    yAxis?: { type?: string; data?: unknown[] };
-                    series?: Array<{ name?: string; type: string; data: unknown[] }>;
-                    title?: { text: string };
-                  };
+                  const raw = widget.chartConfig as Record<string, unknown> | null;
                   const chartConfig = {
-                    ...raw,
-                    xAxis: raw.xAxis ? { type: raw.xAxis.type ?? 'category', data: raw.xAxis.data } : undefined,
-                    yAxis: raw.yAxis ? { type: raw.yAxis.type ?? 'value', data: raw.yAxis.data } : undefined,
-                    series: raw.series ?? [],
+                    ...(raw ?? {}),
+                    series: (raw?.series as Array<{ name?: string; type: string; data: unknown[] }>) ?? [],
                   };
 
                   return (

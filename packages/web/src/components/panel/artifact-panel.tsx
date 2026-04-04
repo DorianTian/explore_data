@@ -42,7 +42,7 @@ export function ArtifactPanel() {
     }
   }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps — intentionally skip message.sql to preserve in-progress edits
 
-  const hasSqlChanged = message?.sql !== editedSql;
+  const hasSqlChanged = Boolean(message?.sql) && message?.sql !== editedSql;
 
   const handleCopySql = useCallback(async () => {
     if (!editedSql) return;
