@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Icon } from '@/components/shared/icon';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3100';
 
 const DEMO_QUERIES = [
   { label: 'GMV 分析', query: '上个月各区域 GMV 是多少？' },

@@ -6,7 +6,7 @@ import { useChatStore, type PipelineStep, type ChatMessage } from '@/stores/chat
 import { usePanelStore } from '@/stores/panel-store';
 import { useProjectStore } from '@/stores/project-store';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3100';
 
 export function useSSEStream() {
   const abortRef = useRef<(() => void) | null>(null);

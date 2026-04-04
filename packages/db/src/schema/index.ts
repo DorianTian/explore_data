@@ -6,3 +6,6 @@ export { schemaRelationships } from './schema-relationships.js';
 export { metrics } from './metrics.js';
 export { knowledgeDocs, knowledgeChunks, glossaryEntries, columnEmbeddings } from './knowledge.js';
 export { conversations, messages, queryHistory } from './conversations.js';
+export { widgets } from './widgets.js';
+export { dashboards, dashboardWidgets } from './dashboards.js';
+export { favorites } from './favorites.js';

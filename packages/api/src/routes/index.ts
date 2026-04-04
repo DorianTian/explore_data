@@ -6,3 +6,6 @@ export { createMetricRouter } from './metrics.js';
 export { createKnowledgeRouter } from './knowledge.js';
 export { createQueryRouter } from './query.js';
 export { createConversationRouter } from './conversations.js';
+export { createWidgetRouter } from './widgets.js';
+export { createDashboardRouter } from './dashboards.js';
+export { createFavoriteRouter } from './favorites.js';

@@ -13,6 +13,9 @@ import {
   createKnowledgeRouter,
   createQueryRouter,
   createConversationRouter,
+  createWidgetRouter,
+  createDashboardRouter,
+  createFavoriteRouter,
 } from './routes/index.js';
 
 export function createApp(db: DbClient) {
@@ -41,6 +44,9 @@ export function createApp(db: DbClient) {
     createKnowledgeRouter(db),
     createQueryRouter(db),
     createConversationRouter(db),
+    createWidgetRouter(db),
+    createDashboardRouter(db),
+    createFavoriteRouter(db),
   ];
 
   for (const router of routers) {

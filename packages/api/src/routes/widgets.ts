@@ -1,0 +1,118 @@
+import Router from '@koa/router';
+import { z } from 'zod';
+import { WidgetService } from '../services/widget-service.js';
+import type { DbClient } from '@nl2sql/db';
+
+const createWidgetSchema = z.object({
+  projectId: z.string().uuid(),
+  conversationId: z.string().uuid().optional(),
+  messageId: z.string().uuid().optional(),
+  title: z.string().max(200),
+  description: z.string().optional(),
+  naturalLanguage: z.string().min(1),
+  sql: z.string().min(1),
+  chartType: z.string().max(30),
+  chartConfig: z.unknown(),
+  dataSnapshot: z.unknown().optional(),
+  datasourceId: z.string().uuid(),
+  isLive: z.boolean().optional(),
+});
+
+const updateWidgetSchema = z.object({
+  title: z.string().max(200).optional(),
+  description: z.string().optional(),
+  naturalLanguage: z.string().min(1).optional(),
+  sql: z.string().min(1).optional(),
+  chartType: z.string().max(30).optional(),
+  chartConfig: z.unknown().optional(),
+  dataSnapshot: z.unknown().optional(),
+  datasourceId: z.string().uuid().optional(),
+  isLive: z.boolean().optional(),
+});
+
+export function createWidgetRouter(db: DbClient): Router {
+  const router = new Router({ prefix: '/api/widgets' });
+  const service = new WidgetService(db);
+
+  router.post('/', async (ctx) => {
+    const parsed = createWidgetSchema.safeParse(ctx.request.body);
+    if (!parsed.success) {
+      ctx.status = 400;
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.message },
+      };
+      return;
+    }
+    const widget = await service.create({
+      ...parsed.data,
+      chartConfig: parsed.data.chartConfig ?? {},
+    });
+    ctx.status = 201;
+    ctx.body = { success: true, data: widget };
+  });
+
+  router.get('/', async (ctx) => {
+    const projectId = ctx.query.projectId as string;
+    if (!projectId) {
+      ctx.status = 400;
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'projectId required' },
+      };
+      return;
+    }
+    const list = await service.listByProject(projectId);
+    ctx.body = { success: true, data: list };
+  });
+
+  router.get('/:id', async (ctx) => {
+    const widget = await service.getById(ctx.params.id);
+    if (!widget) {
+      ctx.status = 404;
+      ctx.body = {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Widget not found' },
+      };
+      return;
+    }
+    ctx.body = { success: true, data: widget };
+  });
+
+  router.patch('/:id', async (ctx) => {
+    const parsed = updateWidgetSchema.safeParse(ctx.request.body);
+    if (!parsed.success) {
+      ctx.status = 400;
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.message },
+      };
+      return;
+    }
+    const updated = await service.update(ctx.params.id, parsed.data);
+    if (!updated) {
+      ctx.status = 404;
+      ctx.body = {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Widget not found' },
+      };
+      return;
+    }
+    ctx.body = { success: true, data: updated };
+  });
+
+  router.delete('/:id', async (ctx) => {
+    const deleted = await service.remove(ctx.params.id);
+    if (!deleted) {
+      ctx.status = 404;
+      ctx.body = {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Widget not found' },
+      };
+      return;
+    }
+    ctx.status = 204;
+  });
+
+  return router;
+}

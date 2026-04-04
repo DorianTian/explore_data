@@ -17,6 +17,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/', label: '首页', icon: 'home' },
   { href: '/chat', label: '对话', icon: 'message' },
+  { href: '/dashboard', label: 'BI 市场', icon: 'layout' },
   { href: '/schema', label: '数据源', icon: 'database' },
   { href: '/metrics', label: '指标', icon: 'chart' },
   { href: '/knowledge', label: '知识库', icon: 'book' },
