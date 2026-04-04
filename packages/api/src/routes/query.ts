@@ -176,12 +176,8 @@ export function createQueryRouter(db: DbClient): Router {
         content: parsed.data.query,
       });
 
-      sendSSE(stream, 'status', { step: 'intent_classification', message: '正在分析查询意图...' });
-
       const { NL2SqlPipeline, SqlValidator } = await import('@nl2sql/engine');
       const pipeline = new NL2SqlPipeline(db, getPipelineConfig());
-
-      sendSSE(stream, 'status', { step: 'schema_linking', message: '正在匹配数据模型...' });
 
       const result = await pipeline.run({
         projectId: parsed.data.projectId,
@@ -189,6 +185,7 @@ export function createQueryRouter(db: DbClient): Router {
         userQuery: parsed.data.query,
         conversationHistory: parsed.data.conversationHistory,
         dialect: parsed.data.dialect,
+        onProgress: (step, message) => sendSSE(stream, 'status', { step, message }),
       });
 
       let finalResult = result;

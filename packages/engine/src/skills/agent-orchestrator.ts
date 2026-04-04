@@ -3,7 +3,7 @@ import { SKILL_DEFINITIONS } from './skill-definitions.js';
 import { SkillExecutor } from './skill-executor.js';
 import type { ClassificationResult } from './types.js';
 import type { DbClient } from '@nl2sql/db';
-import type { PipelineResult, ConversationTurn } from '../types.js';
+import type { PipelineResult, ConversationTurn, ProgressCallback } from '../types.js';
 import { extractText, extractJson, withRetry } from '../llm-utils.js';
 import { MODEL, TIMEOUT, PIPELINE } from '../config.js';
 
@@ -74,8 +74,11 @@ export class AgentOrchestrator {
       datasourceId: string;
       dialect: string;
       conversationHistory: ConversationTurn[];
+      onProgress?: ProgressCallback;
     },
   ): Promise<PipelineResult> {
+    const progress = context.onProgress ?? (() => {});
+
     if (classification.type === 'off_topic') {
       return {
         resolvedVia: 'clarification',
@@ -95,10 +98,10 @@ export class AgentOrchestrator {
 
     // Route based on complexity
     if (classification.complexity === 'simple') {
-      return this.simplePath(userQuery, context);
+      return this.simplePath(userQuery, context, progress);
     }
 
-    return this.agentPath(userQuery, context);
+    return this.agentPath(userQuery, context, progress);
   }
 
   /**
@@ -112,8 +115,10 @@ export class AgentOrchestrator {
       datasourceId: string;
       dialect: string;
     },
+    progress: ProgressCallback,
   ): Promise<PipelineResult> {
     // Parallel: schema search + metric lookup
+    progress('schema_search', '正在搜索数据库结构...');
     const [schemaResult, metricResult] = await Promise.all([
       this.executeSkillSafe('schema_search', { query: userQuery }, context),
       this.executeSkillSafe('metric_lookup', { metricName: userQuery }, context),
@@ -133,6 +138,7 @@ export class AgentOrchestrator {
     }
 
     // Direct generation with Claude Sonnet
+    progress('sql_generation', '正在生成 SQL...');
     const response = await withRetry(
       () =>
         this.client.messages.create(
@@ -156,6 +162,7 @@ export class AgentOrchestrator {
     const result = this.parseGenerationResult(text);
 
     // Validate and check result
+    progress('sql_validation', '正在校验 SQL...');
     const validation = await this.skillExecutor.execute(
       'sql_validate',
       { sql: result.sql },
@@ -193,6 +200,7 @@ export class AgentOrchestrator {
       dialect: string;
       conversationHistory: ConversationTurn[];
     },
+    progress: ProgressCallback,
   ): Promise<PipelineResult> {
     const tools = SKILL_DEFINITIONS.map((s) => ({
       name: s.name,
@@ -290,6 +298,17 @@ export class AgentOrchestrator {
             });
             continue;
           }
+
+          // Report progress for each skill execution
+          const skillMessages: Record<string, string> = {
+            schema_search: '正在搜索数据库结构...',
+            metric_lookup: '正在匹配业务指标...',
+            knowledge_search: '正在检索知识库...',
+            sql_generate: '正在生成 SQL...',
+            sql_review: '正在审查 SQL...',
+            sql_validate: '正在校验 SQL 安全性...',
+          };
+          progress(block.name, skillMessages[block.name] ?? `正在执行 ${block.name}...`);
 
           // Execute skill with error handling — never throws
           const skillResult = await this.executeSkillSafe(

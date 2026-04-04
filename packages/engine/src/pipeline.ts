@@ -263,14 +263,18 @@ export class NL2SqlPipeline {
     conversationHistory: ConversationTurn[],
     dialect: string,
     intent: { type: string; modificationHint?: string },
+    progress: (step: string, message: string) => void,
   ): Promise<PipelineResult> {
     // Node 1: Query Decomposition — detect if query needs multi-step reasoning
+    progress('query_decomposition', '正在拆解查询逻辑...');
     const decomposition = await this.queryDecomposer.decompose(input.userQuery);
 
     // Node 2: Schema Linking (embedding recall)
+    progress('schema_linking', '正在匹配数据模型...');
     let schema = await this.schemaLinker.linkSchema(input.datasourceId, input.userQuery);
 
     // Node 3: Schema Rerank (LLM precision filter for large schemas)
+    progress('schema_rerank', '正在精选相关表结构...');
     schema = await this.schemaReranker.rerank(input.userQuery, schema);
 
     // Node 4: Load glossary
@@ -284,10 +288,12 @@ export class NL2SqlPipeline {
       sqlExpression: g.sqlExpression,
     }));
 
-    // Node 5: RAG �� retrieve relevant knowledge documents
+    // Node 5: RAG — retrieve relevant knowledge documents
+    progress('knowledge_retrieval', '正在检索相关知识文档...');
     const knowledgeContext = await this.retrieveKnowledgeContext(input.projectId, input.userQuery);
 
     // Node 6: Data flywheel — retrieve similar accepted queries as few-shot examples
+    progress('few_shot_retrieval', '正在检索相似案例...');
     const fewShotExamples = await this.retrieveFewShotExamples(input.projectId, input.userQuery);
 
     // Build generation context
@@ -312,6 +318,7 @@ export class NL2SqlPipeline {
     };
 
     // Node 7: SQL Generation
+    progress('sql_generation', '正在生成 SQL...');
     let result;
     if (intent.type === 'follow_up' && conversationHistory.length > 0) {
       const lastSql = [...conversationHistory].reverse().find((t) => t.sql)?.sql;
@@ -330,6 +337,7 @@ export class NL2SqlPipeline {
     }
 
     // Node 8: SQL Self-Verification — LLM checks its own output for logical correctness
+    progress('sql_verification', '正在审查 SQL 正确性...');
     if (result.sql && result.confidence < PIPELINE.verificationThreshold) {
       const verification = await this.sqlVerifier.verify(input.userQuery, result.sql, schema);
 
