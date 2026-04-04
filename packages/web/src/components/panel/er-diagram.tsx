@@ -240,9 +240,13 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
       edges={edges}
       nodeTypes={nodeTypes}
       fitView
+      nodesDraggable
+      panOnDrag
+      zoomOnScroll
       minZoom={0.2}
       maxZoom={1.5}
       proOptions={{ hideAttribution: true }}
+      className="touch-none"
     >
       <Background color="var(--border)" gap={20} size={1} />
       <Controls
