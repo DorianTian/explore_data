@@ -5,7 +5,7 @@ import { useSchemaStore } from '@/stores/schema-store';
 import { useProjectStore } from '@/stores/project-store';
 import { useChatStore } from '@/stores/chat-store';
 import { apiFetch } from '@/lib/api';
-import { Input, Badge } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { Icon } from '@/components/shared/icon';
 import dynamic from 'next/dynamic';
 
@@ -160,14 +160,14 @@ export function SchemaBrowser() {
   return (
     <div className="px-3 pb-3">
       {/* Header with view toggle + refresh */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex bg-background rounded-[var(--radius-md)] p-0.5 border border-border">
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className="flex bg-surface rounded-md p-0.5 border border-border/50">
           <button
             type="button"
             onClick={() => setViewMode('tree')}
-            className={`px-2 py-1 text-xs rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs rounded transition-colors cursor-pointer ${
               viewMode === 'tree'
-                ? 'bg-surface-elevated text-foreground'
+                ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -176,9 +176,9 @@ export function SchemaBrowser() {
           <button
             type="button"
             onClick={() => setViewMode('er')}
-            className={`px-2 py-1 text-xs rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs rounded transition-colors cursor-pointer ${
               viewMode === 'er'
-                ? 'bg-surface-elevated text-foreground'
+                ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -186,22 +186,22 @@ export function SchemaBrowser() {
           </button>
         </div>
 
-        <span className="text-xs text-muted ml-auto">{tables.length} 张表</span>
+        <span className="text-[11px] text-muted ml-auto">{tables.length} 表</span>
 
         <button
           type="button"
           onClick={loadSchema}
-          className="text-muted hover:text-foreground cursor-pointer"
+          className="text-muted hover:text-foreground cursor-pointer p-0.5"
           title="刷新 Schema"
         >
-          <Icon name="refresh" size={14} />
+          <Icon name="refresh" size={13} />
         </button>
       </div>
 
       {viewMode === 'tree' ? (
         <>
           {/* Search */}
-          <div className="mb-3">
+          <div className="mb-2">
             <Input
               placeholder="搜索表名 / 列名..."
               value={search}
@@ -209,8 +209,8 @@ export function SchemaBrowser() {
             />
           </div>
 
-          {/* Table list */}
-          <div className="space-y-1 max-h-[calc(100vh-320px)] overflow-y-auto">
+          {/* Table list — compact IDE-style tree */}
+          <div className="space-y-px max-h-[calc(100vh-280px)] overflow-y-auto">
             {filteredTables.map((table) => {
               const isExpanded = expandedIds.has(table.id);
               const isUsed = usedTableNames.has(table.name.toLowerCase());
@@ -221,71 +221,63 @@ export function SchemaBrowser() {
                   <button
                     type="button"
                     onClick={() => toggleExpand(table.id)}
-                    className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[var(--radius-sm)] text-sm transition-colors cursor-pointer ${
+                    className={`flex items-center gap-1.5 w-full px-1.5 py-[5px] rounded-md text-[13px] transition-colors cursor-pointer group ${
                       isUsed
-                        ? 'bg-primary/10 text-primary font-medium'
+                        ? 'text-primary font-medium'
                         : 'text-foreground hover:bg-surface-hover'
                     }`}
                   >
                     <Icon
                       name={isExpanded ? 'chevronDown' : 'chevronRight'}
-                      size={12}
-                      className="text-muted shrink-0"
+                      size={10}
+                      className="text-muted/60 shrink-0"
                     />
-                    <Icon
-                      name="table"
-                      size={14}
-                      className={isUsed ? 'text-primary' : 'text-muted'}
-                    />
-                    <span className="truncate">{table.name}</span>
-                    <span className="ml-auto text-xs text-muted shrink-0">
+                    <span className={`truncate font-mono text-[13px] ${isUsed ? 'text-primary' : ''}`}>
+                      {table.name}
+                    </span>
+                    {table.comment && (
+                      <span className="text-[11px] text-muted truncate ml-1 hidden group-hover:inline">
+                        {table.comment}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[11px] text-muted/50 tabular-nums shrink-0">
                       {table.columns.length}
                     </span>
                   </button>
 
-                  {/* Columns */}
+                  {/* Columns — compact with indent guide */}
                   {isExpanded && (
-                    <div className="ml-6 mt-0.5 mb-1 space-y-0.5">
-                      {table.columns.map((col) => {
+                    <div className="relative ml-[11px] border-l border-border/40">
+                      {table.columns.map((col, idx) => {
                         const isFK = fkColumnIds.has(col.id);
+                        const isLast = idx === table.columns.length - 1;
                         return (
                           <div
                             key={col.id}
-                            className="flex items-center gap-2 px-2 py-1 text-xs rounded-[var(--radius-sm)] hover:bg-surface-hover transition-colors"
+                            className="flex items-center gap-1.5 pl-3 pr-1.5 py-[3px] text-[12px] hover:bg-surface-hover/50 transition-colors relative"
                           >
-                            {isFK ? (
-                              <Icon
-                                name="link"
-                                size={12}
-                                className="text-secondary shrink-0"
-                              />
+                            {/* Branch connector */}
+                            <span className={`absolute left-0 top-0 w-2.5 border-b border-border/40 ${isLast ? 'h-1/2' : 'h-full'}`} />
+                            {isLast && <span className="absolute left-0 top-1/2 bottom-0 w-px bg-background-secondary" />}
+
+                            {/* Column indicator */}
+                            {col.isPrimaryKey ? (
+                              <span className="text-[10px] text-amber-500 font-bold shrink-0 w-3 text-center font-mono">K</span>
+                            ) : isFK ? (
+                              <span className="text-[10px] text-blue-500 font-bold shrink-0 w-3 text-center font-mono">F</span>
                             ) : (
                               <span className="w-3 shrink-0" />
                             )}
-                            <span className="text-foreground truncate">
+
+                            <span className="text-foreground/80 font-mono truncate">
                               {col.name}
                             </span>
-                            <span className="text-muted font-mono ml-auto shrink-0">
+                            <span className="text-[10px] text-muted/50 font-mono ml-auto shrink-0 tabular-nums">
                               {col.dataType}
                             </span>
-                            {col.isPrimaryKey && (
-                              <Badge variant="golden" className="text-[10px] px-1.5 py-0">
-                                PK
-                              </Badge>
-                            )}
-                            {isFK && (
-                              <Badge variant="info" className="text-[10px] px-1.5 py-0">
-                                FK
-                              </Badge>
-                            )}
                           </div>
                         );
                       })}
-                      {table.comment && (
-                        <p className="text-xs text-muted px-2 pt-1 border-t border-border/50">
-                          {table.comment}
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -294,7 +286,7 @@ export function SchemaBrowser() {
           </div>
         </>
       ) : (
-        <div className="h-[400px] rounded-[var(--radius-md)] border border-border overflow-hidden">
+        <div className="h-[400px] rounded-lg border border-border overflow-hidden">
           <ERDiagram />
         </div>
       )}
