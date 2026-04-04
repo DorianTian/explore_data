@@ -113,6 +113,6 @@ Score this chart recommendation.`,
     };
   }
 
-  // Fallback: assume pass if unparseable
-  return { score: 100, passed: true, dimensions: [] };
+  // Fallback: LLM unparseable — fail to trigger correction
+  return { score: 0, passed: false, dimensions: [{ name: 'parse_error', score: 0, issues: ['LLM response unparseable'] }] };
 }

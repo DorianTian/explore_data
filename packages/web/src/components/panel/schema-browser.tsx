@@ -217,24 +217,17 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
     );
     if (!tablesResult.success || !tablesResult.data) return;
 
-    const fullTables = await Promise.all(
-      tablesResult.data.map(async (t) => {
-        const detail = await apiFetch<{
-          table: SchemaTableResponse;
-          columns: SchemaColumnResponse[];
-        }>(`/api/schema/tables/${t.id}`);
-        return {
-          id: t.id,
-          name: t.name,
-          comment: t.comment,
-          columns: detail.data?.columns ?? [],
-          layer: t.layer?.toUpperCase() ?? inferLayer(t.name),
-          domain: t.domain ?? undefined,
-          columnsLoaded: true,
-        };
-      }),
-    );
-    setTables(fullTables);
+    // Load table list only (no columns) — columns loaded lazily on expand
+    const tables = tablesResult.data.map((t) => ({
+      id: t.id,
+      name: t.name,
+      comment: t.comment,
+      columns: [] as SchemaColumn[],
+      layer: t.layer?.toUpperCase() ?? inferLayer(t.name),
+      domain: t.domain ?? undefined,
+      columnsLoaded: false,
+    }));
+    setTables(tables);
 
     const relResult = await apiFetch<
       Array<{

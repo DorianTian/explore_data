@@ -30,7 +30,15 @@ const PG_TYPE_MAP: Record<string, string> = {
 
 function toPgType(seedType: string): string {
   const upper = seedType.toUpperCase();
-  return PG_TYPE_MAP[upper] ?? 'TEXT';
+  if (PG_TYPE_MAP[upper]) return PG_TYPE_MAP[upper];
+  // Handle parameterized types: VARCHAR(N), DECIMAL(p,s), CHAR(N)
+  const varcharMatch = upper.match(/^VARCHAR\((\d+)\)$/);
+  if (varcharMatch) return `VARCHAR(${varcharMatch[1]})`;
+  const decimalMatch = upper.match(/^DECIMAL\((\d+),(\d+)\)$/);
+  if (decimalMatch) return `NUMERIC(${decimalMatch[1]},${decimalMatch[2]})`;
+  const charMatch = upper.match(/^CHAR\((\d+)\)$/);
+  if (charMatch) return `CHAR(${charMatch[1]})`;
+  return 'TEXT';
 }
 
 function generateDDL(pgSchema: string, table: TableDef): string {

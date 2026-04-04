@@ -83,9 +83,9 @@ function StepRow({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const hasThinking = Boolean(entry.thinking);
 
-  /* Auto-expand when this becomes the current step */
+  /* Auto-expand current step, auto-collapse when no longer current */
   useEffect(() => {
-    if (isCurrent) setExpanded(true);
+    setExpanded(isCurrent);
   }, [isCurrent]);
 
   const toggle = useCallback(() => {

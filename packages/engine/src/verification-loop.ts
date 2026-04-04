@@ -200,14 +200,14 @@ Score this SQL on the 5 dimensions.`;
     };
   }
 
-  // Fallback: assume pass if LLM response is unparseable
+  // Fallback: LLM response unparseable — fail with zero scores to trigger retry
   return {
     dimensions: [
-      { name: 'correctness', weight: 35, score: 35, issues: [] },
-      { name: 'completeness', weight: 25, score: 25, issues: [] },
-      { name: 'efficiency', weight: 15, score: 15, issues: [] },
-      { name: 'safety', weight: 15, score: 15, issues: [] },
-      { name: 'dialect', weight: 10, score: 10, issues: [] },
+      { name: 'correctness', weight: 35, score: 0, issues: ['LLM response unparseable'] },
+      { name: 'completeness', weight: 25, score: 0, issues: [] },
+      { name: 'efficiency', weight: 15, score: 0, issues: [] },
+      { name: 'safety', weight: 15, score: 0, issues: [] },
+      { name: 'dialect', weight: 10, score: 0, issues: [] },
     ],
   };
 }

@@ -16,6 +16,7 @@ export type { QueryComplexity, ClassificationResult } from './skills/index.js';
 export { validateSql } from './antlr4-validator.js';
 export type { Antlr4ValidationResult } from './antlr4-validator.js';
 export { QueryExecutor } from './query-executor.js';
+export type { ExecutionConfig, ExecutionResult } from './query-executor.js';
 export { ChartRecommender } from './chart-recommender.js';
 export { EmbeddingService } from './embedding-service.js';
 export * from './config.js';

@@ -263,7 +263,7 @@ export function createQueryRouter(db: DbClient): Router {
             const executor = new QueryExecutor();
             const execResult = await executor.execute(
               finalResult.sql,
-              ds.connectionConfig as never,
+              ds.connectionConfig as import('@nl2sql/engine').ExecutionConfig,
               { timeoutMs: 30000, rowLimit: 1000 },
             );
 

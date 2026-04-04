@@ -239,6 +239,11 @@ export function SmartChart({ config, rows, columns }: SmartChartProps) {
 
   /* metric_card: render MetricCard */
   if (config.chartType === 'metric_card' || config.chartType === 'kpi') {
+    if (rows.length === 0) {
+      return (
+        <div className="flex items-center justify-center p-8 text-muted text-sm">暂无数据</div>
+      );
+    }
     const valueField = config.valueField ?? columns[1]?.name ?? columns[0]?.name;
     const firstRow = rows[0];
     const value = firstRow ? (firstRow[valueField] as string | number) ?? 0 : 0;
