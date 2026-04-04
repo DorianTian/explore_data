@@ -34,7 +34,7 @@ export function WidgetCard({ widget, onClick }: WidgetCardProps) {
   const handleFavorite = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      toggleFavorite('widget', widget.id);
+      toggleFavorite(widget.projectId, 'widget', widget.id);
     },
     [toggleFavorite, widget.id],
   );
@@ -67,7 +67,7 @@ export function WidgetCard({ widget, onClick }: WidgetCardProps) {
         )}
 
         {/* Live indicator */}
-        {widget.refreshInterval && (
+        {widget.isLive && (
           <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[10px] text-emerald-400 font-medium">LIVE</span>

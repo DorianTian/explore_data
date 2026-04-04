@@ -25,6 +25,7 @@ export function AppShell({ children, panel }: AppShellProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Sidebar manages its own width via sidebar-store */}
       <Sidebar />
 
       {/* Main content */}

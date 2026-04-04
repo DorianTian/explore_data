@@ -48,27 +48,25 @@ const STEPS = [
   { num: '03', title: '查看结果', desc: '执行查询并自动生成图表，数据一目了然', icon: '📊' },
 ];
 
-/* ─── Token color mapping for the SQL preview ─── */
+/* ─── Token color mapping for the SQL preview (light theme) ─── */
 function tokenColor(type: string): string {
   switch (type) {
     case 'keyword': return 'text-primary font-medium';
     case 'function': return 'text-secondary';
     case 'string': return 'text-success';
-    case 'number': return 'text-[#c084fc]';
-    default: return 'text-foreground/80';
+    case 'number': return 'text-[#7c3aed]';
+    default: return 'text-foreground/70';
   }
 }
 
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-background text-foreground font-sans overflow-x-hidden">
-      {/* Noise texture */}
-      <div className="noise-overlay" />
 
       {/* ═══════════ NAV ═══════════ */}
       <nav className="relative z-10 flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 5c0 1.66-4.03 3-9 3S3 6.66 3 5s4.03-3 9-3 9 1.34 9 3" />
               <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
@@ -93,15 +91,15 @@ export default function LandingPage() {
 
       {/* ═══════════ HERO ═══════════ */}
       <section className="relative z-10 flex flex-col items-center text-center px-6 pt-20 pb-32">
-        {/* Radial glow behind hero */}
+        {/* Subtle warm radial gradient on white */}
         <div
-          className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-30"
-          style={{ background: 'radial-gradient(ellipse at center, rgba(245,158,11,0.12) 0%, rgba(59,130,246,0.06) 40%, transparent 70%)' }}
+          className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] opacity-50"
+          style={{ background: 'radial-gradient(ellipse at center, rgba(217,119,6,0.06) 0%, rgba(37,99,235,0.03) 40%, transparent 70%)' }}
         />
 
-        <div className="landing-fade-in relative max-w-3xl mx-auto">
-          <h1 className="text-5xl sm:text-6xl font-bold leading-tight tracking-tight">
-            用<span className="text-primary" style={{ textShadow: '0 0 40px rgba(245,158,11,0.3)' }}>自然语言</span>查询数据
+        <div className="animate-landing-entrance relative max-w-3xl mx-auto">
+          <h1 className="text-5xl sm:text-6xl font-bold leading-tight tracking-tight text-foreground">
+            用<span className="text-primary">自然语言</span>查询数据
           </h1>
           <p className="mt-6 text-lg text-muted max-w-xl mx-auto leading-relaxed">
             AI 驱动的 NL2SQL 引擎，将自然语言转化为精确的 SQL 查询
@@ -110,8 +108,7 @@ export default function LandingPage() {
           <div className="mt-10 flex items-center justify-center gap-4">
             <Link
               href="/chat"
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-[var(--radius-lg)] bg-primary text-primary-foreground font-semibold text-base hover:bg-primary-hover transition-colors"
-              style={{ boxShadow: '0 0 24px rgba(245,158,11,0.25)' }}
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-[var(--radius-lg)] bg-primary text-white font-semibold text-base hover:bg-primary-hover transition-colors shadow-md"
             >
               开始使用
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -130,10 +127,10 @@ export default function LandingPage() {
         </div>
 
         {/* ─── Hero SQL Preview ─── */}
-        <div className="landing-fade-in-delay-1 relative mt-20 w-full max-w-2xl mx-auto">
-          <div className="rounded-[var(--radius-xl)] border border-border bg-surface/80 backdrop-blur-sm overflow-hidden" style={{ boxShadow: '0 0 60px rgba(245,158,11,0.06), 0 20px 40px rgba(0,0,0,0.3)' }}>
+        <div className="animate-landing-entrance-delayed relative mt-20 w-full max-w-2xl mx-auto">
+          <div className="rounded-[var(--radius-xl)] border border-border bg-white shadow-lg overflow-hidden">
             {/* Terminal title bar */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-surface">
               <div className="flex gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-error/60" />
                 <span className="w-3 h-3 rounded-full bg-warning/60" />
@@ -146,21 +143,21 @@ export default function LandingPage() {
             <div className="p-5 space-y-4">
               {/* User question */}
               <div className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-secondary/20 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-full bg-secondary/10 flex items-center justify-center shrink-0 mt-0.5">
                   <span className="text-xs text-secondary font-medium">U</span>
                 </div>
-                <div className="bg-surface-elevated rounded-[var(--radius-md)] px-4 py-2.5 text-sm text-foreground">
+                <div className="bg-surface rounded-[var(--radius-md)] px-4 py-2.5 text-sm text-foreground">
                   上个月各区域的 GMV 是多少？按 GMV 降序排列，取 Top 10
                 </div>
               </div>
 
               {/* AI SQL response */}
               <div className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                   <span className="text-xs text-primary font-medium">AI</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="bg-background rounded-[var(--radius-md)] border border-border p-4 font-mono text-[13px] leading-relaxed overflow-x-auto">
+                  <div className="bg-surface rounded-[var(--radius-md)] border border-border p-4 font-mono text-[13px] leading-relaxed overflow-x-auto">
                     {MOCK_SQL_LINES.map((line, i) => (
                       <div key={i}>
                         {line.tokens.map((tok, j) => (
@@ -186,13 +183,12 @@ export default function LandingPage() {
           </p>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {FEATURES.map((f, i) => (
+            {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="landing-fade-in-delay-1 group rounded-[var(--radius-xl)] border border-border bg-surface/50 p-7 hover:bg-surface hover:border-primary/20 transition-all duration-300"
-                style={{ animationDelay: `${i * 120}ms` }}
+                className="group rounded-[var(--radius-xl)] border border-border bg-white p-7 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-primary/15 transition-colors">
+                <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-primary/8 text-primary flex items-center justify-center mb-5 group-hover:bg-primary/12 transition-colors">
                   {f.icon}
                 </div>
                 <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
@@ -204,13 +200,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════ HOW IT WORKS ═══════════ */}
-      <section className="relative z-10 px-6 py-28">
-        {/* Subtle section divider gradient */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.06) 0%, transparent 60%)' }}
-        />
-
+      <section className="relative z-10 px-6 py-28 bg-surface">
         <div className="relative max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-4">工作流程</h2>
           <p className="text-center text-muted mb-16 max-w-lg mx-auto">
@@ -219,13 +209,13 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {STEPS.map((s, i) => (
-              <div key={s.num} className="landing-fade-in-delay-2 relative text-center" style={{ animationDelay: `${i * 150}ms` }}>
+              <div key={s.num} className="relative text-center">
                 {/* Connector line (between items, not after last) */}
                 {i < STEPS.length - 1 && (
                   <div className="hidden md:block absolute top-10 left-[calc(50%+40px)] w-[calc(100%-80px)] h-px bg-border" />
                 )}
 
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full border border-border bg-surface mb-6 text-3xl">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full border border-border bg-white shadow-sm mb-6 text-3xl">
                   {s.icon}
                 </div>
                 <div className="text-xs font-mono text-primary mb-2">{s.num}</div>
@@ -248,8 +238,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/chat"
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-[var(--radius-lg)] bg-primary text-primary-foreground font-semibold text-base hover:bg-primary-hover transition-colors"
-            style={{ boxShadow: '0 0 30px rgba(245,158,11,0.2)' }}
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-[var(--radius-lg)] bg-primary text-white font-semibold text-base hover:bg-primary-hover transition-colors shadow-md"
           >
             开始使用
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -275,31 +264,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* ─── Entrance animation styles ─── */}
-      <style>{`
-        .landing-fade-in {
-          animation: landing-entrance 0.8s ease-out both;
-        }
-        .landing-fade-in-delay-1 {
-          animation: landing-entrance 0.8s ease-out both;
-          animation-delay: 200ms;
-        }
-        .landing-fade-in-delay-2 {
-          animation: landing-entrance 0.8s ease-out both;
-          animation-delay: 400ms;
-        }
-        @keyframes landing-entrance {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -7,51 +7,55 @@ export interface Widget {
   id: string;
   projectId: string;
   datasourceId: string;
+  conversationId: string | null;
+  messageId: string | null;
   title: string;
   description: string | null;
-  sourceType: 'chat' | 'manual';
-  sourceMessageId: string | null;
-  naturalLanguageQuery: string | null;
+  naturalLanguage: string;
   sql: string;
   chartType: string;
   chartConfig: unknown;
-  refreshInterval: number | null;
+  dataSnapshot: unknown;
+  isLive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 /** Placement of a widget inside a dashboard grid */
 export interface WidgetPlacement {
-  id: string;
-  dashboardId: string;
-  widgetId: string;
-  positionX: number;
-  positionY: number;
-  width: number;
-  height: number;
-  widget?: Widget;
+  placement: {
+    id: string;
+    dashboardId: string;
+    widgetId: string;
+    positionX: number;
+    positionY: number;
+    width: number;
+    height: number;
+  };
+  widget: Widget;
 }
 
 /** Dashboard summary (list endpoint) */
 export interface Dashboard {
   id: string;
   projectId: string;
-  name: string;
+  title: string;
   description: string | null;
   layoutConfig: { columns?: number };
   createdAt: string;
   updatedAt: string;
 }
 
-/** Dashboard with its placements (detail endpoint) */
-export interface DashboardDetail extends Dashboard {
-  placements: WidgetPlacement[];
+/** Dashboard with its widget placements (detail endpoint) */
+export interface DashboardDetail {
+  dashboard: Dashboard;
+  widgets: WidgetPlacement[];
 }
 
 /** Favorite record */
 export interface Favorite {
   id: string;
-  userId: string;
+  projectId: string;
   targetType: 'widget' | 'dashboard';
   targetId: string;
 }
@@ -67,13 +71,13 @@ interface DashboardState {
 interface DashboardActions {
   fetchWidgets: (projectId: string) => Promise<void>;
   fetchDashboards: (projectId: string) => Promise<void>;
-  fetchFavorites: () => Promise<void>;
+  fetchFavorites: (projectId: string) => Promise<void>;
   fetchDashboard: (id: string) => Promise<void>;
   createWidget: (params: CreateWidgetParams) => Promise<Widget | null>;
   createDashboard: (params: CreateDashboardParams) => Promise<Dashboard | null>;
   deleteDashboard: (id: string) => Promise<boolean>;
   deleteWidget: (id: string) => Promise<boolean>;
-  toggleFavorite: (targetType: 'widget' | 'dashboard', targetId: string) => Promise<void>;
+  toggleFavorite: (projectId: string, targetType: 'widget' | 'dashboard', targetId: string) => Promise<void>;
   isFavorited: (targetType: 'widget' | 'dashboard', targetId: string) => boolean;
 }
 
@@ -87,7 +91,7 @@ interface CreateWidgetParams {
 
 interface CreateDashboardParams {
   projectId: string;
-  name: string;
+  title: string;
   description?: string;
 }
 
@@ -124,8 +128,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     }
   },
 
-  fetchFavorites: async () => {
-    const res = await apiFetch<Favorite[]>('/api/favorites');
+  fetchFavorites: async (projectId) => {
+    const res = await apiFetch<Favorite[]>(`/api/favorites?projectId=${projectId}`);
     if (res.success && res.data) {
       set({ favorites: res.data });
     }
@@ -149,12 +153,12 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       datasourceId,
       title,
       description: description || undefined,
-      sourceType: 'chat' as const,
-      sourceMessageId: message.id,
-      naturalLanguageQuery: message.content,
+      naturalLanguage: message.content,
       sql: message.sql,
       chartType: message.chartRecommendation?.chartType ?? 'table',
       chartConfig: message.chartRecommendation?.config ?? {},
+      dataSnapshot: message.executionResult ?? undefined,
+      messageId: message.id,
     };
 
     const res = await apiPost<Widget>('/api/widgets', body);
@@ -165,10 +169,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     return null;
   },
 
-  createDashboard: async ({ projectId, name, description }) => {
+  createDashboard: async ({ projectId, title, description }) => {
     const res = await apiPost<Dashboard>('/api/dashboards', {
       projectId,
-      name,
+      title,
       description: description || undefined,
     });
     if (res.success && res.data) {
@@ -196,22 +200,15 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     return false;
   },
 
-  toggleFavorite: async (targetType, targetId) => {
-    const { favorites } = get();
-    const existing = favorites.find(
-      (f) => f.targetType === targetType && f.targetId === targetId,
-    );
-
-    if (existing) {
-      const res = await apiDelete(`/api/favorites/${existing.id}`);
-      if (res.success) {
-        set((s) => ({ favorites: s.favorites.filter((f) => f.id !== existing.id) }));
-      }
-    } else {
-      const res = await apiPost<Favorite>('/api/favorites', { targetType, targetId });
-      if (res.success && res.data) {
-        set((s) => ({ favorites: [...s.favorites, res.data!] }));
-      }
+  toggleFavorite: async (projectId, targetType, targetId) => {
+    const res = await apiPost<{ favorited: boolean; id?: string }>('/api/favorites/toggle', {
+      projectId,
+      targetType,
+      targetId,
+    });
+    if (res.success) {
+      /* Re-fetch to stay in sync */
+      get().fetchFavorites(projectId);
     }
   },
 

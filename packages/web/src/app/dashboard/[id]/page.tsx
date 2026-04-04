@@ -4,7 +4,7 @@ import { useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/app-shell';
 import { ChartView } from '@/components/chart-view';
-import { useDashboardStore } from '@/stores/dashboard-store';
+import { useDashboardStore, type WidgetPlacement } from '@/stores/dashboard-store';
 import { Button } from '@/components/ui';
 import { Icon } from '@/components/shared/icon';
 
@@ -16,13 +16,15 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
   const { id } = use(params);
   const router = useRouter();
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
-  const dashboard = useDashboardStore((s) => s.currentDashboard);
+  const detail = useDashboardStore((s) => s.currentDashboard);
   const loading = useDashboardStore((s) => s.loading);
 
   useEffect(() => {
     fetchDashboard(id);
   }, [id, fetchDashboard]);
 
+  const dashboard = detail?.dashboard;
+  const placements = detail?.widgets ?? [];
   const columns = dashboard?.layoutConfig?.columns ?? 2;
 
   return (
@@ -39,7 +41,7 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
           </Button>
           <div className="min-w-0">
             <h2 className="text-sm font-medium text-foreground truncate">
-              {dashboard?.name ?? '加载中...'}
+              {dashboard?.title ?? '加载中...'}
             </h2>
             {dashboard?.description && (
               <p className="text-xs text-muted truncate">{dashboard.description}</p>
@@ -57,7 +59,7 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
             <div className="flex items-center justify-center py-20 text-muted">
               <p className="text-sm">仪表盘未找到</p>
             </div>
-          ) : dashboard.placements.length === 0 ? (
+          ) : placements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted">
               <Icon name="layout" size={40} className="mb-3 opacity-30" />
               <p className="text-sm">还没有添加任何组件</p>
@@ -70,10 +72,12 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
                 gridTemplateColumns: `repeat(${columns}, 1fr)`,
               }}
             >
-              {dashboard.placements
-                .sort((a, b) => a.positionY - b.positionY || a.positionX - b.positionX)
-                .map((placement) => {
-                  const widget = placement.widget;
+              {placements
+                .sort((a: WidgetPlacement, b: WidgetPlacement) =>
+                  a.placement.positionY - b.placement.positionY || a.placement.positionX - b.placement.positionX,
+                )
+                .map((item: WidgetPlacement) => {
+                  const widget = item.widget;
                   if (!widget) return null;
 
                   const raw = widget.chartConfig as {
@@ -91,17 +95,17 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
 
                   return (
                     <div
-                      key={placement.id}
+                      key={item.placement.id}
                       className="rounded-xl border border-border bg-background overflow-hidden"
                       style={{
-                        gridColumn: `span ${Math.min(placement.width, columns)}`,
+                        gridColumn: `span ${Math.min(item.placement.width, columns)}`,
                       }}
                     >
                       <div className="flex items-center justify-between px-4 py-2.5 bg-surface border-b border-border">
                         <span className="text-xs font-medium text-foreground truncate">
                           {widget.title}
                         </span>
-                        {widget.refreshInterval && (
+                        {widget.isLive && (
                           <div className="flex items-center gap-1 ml-2 shrink-0">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                             <span className="text-[10px] text-emerald-400 font-medium">LIVE</span>

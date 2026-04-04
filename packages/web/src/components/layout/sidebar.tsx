@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useProjectStore } from '@/stores/project-store';
+import { useSidebarStore, SIDEBAR_MIN, SIDEBAR_MAX } from '@/stores/sidebar-store';
 import { usePanelStore } from '@/stores/panel-store';
 import { Icon, type IconName } from '@/components/shared/icon';
-import { Button, Select } from '@/components/ui';
+import { Tooltip } from '@/components/ui';
+import { WorkspaceSelector } from './workspace-selector';
 
 interface NavItem {
   href: string;
@@ -25,214 +26,155 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const {
-    projects,
-    datasources,
-    currentProjectId,
-    currentDatasourceId,
-    loadingProjects,
-    fetchProjects,
-    fetchDatasources,
-    setCurrentProject,
-    setCurrentDatasource,
-    createProject,
-    createDatasource,
-  } = useProjectStore();
+  const width = useSidebarStore((s) => s.width);
+  const isCollapsed = useSidebarStore((s) => s.isCollapsed);
+  const setWidth = useSidebarStore((s) => s.setWidth);
+  const toggleCollapse = useSidebarStore((s) => s.toggleCollapse);
 
   const togglePanel = usePanelStore((s) => s.togglePanel);
   const isPanelOpen = usePanelStore((s) => s.isOpen);
 
-  const [showNewProject, setShowNewProject] = useState(false);
-  const [showNewDatasource, setShowNewDatasource] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newDsName, setNewDsName] = useState('');
-  const [newDsDialect, setNewDsDialect] = useState('postgresql');
+  const startResize = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = width;
 
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+      const onMouseMove = (ev: MouseEvent) => {
+        const newWidth = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, startWidth + ev.clientX - startX));
+        setWidth(newWidth);
+      };
 
-  // After page refresh, persist restores currentProjectId but datasources is empty — re-fetch
-  useEffect(() => {
-    if (currentProjectId && datasources.length === 0) {
-      fetchDatasources(currentProjectId);
-    }
-  }, [currentProjectId, datasources.length, fetchDatasources]);
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
 
-  const handleCreateProject = useCallback(async () => {
-    const trimmed = newProjectName.trim();
-    if (!trimmed) return;
-    const project = await createProject(trimmed);
-    if (project) {
-      setCurrentProject(project.id);
-      setShowNewProject(false);
-      setNewProjectName('');
-    }
-  }, [newProjectName, createProject, setCurrentProject]);
-
-  const handleCreateDatasource = useCallback(async () => {
-    const trimmed = newDsName.trim();
-    if (!trimmed) return;
-    const ds = await createDatasource(trimmed, newDsDialect);
-    if (ds) {
-      setCurrentDatasource(ds.id);
-      setShowNewDatasource(false);
-      setNewDsName('');
-    }
-  }, [newDsName, newDsDialect, createDatasource, setCurrentDatasource]);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [width, setWidth],
+  );
 
   return (
-    <aside className="w-[var(--sidebar-width)] flex flex-col border-r border-border bg-sidebar-bg h-full shrink-0">
+    <aside
+      style={{ width }}
+      className="relative flex flex-col h-full shrink-0 bg-sidebar-bg border-r border-sidebar-border transition-[width] duration-100 ease-out"
+    >
+      {/* Drag handle */}
+      <div className="resize-handle" onMouseDown={startResize} />
+
       {/* Brand */}
-      <div className="px-5 py-4 border-b border-border">
-        <h1 className="text-lg font-bold text-foreground tracking-tight">
-          NL2SQL
-        </h1>
-        <p className="text-xs text-muted mt-0.5">智能数据查询平台</p>
-      </div>
-
-      {/* Project / Datasource selectors */}
-      <div className="px-3 py-3 border-b border-border space-y-2">
-        <div>
-          <label className="block text-[11px] font-medium text-muted uppercase tracking-wider px-1 mb-1">
-            项目
-          </label>
-          {loadingProjects ? (
-            <div className="skeleton h-8 rounded-md" />
-          ) : (
-            <Select
-              value={currentProjectId ?? ''}
-              onChange={(v) => setCurrentProject(v || null)}
-              options={projects.map((p) => ({ value: p.id, label: p.name }))}
-              placeholder="选择项目..."
-              size="sm"
-            />
-          )}
-        </div>
-
-        {showNewProject ? (
-          <div className="flex gap-1.5">
-            <input
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateProject();
-                if (e.key === 'Escape') setShowNewProject(false);
-              }}
-              placeholder="项目名称"
-              autoFocus
-              className="flex-1 min-w-0 h-7 rounded border border-border bg-background px-2 text-xs outline-none"
-            />
-            <Button size="sm" onClick={handleCreateProject}>
-              创建
-            </Button>
+      <div className={`border-b border-sidebar-border ${isCollapsed ? 'px-2 py-3' : 'px-4 py-3'}`}>
+        {isCollapsed ? (
+          <div className="flex justify-center">
+            <span className="text-sm font-bold text-primary">N</span>
           </div>
         ) : (
-          <button
-            onClick={() => setShowNewProject(true)}
-            className="flex items-center gap-1.5 text-xs text-muted hover:text-foreground px-1 cursor-pointer"
-          >
-            <Icon name="plus" size={12} /> 新建项目
-          </button>
-        )}
-
-        {currentProjectId && (
-          <div className="pt-1 space-y-1.5">
-            <label className="block text-[11px] font-medium text-muted uppercase tracking-wider px-1">
-              数据源
-            </label>
-            <Select
-              value={currentDatasourceId ?? ''}
-              onChange={(v) => setCurrentDatasource(v || null)}
-              options={datasources.map((d) => ({ value: d.id, label: `${d.name} (${d.dialect})` }))}
-              placeholder="选择数据源..."
-              size="sm"
-            />
-
-            {showNewDatasource ? (
-              <div className="space-y-1.5">
-                <input
-                  value={newDsName}
-                  onChange={(e) => setNewDsName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateDatasource();
-                    if (e.key === 'Escape') setShowNewDatasource(false);
-                  }}
-                  placeholder="数据源名称"
-                  autoFocus
-                  className="w-full h-7 rounded border border-border bg-background px-2 text-xs outline-none"
-                />
-                <div className="flex gap-1.5">
-                  <Select
-                    value={newDsDialect}
-                    onChange={setNewDsDialect}
-                    options={['postgresql', 'mysql', 'hive', 'sparksql', 'flinksql'].map((d) => ({ value: d, label: d }))}
-                    size="sm"
-                    className="flex-1"
-                  />
-                  <Button size="sm" onClick={handleCreateDatasource}>
-                    创建
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowNewDatasource(true)}
-                className="flex items-center gap-1.5 text-xs text-muted hover:text-foreground px-1 cursor-pointer"
-              >
-                <Icon name="plus" size={12} /> 新建数据源
-              </button>
-            )}
+          <div>
+            <h1 className="text-sm font-bold text-foreground tracking-tight">NL2SQL</h1>
+            <p className="text-[11px] text-muted mt-0.5">智能数据查询平台</p>
           </div>
         )}
+      </div>
+
+      {/* Workspace selector */}
+      <div className={`border-b border-sidebar-border ${isCollapsed ? 'p-1.5' : 'p-2'}`}>
+        <WorkspaceSelector collapsed={isCollapsed} />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 p-1.5 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = item.href === '/'
-            ? pathname === '/'
-            : pathname.startsWith(item.href);
-          return (
+          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+
+          const linkContent = (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-sm transition-colors ${
+              className={`flex items-center rounded-[var(--radius-md)] text-sm transition-colors relative ${
+                isCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-1.5'
+              } ${
                 isActive
                   ? 'bg-surface-hover text-foreground font-medium'
                   : 'text-muted hover:bg-surface hover:text-foreground'
               }`}
             >
+              {/* Active indicator */}
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r" />
+              )}
               <Icon
                 name={item.icon}
                 size={18}
-                className={isActive ? 'text-primary' : ''}
+                className={`shrink-0 ${isActive ? 'text-primary' : ''}`}
               />
-              {item.label}
+              {!isCollapsed && <span>{item.label}</span>}
             </Link>
           );
+
+          if (isCollapsed) {
+            return (
+              <Tooltip key={item.href} content={item.label} side="right">
+                {linkContent}
+              </Tooltip>
+            );
+          }
+
+          return linkContent;
         })}
       </nav>
 
       {/* Panel toggle (chat page only) */}
       {pathname === '/chat' && (
-        <div className="px-3 py-2 border-t border-border">
-          <button
-            onClick={togglePanel}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] text-sm text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
-          >
-            <Icon
-              name={isPanelOpen ? 'panelRightClose' : 'panelRight'}
-              size={16}
-            />
-            {isPanelOpen ? '收起面板' : '展开面板'}
-          </button>
+        <div className={`border-t border-sidebar-border ${isCollapsed ? 'p-1.5' : 'px-2 py-1.5'}`}>
+          {isCollapsed ? (
+            <Tooltip content={isPanelOpen ? '收起面板' : '展开面板'} side="right">
+              <button
+                onClick={togglePanel}
+                className="flex items-center justify-center w-full p-2 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+              >
+                <Icon name={isPanelOpen ? 'panelRightClose' : 'panelRight'} size={16} />
+              </button>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={togglePanel}
+              className="flex items-center gap-2 w-full px-3 py-1.5 rounded-[var(--radius-md)] text-sm text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+            >
+              <Icon name={isPanelOpen ? 'panelRightClose' : 'panelRight'} size={16} />
+              {isPanelOpen ? '收起面板' : '展开面板'}
+            </button>
+          )}
         </div>
       )}
 
-      {/* Version */}
-      <div className="px-4 py-3 border-t border-border">
-        <p className="text-[11px] text-muted">NL2SQL v2.0</p>
+      {/* Collapse toggle + version */}
+      <div className={`border-t border-sidebar-border ${isCollapsed ? 'p-1.5' : 'px-2 py-1.5'}`}>
+        {isCollapsed ? (
+          <Tooltip content="展开侧栏" side="right">
+            <button
+              onClick={toggleCollapse}
+              className="flex items-center justify-center w-full p-2 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+            >
+              <Icon name="chevronRight" size={16} />
+            </button>
+          </Tooltip>
+        ) : (
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted px-1">v2.0</p>
+            <button
+              onClick={toggleCollapse}
+              className="flex items-center justify-center p-1.5 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+            >
+              <Icon name="chevronLeft" size={16} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

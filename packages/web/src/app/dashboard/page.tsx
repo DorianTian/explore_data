@@ -27,7 +27,7 @@ function DashboardPageInner() {
     if (!currentProjectId) return;
     fetchWidgets(currentProjectId);
     fetchDashboards(currentProjectId);
-    fetchFavorites();
+    fetchFavorites(currentProjectId);
   }, [currentProjectId, fetchWidgets, fetchDashboards, fetchFavorites]);
 
   const handleCreate = useCallback(async () => {
@@ -37,7 +37,7 @@ function DashboardPageInner() {
     try {
       const dashboard = await createDashboard({
         projectId: currentProjectId,
-        name: newName.trim(),
+        title: newName.trim(),
         description: newDesc.trim() || undefined,
       });
       if (dashboard) {

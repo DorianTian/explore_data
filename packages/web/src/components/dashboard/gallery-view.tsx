@@ -44,7 +44,7 @@ export function GalleryView() {
     if (query) {
       result = result.filter(
         (d) =>
-          d.name.toLowerCase().includes(query) ||
+          d.title.toLowerCase().includes(query) ||
           (d.description?.toLowerCase().includes(query) ?? false),
       );
     }
@@ -131,7 +131,7 @@ export function GalleryView() {
                   (f) => f.targetType === 'dashboard' && f.targetId === d.id,
                 )}
                 onOpen={() => router.push(`/dashboard/${d.id}`)}
-                onToggleFavorite={() => toggleFavorite('dashboard', d.id)}
+                onToggleFavorite={() => toggleFavorite(d.projectId, 'dashboard', d.id)}
                 onDelete={() => deleteDashboard(d.id)}
               />
             ))}
@@ -168,7 +168,7 @@ function DashboardCard({
 
       <div className="p-3 space-y-2">
         <h3 className="text-sm font-medium text-foreground line-clamp-1">
-          {dashboard.name}
+          {dashboard.title}
         </h3>
         {dashboard.description && (
           <p className="text-xs text-muted line-clamp-2">{dashboard.description}</p>
