@@ -111,7 +111,7 @@ function ChatPageInner() {
           {/* Right panel — artifact (SQL/Result/Chart) or schema browser */}
           {showRightPanel && (
             <div
-              className="shrink-0 border-l border-border bg-background animate-slide-in-right"
+              className="shrink-0 border-l border-border bg-background-secondary animate-slide-in-right"
               style={{ width: 'min(480px, 45vw)' }}
             >
               {artifactOpen ? (
