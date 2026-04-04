@@ -94,6 +94,7 @@ export function useSSEStream() {
               isStreaming: false,
               pipelineStatus: undefined,
             });
+            setLoading(false);
             break;
         }
       };
@@ -108,6 +109,7 @@ export function useSSEStream() {
       };
 
       const handleDone = () => {
+        updateMessage(assistantMessageId, { isStreaming: false, pipelineStatus: undefined });
         setLoading(false);
       };
 

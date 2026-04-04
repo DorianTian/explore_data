@@ -42,9 +42,13 @@ export function WidgetCard({ widget, onClick }: WidgetCardProps) {
   );
 
   const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
+    async (e: React.MouseEvent) => {
       e.stopPropagation();
-      deleteWidget(widget.id);
+      try {
+        await deleteWidget(widget.id);
+      } catch {
+        /* Delete failed — widget remains in list */
+      }
     },
     [deleteWidget, widget.id],
   );

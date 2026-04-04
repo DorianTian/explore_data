@@ -82,9 +82,11 @@ export function ExecutionDetail() {
   const handleExportCsv = useCallback(() => {
     if (!message?.executionResult) return;
     const { rows, columns } = message.executionResult;
-    const header = columns.map((c) => c.name).join(',');
+    const esc = (v: string) =>
+      v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v.replace(/"/g, '""')}"` : v;
+    const header = columns.map((c) => esc(c.name)).join(',');
     const body = rows
-      .map((r) => columns.map((c) => String(r[c.name] ?? '')).join(','))
+      .map((r) => columns.map((c) => esc(String(r[c.name] ?? ''))).join(','))
       .join('\n');
     const blob = new Blob([`${header}\n${body}`], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

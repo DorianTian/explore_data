@@ -31,7 +31,7 @@ export function SaveWidgetDialog({ open, onClose, message }: SaveWidgetDialogPro
   useEffect(() => {
     setTitle(message.content.slice(0, 80) || 'Untitled Widget');
     setDescription('');
-  }, [message.id, message.content]);
+  }, [message.id]); // eslint-disable-line react-hooks/exhaustive-deps — content excluded to preserve user edits during streaming
 
   const createWidget = useDashboardStore((s) => s.createWidget);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);

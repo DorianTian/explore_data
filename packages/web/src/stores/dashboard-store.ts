@@ -191,7 +191,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   deleteDashboard: async (id) => {
     const res = await apiDelete(`/api/dashboards/${id}`);
     if (res.success) {
-      set((s) => ({ dashboards: s.dashboards.filter((d) => d.id !== id) }));
+      set((s) => ({
+        dashboards: s.dashboards.filter((d) => d.id !== id),
+        currentDashboard: s.currentDashboard?.dashboard.id === id ? null : s.currentDashboard,
+      }));
       return true;
     }
     return false;
