@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Sidebar } from '@/components/sidebar';
+import { AppShell } from '@/components/layout/app-shell';
 import { ToastProvider, useToast } from '@/components/toast';
 import { useProjectStore } from '@/stores/project-store';
 import { apiPost } from '@/lib/api';
@@ -60,8 +60,7 @@ function MetricsPageInner() {
   }, [name, displayName, expression, metricType, currentProjectId, toast]);
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
+    <AppShell>
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         <header className="border-b border-border px-6 py-3 shrink-0">
           <h2 className="text-sm font-medium text-foreground">指标管理</h2>
@@ -181,7 +180,7 @@ function MetricsPageInner() {
           </div>
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }
 
