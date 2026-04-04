@@ -245,22 +245,23 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
   }
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      nodeTypes={nodeTypes}
-      fitView
-      minZoom={0.2}
-      maxZoom={1.5}
-      proOptions={{ hideAttribution: true }}
-      className="touch-none"
-    >
-      <Background color="var(--border)" gap={20} size={1} />
-      <Controls
-        className="!bg-surface !border-border !rounded-[var(--radius-md)] !shadow-md [&>button]:!bg-surface [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-surface-hover"
-      />
-    </ReactFlow>
+    <div style={{ width: '100%', height: '100%' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={nodeTypes}
+        fitView
+        minZoom={0.2}
+        maxZoom={1.5}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background color="var(--border)" gap={20} size={1} />
+        <Controls
+          className="!bg-surface !border-border !rounded-[var(--radius-md)] !shadow-md [&>button]:!bg-surface [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-surface-hover"
+        />
+      </ReactFlow>
+    </div>
   );
 }

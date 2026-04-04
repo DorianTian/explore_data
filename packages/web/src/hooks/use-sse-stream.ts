@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import { connectSSE, type SSEEvent } from '@/lib/sse';
-import { useChatStore, type PipelineStep, type ChatMessage } from '@/stores/chat-store';
+import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 import { usePanelStore } from '@/stores/panel-store';
 import { useProjectStore } from '@/stores/project-store';
 
@@ -14,6 +14,7 @@ export function useSSEStream() {
   const addMessage = useChatStore((s) => s.addMessage);
   const updateMessage = useChatStore((s) => s.updateMessage);
   const appendContent = useChatStore((s) => s.appendContent);
+  const appendInsight = useChatStore((s) => s.appendInsight);
   const setLoading = useChatStore((s) => s.setLoading);
   const setConversationId = useChatStore((s) => s.setConversationId);
   const setPipelineStatus = useChatStore((s) => s.setPipelineStatus);
@@ -51,6 +52,7 @@ export function useSSEStream() {
 
       const handleEvent = (event: SSEEvent) => {
         const data = event.data as Record<string, unknown>;
+        console.log('[SSE event]', event.event, data); // DEBUG
 
         switch (event.event) {
           case 'conversation':
@@ -59,9 +61,9 @@ export function useSSEStream() {
 
           case 'status':
             setPipelineStatus(assistantMessageId, {
-              currentStep: data.step as PipelineStep,
+              currentStep: data.step as string,
               message: data.message as string,
-              completedSteps: [],
+              steps: [],
             });
             break;
 
@@ -91,6 +93,10 @@ export function useSSEStream() {
             updateMessage(assistantMessageId, {
               chartRecommendation: data as ChatMessage['chartRecommendation'],
             });
+            break;
+
+          case 'insight_token':
+            appendInsight(assistantMessageId, data.text as string);
             break;
 
           case 'error':
@@ -139,6 +145,7 @@ export function useSSEStream() {
       addMessage,
       updateMessage,
       appendContent,
+      appendInsight,
       setLoading,
       setConversationId,
       setPipelineStatus,
