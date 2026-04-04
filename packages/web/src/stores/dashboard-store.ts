@@ -42,6 +42,7 @@ export interface Dashboard {
   title: string;
   description: string | null;
   layoutConfig: { columns?: number };
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +89,7 @@ interface DashboardActions {
 interface CreateWidgetParams {
   projectId: string;
   datasourceId: string;
+  conversationId?: string;
   title: string;
   description?: string;
   message: ChatMessage;
@@ -151,12 +153,20 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     }
   },
 
-  createWidget: async ({ projectId, datasourceId, title, description, message }) => {
+  createWidget: async ({
+    projectId,
+    datasourceId,
+    conversationId,
+    title,
+    description,
+    message,
+  }) => {
     if (!message.sql) return null;
 
     const body = {
       projectId,
       datasourceId,
+      conversationId: conversationId ?? undefined,
       title,
       description: description || undefined,
       naturalLanguage: message.content,
@@ -214,7 +224,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     });
     if (res.success) {
       /* Re-fetch to stay in sync */
-      get().fetchFavorites(projectId);
+      await get().fetchFavorites(projectId);
     }
   },
 

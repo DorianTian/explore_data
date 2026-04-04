@@ -26,12 +26,12 @@ export function ExecutionDetail() {
   const [editedSql, setEditedSql] = useState('');
   const [copied, setCopied] = useState(false);
 
-  /* Sync SQL when selection changes */
+  /* Sync SQL when selection changes (skip sql dep to preserve in-progress edits) */
   useEffect(() => {
     if (message?.sql) {
       setEditedSql(message.sql);
     }
-  }, [message?.id, message?.sql]);
+  }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasSqlChanged = message?.sql !== editedSql;
 

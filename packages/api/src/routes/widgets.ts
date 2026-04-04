@@ -53,16 +53,16 @@ export function createWidgetRouter(db: DbClient): Router {
   });
 
   router.get('/', async (ctx) => {
-    const projectId = ctx.query.projectId as string;
-    if (!projectId) {
+    const result = z.string().uuid().safeParse(ctx.query.projectId);
+    if (!result.success) {
       ctx.status = 400;
       ctx.body = {
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'projectId required' },
+        error: { code: 'VALIDATION_ERROR', message: 'projectId must be a valid UUID' },
       };
       return;
     }
-    const list = await service.listByProject(projectId);
+    const list = await service.listByProject(result.data);
     ctx.body = { success: true, data: list };
   });
 

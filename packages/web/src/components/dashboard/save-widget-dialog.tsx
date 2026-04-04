@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogHeader,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui';
 import { useDashboardStore } from '@/stores/dashboard-store';
 import { useProjectStore } from '@/stores/project-store';
-import type { ChatMessage } from '@/stores/chat-store';
+import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 
 interface SaveWidgetDialogProps {
   open: boolean;
@@ -27,9 +27,16 @@ export function SaveWidgetDialog({ open, onClose, message }: SaveWidgetDialogPro
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
+  /* Sync title when dialog opens with a different message */
+  useEffect(() => {
+    setTitle(message.content.slice(0, 80) || 'Untitled Widget');
+    setDescription('');
+  }, [message.id, message.content]);
+
   const createWidget = useDashboardStore((s) => s.createWidget);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const currentDatasourceId = useProjectStore((s) => s.currentDatasourceId);
+  const conversationId = useChatStore((s) => s.conversationId);
 
   const handleSave = useCallback(async () => {
     if (!title.trim() || !currentProjectId || !currentDatasourceId) return;
@@ -39,6 +46,7 @@ export function SaveWidgetDialog({ open, onClose, message }: SaveWidgetDialogPro
       const widget = await createWidget({
         projectId: currentProjectId,
         datasourceId: currentDatasourceId,
+        conversationId: conversationId ?? undefined,
         title: title.trim(),
         description: description.trim() || undefined,
         message,
@@ -49,7 +57,7 @@ export function SaveWidgetDialog({ open, onClose, message }: SaveWidgetDialogPro
     } finally {
       setSaving(false);
     }
-  }, [title, description, message, currentProjectId, currentDatasourceId, createWidget, onClose]);
+  }, [title, description, message, currentProjectId, currentDatasourceId, conversationId, createWidget, onClose]);
 
   return (
     <Dialog open={open} onClose={onClose}>

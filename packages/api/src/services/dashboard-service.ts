@@ -104,26 +104,28 @@ export class DashboardService {
   }
 
   async updateLayout(dashboardId: string, items: LayoutItem[]) {
-    const results = await Promise.all(
-      items.map((item) =>
-        this.db
-          .update(dashboardWidgets)
-          .set({
-            positionX: item.positionX,
-            positionY: item.positionY,
-            width: item.width,
-            height: item.height,
-          })
-          .where(eq(dashboardWidgets.id, item.id))
-          .returning(),
-      ),
-    );
+    return this.db.transaction(async (tx) => {
+      const results = await Promise.all(
+        items.map((item) =>
+          tx
+            .update(dashboardWidgets)
+            .set({
+              positionX: item.positionX,
+              positionY: item.positionY,
+              width: item.width,
+              height: item.height,
+            })
+            .where(eq(dashboardWidgets.id, item.id))
+            .returning(),
+        ),
+      );
 
-    await this.db
-      .update(dashboards)
-      .set({ updatedAt: new Date() })
-      .where(eq(dashboards.id, dashboardId));
+      await tx
+        .update(dashboards)
+        .set({ updatedAt: new Date() })
+        .where(eq(dashboards.id, dashboardId));
 
-    return results.flat();
+      return results.flat();
+    });
   }
 }

@@ -53,7 +53,23 @@ export class WidgetService {
     return row ?? null;
   }
 
-  async update(id: string, input: Partial<Omit<CreateWidgetInput, 'projectId'>>) {
+  async update(
+    id: string,
+    input: Partial<
+      Pick<
+        CreateWidgetInput,
+        | 'title'
+        | 'description'
+        | 'naturalLanguage'
+        | 'sql'
+        | 'chartType'
+        | 'chartConfig'
+        | 'dataSnapshot'
+        | 'datasourceId'
+        | 'isLive'
+      >
+    >,
+  ) {
     const [row] = await this.db
       .update(widgets)
       .set({ ...input, updatedAt: new Date() })

@@ -42,7 +42,7 @@ export function ArtifactPanel() {
       setEditedSql(message.sql);
       setIsEditing(false);
     }
-  }, [message?.id, message?.sql]);
+  }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps — intentionally skip message.sql to preserve in-progress edits
 
   const hasSqlChanged = message?.sql !== editedSql;
 
