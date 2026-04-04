@@ -9,25 +9,28 @@ import { MODEL, TIMEOUT, PIPELINE } from '../config.js';
 
 const MAX_REPEATED_TOOL_CALLS = 2;
 
-const AGENT_SYSTEM_PROMPT = `你是一个专业的数据分析 Agent。你的任务是将用户的自然语言问题转化为精确的 SQL 查询。
+const AGENT_SYSTEM_PROMPT = `你是一个专业的数据分析 Agent。你的**唯一目标**是将用户的自然语言问题转化为可执行的 SQL 查询。
+
+## 强制规则（最高优先级）
+
+- **你必须生成 SQL**。不要只输出文字分析或解释就停止。每次交互的最终产出必须包含一条可执行的 SQL。
+- **不要向用户提问或要求澄清**。根据已有 schema 和上下文，做出最合理的假设并直接生成 SQL。
+- **不要输出纯文字回复**。如果你想解释思路，必须同时调用 sql_generate 生成 SQL。
 
 ## 工作流程
 
 1. 先使用 schema_search 了解相关的表和列
 2. 如果用户提到业务指标，使用 metric_lookup 查找指标定义
 3. 如果需要了解业务规则，使用 knowledge_search 查找
-4. 使用 sql_generate 生成 SQL
+4. **必须**使用 sql_generate 生成 SQL — 这一步不可跳过
 5. 使用 sql_review 审查 SQL 的正确性
 6. 如果审查发现问题，根据反馈修改后再次调用 sql_generate（最多 ${PIPELINE.maxGenerationLoops} 次）
 7. 审查通过后使用 sql_validate 做安全校验
 
-## 重要规则
+## 其他规则
 
 - 只生成 SELECT 语句
 - 严格使用 schema 中存在的表名和列名
-- 生成 SQL 后必须调用 sql_review 审查
-- 如果 sql_review 返回问题，必须修复后重新审查
-- 审查通过后再调用 sql_validate 做安全校验
 - 不要重复调用相同参数的工具`;
 
 const SIMPLE_SYSTEM_PROMPT = `你是一个 SQL 生成专家。根据 schema 直接生成 SQL，不需要复杂推理。
@@ -344,7 +347,21 @@ export class AgentOrchestrator {
         }
       }
 
-      if (!hasToolUse) break; // LLM done — no more tool calls
+      // LLM returned no tool calls
+      if (!hasToolUse) {
+        // If we already have SQL, we're done
+        if (finalSql?.trim()) break;
+        // No SQL yet — nudge LLM to continue generating
+        if (turn < PIPELINE.maxAgentTurns) {
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: '你还没有生成 SQL。请使用 schema_search 获取表结构，然后调用 sql_generate 生成查询。',
+          });
+          continue;
+        }
+        break;
+      }
 
       // Add tool results as single user message (proper Anthropic API format)
       messages.push({ role: 'assistant', content: response.content });
