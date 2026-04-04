@@ -37,6 +37,7 @@ export interface GenerationContext {
   userQuery: string;
   schema: SchemaContext;
   glossary: Array<{ term: string; sqlExpression: string }>;
+  knowledgeContext: string[];
   conversationHistory: ConversationTurn[];
   fewShotExamples: Array<{ question: string; sql: string }>;
   dialect: string;

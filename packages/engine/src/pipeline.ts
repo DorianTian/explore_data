@@ -1,7 +1,9 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import {
   metrics,
   glossaryEntries,
+  knowledgeChunks,
+  knowledgeDocs,
   schemaTables,
   queryHistory,
   type DbClient,
@@ -9,6 +11,7 @@ import {
 import { IntentClassifier } from './intent-classifier.js';
 import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
+import { EmbeddingService } from './embedding-service.js';
 import type { PipelineInput, PipelineResult, ConversationTurn } from './types.js';
 
 /**
@@ -215,6 +218,12 @@ export class NL2SqlPipeline {
       sqlExpression: g.sqlExpression,
     }));
 
+    // RAG — retrieve relevant knowledge documents
+    const knowledgeContext = await this.retrieveKnowledgeContext(
+      input.projectId,
+      input.userQuery,
+    );
+
     // Data flywheel — retrieve similar accepted queries as few-shot examples
     const fewShotExamples = await this.retrieveFewShotExamples(
       input.projectId,
@@ -225,6 +234,7 @@ export class NL2SqlPipeline {
       userQuery: input.userQuery,
       schema,
       glossary,
+      knowledgeContext,
       conversationHistory,
       fewShotExamples,
       dialect,
@@ -279,5 +289,49 @@ export class NL2SqlPipeline {
         question: h.naturalLanguage,
         sql: h.correctedSql ?? h.generatedSql,
       }));
+  }
+
+  /**
+   * RAG: retrieve relevant knowledge chunks via pgvector similarity.
+   * Returns top-5 most relevant document chunks for the user query.
+   */
+  private async retrieveKnowledgeContext(
+    projectId: string,
+    userQuery: string,
+  ): Promise<string[]> {
+    if (!process.env.OPENAI_API_KEY) return [];
+
+    try {
+      const embService = new EmbeddingService(
+        process.env.OPENAI_API_KEY,
+        process.env.OPENAI_BASE_URL,
+      );
+      const queryEmbedding = await embService.embedSingle(userQuery);
+      const vectorStr = `[${queryEmbedding.join(',')}]`;
+
+      const results = await this.db.execute<{
+        content: string;
+        distance: number;
+        title: string;
+      }>(sql`
+        SELECT kc.content, kd.title,
+               kc.embedding <=> ${vectorStr}::vector AS distance
+        FROM knowledge_chunks kc
+        INNER JOIN knowledge_docs kd ON kd.id = kc.doc_id
+        WHERE kd.project_id = ${projectId}
+          AND kc.embedding IS NOT NULL
+        ORDER BY distance ASC
+        LIMIT 5
+      `);
+
+      if (!results.rows || results.rows.length === 0) return [];
+
+      // Only include chunks with reasonable similarity (distance < 0.7)
+      return results.rows
+        .filter((r) => r.distance < 0.7)
+        .map((r) => `[${r.title}] ${r.content}`);
+    } catch {
+      return [];
+    }
   }
 }

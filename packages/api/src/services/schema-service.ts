@@ -3,6 +3,7 @@ import {
   schemaTables,
   schemaColumns,
   schemaRelationships,
+  columnEmbeddings,
   type DbClient,
 } from '@nl2sql/db';
 import type { DdlParseResult } from '@nl2sql/shared';
@@ -180,7 +181,51 @@ export class SchemaService {
       .set(input)
       .where(eq(schemaColumns.id, columnId))
       .returning();
-    return row ?? null;
+
+    if (!row) return null;
+
+    // Re-generate embedding for this column with updated metadata
+    if (process.env.OPENAI_API_KEY && (input.comment !== undefined || input.sampleValues !== undefined)) {
+      try {
+        const [table] = await this.db
+          .select()
+          .from(schemaTables)
+          .where(eq(schemaTables.id, row.tableId));
+
+        if (table) {
+          const { EmbeddingService } = await import('@nl2sql/engine');
+          const embService = new EmbeddingService(
+            process.env.OPENAI_API_KEY,
+            process.env.OPENAI_BASE_URL,
+          );
+
+          const text = EmbeddingService.buildColumnText({
+            tableName: table.name,
+            tableComment: table.comment,
+            columnName: row.name,
+            columnComment: row.comment,
+            dataType: row.dataType,
+            sampleValues: row.sampleValues,
+            isPrimaryKey: row.isPrimaryKey,
+          });
+
+          const embedding = await embService.embedSingle(text);
+
+          await this.db
+            .delete(columnEmbeddings)
+            .where(eq(columnEmbeddings.columnId, columnId));
+          await this.db.insert(columnEmbeddings).values({
+            columnId,
+            textRepresentation: text,
+            embedding,
+          });
+        }
+      } catch {
+        // Embedding re-generation is best-effort
+      }
+    }
+
+    return row;
   }
 
   async removeTable(tableId: string): Promise<boolean> {

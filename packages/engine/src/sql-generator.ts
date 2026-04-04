@@ -141,6 +141,14 @@ export class SqlGenerator {
       }
     }
 
+    // Knowledge context from RAG
+    if (context.knowledgeContext && context.knowledgeContext.length > 0) {
+      parts.push('\n## 相关业务知识\n');
+      for (const chunk of context.knowledgeContext) {
+        parts.push(`- ${chunk}`);
+      }
+    }
+
     // Few-shot examples from data flywheel
     if (context.fewShotExamples.length > 0) {
       parts.push('\n## 参考示例（来自历史查询）\n');
