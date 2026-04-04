@@ -13,6 +13,7 @@ export function useSSEStream() {
 
   const addMessage = useChatStore((s) => s.addMessage);
   const updateMessage = useChatStore((s) => s.updateMessage);
+  const appendContent = useChatStore((s) => s.appendContent);
   const setLoading = useChatStore((s) => s.setLoading);
   const setConversationId = useChatStore((s) => s.setConversationId);
   const setPipelineStatus = useChatStore((s) => s.setPipelineStatus);
@@ -62,6 +63,10 @@ export function useSSEStream() {
               message: data.message as string,
               completedSteps: [],
             });
+            break;
+
+          case 'token':
+            appendContent(assistantMessageId, data.text as string);
             break;
 
           case 'result':
@@ -133,6 +138,7 @@ export function useSSEStream() {
       conversationId,
       addMessage,
       updateMessage,
+      appendContent,
       setLoading,
       setConversationId,
       setPipelineStatus,

@@ -186,6 +186,7 @@ export function createQueryRouter(db: DbClient): Router {
         conversationHistory: parsed.data.conversationHistory,
         dialect: parsed.data.dialect,
         onProgress: (step, message) => sendSSE(stream, 'status', { step, message }),
+        onToken: (token) => sendSSE(stream, 'token', { text: token }),
       });
 
       let finalResult = result;
@@ -276,8 +277,12 @@ export function createQueryRouter(db: DbClient): Router {
               sendSSE(stream, 'chart', chartRecommendation);
             }
           }
-        } catch {
-          /* execution failure is non-fatal — SQL was already sent */
+        } catch (execErr: unknown) {
+          const execMsg = execErr instanceof Error ? execErr.message : String(execErr);
+          sendSSE(stream, 'status', { step: 'execution_error', message: `执行失败: ${execMsg}` });
+          process.stderr.write(
+            JSON.stringify({ level: 'warn', msg: 'SQL execution failed', error: execMsg }) + '\n',
+          );
         }
       }
 

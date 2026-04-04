@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { GenerationContext, GenerationResult } from './types.js';
-import { extractText, extractJson, withRetry } from './llm-utils.js';
+import type { GenerationContext, GenerationResult, TokenCallback } from './types.js';
+import { extractJson, withRetry } from './llm-utils.js';
 import { MODEL, TIMEOUT } from './config.js';
 
 const SYSTEM_PROMPT = `你是一个专业的 SQL 生成专家。根据数据库 schema 和用户的自然语言问题，生成准确的 SQL 查询。
@@ -45,52 +45,68 @@ export class SqlGenerator {
     });
   }
 
-  async generate(context: GenerationContext): Promise<GenerationResult> {
+  async generate(context: GenerationContext, onToken?: TokenCallback): Promise<GenerationResult> {
     const userPrompt = this.buildPrompt(context);
-
-    const response = await withRetry(
-      () =>
-        this.client.messages.create(
-          {
-            model: MODEL.generation,
-            max_tokens: 2000,
-            system: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: userPrompt }],
-          },
-          { timeout: TIMEOUT.generation },
-        ),
-      { label: 'SqlGenerator.generate' },
-    );
-
-    return this.parseResponse(response);
+    return this.callLlm(userPrompt, onToken, 'SqlGenerator.generate');
   }
 
   async generateFollowUp(
     context: GenerationContext,
     previousSql: string,
     modificationHint: string,
+    onToken?: TokenCallback,
   ): Promise<GenerationResult> {
     const userPrompt = this.buildPrompt(context, previousSql, modificationHint);
-
-    const response = await withRetry(
-      () =>
-        this.client.messages.create(
-          {
-            model: MODEL.generation,
-            max_tokens: 2000,
-            system: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: userPrompt }],
-          },
-          { timeout: TIMEOUT.generation },
-        ),
-      { label: 'SqlGenerator.generateFollowUp' },
-    );
-
-    return this.parseResponse(response);
+    return this.callLlm(userPrompt, onToken, 'SqlGenerator.generateFollowUp');
   }
 
-  private parseResponse(response: Anthropic.Message): GenerationResult {
-    const text = extractText(response);
+  /**
+   * Call the LLM with optional token-level streaming.
+   * When onToken is provided, uses the streaming API to forward deltas in real-time.
+   * Falls back to non-streaming create() when no callback is given.
+   */
+  private async callLlm(
+    userPrompt: string,
+    onToken: TokenCallback | undefined,
+    label: string,
+  ): Promise<GenerationResult> {
+    const params = {
+      model: MODEL.generation,
+      max_tokens: 2000,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user' as const, content: userPrompt }],
+    };
+
+    if (onToken) {
+      // Streaming path — forward each text delta to the caller
+      const text = await withRetry(
+        async () => {
+          let accumulated = '';
+          const stream = this.client.messages.stream(params, { timeout: TIMEOUT.generation });
+
+          stream.on('text', (delta) => {
+            accumulated += delta;
+            onToken(delta);
+          });
+
+          await stream.finalMessage();
+          return accumulated;
+        },
+        { label },
+      );
+      return this.parseText(text);
+    }
+
+    // Non-streaming fallback
+    const response = await withRetry(
+      () => this.client.messages.create(params, { timeout: TIMEOUT.generation }),
+      { label },
+    );
+    const text = response.content.find((b) => b.type === 'text');
+    return this.parseText(text?.type === 'text' ? text.text : '');
+  }
+
+  private parseText(text: string): GenerationResult {
 
     const parsed = extractJson<Record<string, unknown>>(text);
     if (parsed) {

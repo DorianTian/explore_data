@@ -61,6 +61,7 @@ export class NL2SqlPipeline {
     const conversationHistory = input.conversationHistory ?? [];
     const dialect = input.dialect ?? 'postgresql';
     const progress = input.onProgress ?? (() => {});
+    const onToken = input.onToken;
 
     // Step 1: Router — classify intent + complexity
     progress('intent_classification', '正在分析查询意图...');
@@ -104,6 +105,7 @@ export class NL2SqlPipeline {
         modificationHint: classification.modificationHint,
       },
       progress,
+      onToken,
     );
   }
 
@@ -264,6 +266,7 @@ export class NL2SqlPipeline {
     dialect: string,
     intent: { type: string; modificationHint?: string },
     progress: (step: string, message: string) => void,
+    onToken?: (token: string) => void,
   ): Promise<PipelineResult> {
     // Node 1: Query Decomposition — detect if query needs multi-step reasoning
     progress('query_decomposition', '正在拆解查询逻辑...');
@@ -317,7 +320,7 @@ export class NL2SqlPipeline {
       dialect,
     };
 
-    // Node 7: SQL Generation
+    // Node 7: SQL Generation (with optional token streaming)
     progress('sql_generation', '正在生成 SQL...');
     let result;
     if (intent.type === 'follow_up' && conversationHistory.length > 0) {
@@ -328,12 +331,13 @@ export class NL2SqlPipeline {
           context,
           lastSql,
           intent.modificationHint ?? input.userQuery,
+          onToken,
         );
       } else {
-        result = await this.sqlGenerator.generate(context);
+        result = await this.sqlGenerator.generate(context, onToken);
       }
     } else {
-      result = await this.sqlGenerator.generate(context);
+      result = await this.sqlGenerator.generate(context, onToken);
     }
 
     // Node 8: SQL Self-Verification — LLM checks its own output for logical correctness

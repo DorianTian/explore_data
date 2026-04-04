@@ -56,6 +56,9 @@ export interface GenerationResult {
 /** Progress callback for streaming pipeline status to the client */
 export type ProgressCallback = (step: string, message: string) => void;
 
+/** Token callback for streaming LLM output character-by-character */
+export type TokenCallback = (token: string) => void;
+
 export interface PipelineInput {
   projectId: string;
   datasourceId: string;
@@ -64,6 +67,8 @@ export interface PipelineInput {
   dialect?: string;
   /** Optional callback invoked at each pipeline stage for progress reporting */
   onProgress?: ProgressCallback;
+  /** Optional callback invoked for each LLM text delta during SQL generation */
+  onToken?: TokenCallback;
 }
 
 export interface PipelineResult {
