@@ -43,7 +43,10 @@ export function connectSSE(
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          buffer += decoder.decode(); // flush remaining multi-byte bytes
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -67,6 +70,17 @@ export function connectSSE(
             currentEvent = '';
             currentData = '';
           }
+        }
+      }
+
+      /* Dispatch any buffered event not terminated by a trailing blank line */
+      if (currentData) {
+        const eventName = currentEvent || 'message';
+        try {
+          const parsed = JSON.parse(currentData);
+          onEvent({ event: eventName, data: parsed });
+        } catch {
+          onEvent({ event: eventName, data: currentData });
         }
       }
 
