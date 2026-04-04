@@ -167,12 +167,12 @@ function EmptyState({
       </p>
 
       {hasContext && (
-        <div className="grid grid-cols-2 gap-2.5 w-full max-w-lg">
+        <div className="grid grid-cols-2 gap-2 w-full max-w-lg">
           {EXAMPLE_QUERIES.map((query) => (
             <button
               key={query}
               onClick={() => onSelectQuery(query)}
-              className="text-left text-sm px-4 py-3 rounded-xl border border-border bg-surface text-muted hover:text-foreground hover:bg-surface-hover hover:border-border-strong transition-all cursor-pointer leading-relaxed"
+              className="text-left text-[13px] px-3 py-2.5 rounded-lg border border-border/60 text-muted hover:text-foreground hover:bg-surface-hover hover:border-border-strong transition-all cursor-pointer leading-snug"
             >
               {query}
             </button>
