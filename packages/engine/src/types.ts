@@ -53,8 +53,14 @@ export interface GenerationResult {
   columnsUsed: string[];
 }
 
+/** Detail payload for rich SSE progress events */
+export interface StepDetail {
+  thinking?: string;
+  data?: unknown;
+}
+
 /** Progress callback for streaming pipeline status to the client */
-export type ProgressCallback = (step: string, message: string) => void;
+export type ProgressCallback = (step: string, message: string, detail?: StepDetail) => void;
 
 /** Token callback for streaming LLM output character-by-character */
 export type TokenCallback = (token: string) => void;
@@ -80,4 +86,59 @@ export interface PipelineResult {
   tablesUsed?: string[];
   /** If clarification is needed, the question to ask the user */
   clarificationQuestion?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Verification Loop types
+// ---------------------------------------------------------------------------
+
+export interface VerificationDimension {
+  name: string;
+  weight: number;
+  score: number;
+  issues: string[];
+}
+
+export interface VerificationScore {
+  total: number;
+  dimensions: VerificationDimension[];
+  passed: boolean;
+}
+
+export interface VerificationRound {
+  round: number;
+  sql: string;
+  score: VerificationScore;
+  staticIssues: string[];
+  semanticIssues: string[];
+  suggestedFix?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Chart types
+// ---------------------------------------------------------------------------
+
+export type ChartType =
+  | 'metric_card'
+  | 'line'
+  | 'bar'
+  | 'horizontal_bar'
+  | 'pie'
+  | 'area'
+  | 'scatter'
+  | 'heatmap'
+  | 'grouped_bar'
+  | 'table';
+
+export interface ChartConfig {
+  chartType: ChartType;
+  title: string;
+  xField?: string;
+  yField?: string[];
+  categoryField?: string;
+  valueField?: string;
+  series?: Array<{ name: string; field: string; type?: string }>;
+  sort?: 'asc' | 'desc';
+  limit?: number;
+  stacked?: boolean;
 }

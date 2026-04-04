@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { SchemaContext } from './types.js';
+import type { SchemaContext, ProgressCallback } from './types.js';
 import { extractText, extractJson, withRetry } from './llm-utils.js';
 import { MODEL, TIMEOUT } from './config.js';
 
@@ -41,9 +41,18 @@ export class SchemaReranker {
    * Rerank schema tables — filter embedding recall results using LLM judgment.
    * Only called for large schemas where embedding recall may include false positives.
    */
-  async rerank(userQuery: string, schema: SchemaContext): Promise<SchemaContext> {
+  async rerank(
+    userQuery: string,
+    schema: SchemaContext,
+    onProgress?: ProgressCallback,
+  ): Promise<SchemaContext> {
     // For small schemas (≤5 tables), skip reranking
-    if (schema.tables.length <= 5) return schema;
+    if (schema.tables.length <= 5) {
+      onProgress?.('schema_rerank', `Small schema (${schema.tables.length} tables), skipping rerank`, {
+        thinking: `Table count (${schema.tables.length}) <= 5, reranking unnecessary.`,
+      });
+      return schema;
+    }
 
     const tableDescriptions = schema.tables.map((t) => {
       const cols = t.columns.map((c) => {
@@ -75,6 +84,8 @@ export class SchemaReranker {
     const text = extractText(response);
     const result = extractJson<{ tables: string[] }>(text);
 
+    const reason = (result as { tables?: string[]; reason?: string } | null)?.reason;
+
     if (result && result.tables.length > 0) {
       const selectedTables = new Set(result.tables.map((t) => t.toLowerCase()));
 
@@ -87,9 +98,21 @@ export class SchemaReranker {
         ),
       };
 
+      onProgress?.(
+        'schema_rerank',
+        `Reranked ${schema.tables.length} → ${filtered.tables.length} tables`,
+        {
+          thinking: `Selected tables: ${result.tables.join(', ')}\nReason: ${reason ?? 'N/A'}`,
+          data: { before: schema.tables.length, after: filtered.tables.length, selected: result.tables },
+        },
+      );
+
       return filtered.tables.length > 0 ? filtered : schema;
     }
 
+    onProgress?.('schema_rerank', 'Reranking returned no results, using original schema', {
+      thinking: 'LLM reranker did not return usable table selection. Falling back to full embedding recall.',
+    });
     return schema;
   }
 }

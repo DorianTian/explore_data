@@ -1,5 +1,5 @@
 import { eq, desc, sql } from 'drizzle-orm';
-import { metrics, glossaryEntries, schemaTables, queryHistory, type DbClient } from '@nl2sql/db';
+import { metrics, glossaryEntries, schemaTables, datasources, queryHistory, type DbClient } from '@nl2sql/db';
 import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
 import { QueryDecomposer } from './query-decomposer.js';
@@ -8,8 +8,9 @@ import { SqlVerifier } from './sql-verifier.js';
 import { EmbeddingService } from './embedding-service.js';
 import { QueryRouter } from './skills/router.js';
 import { AgentOrchestrator } from './skills/agent-orchestrator.js';
+import { runVerificationLoop } from './verification-loop.js';
 import { PIPELINE, RAG } from './config.js';
-import type { PipelineInput, PipelineResult, ConversationTurn } from './types.js';
+import type { PipelineInput, PipelineResult, ConversationTurn, ProgressCallback } from './types.js';
 
 /** Engine-wide config passed to pipeline constructor */
 export interface EngineConfig {
@@ -112,6 +113,7 @@ export class NL2SqlPipeline {
   }
 
   private async tryMetricResolution(input: PipelineInput): Promise<PipelineResult | null> {
+    const progress: ProgressCallback = input.onProgress ?? (() => {});
     const projectMetrics = await this.db
       .select()
       .from(metrics)
@@ -184,7 +186,24 @@ export class NL2SqlPipeline {
 
     if (!sourceTable) return null;
 
-    const sourceTableName = quoteIdentifier(sourceTable.name);
+    // Resolve schema prefix from datasource connectionConfig for fully-qualified table name
+    let schemaPrefix = '';
+    try {
+      const [ds] = await this.db
+        .select()
+        .from(datasources)
+        .where(eq(datasources.id, input.datasourceId));
+      const connConfig = ds?.connectionConfig as { schema?: string } | null;
+      if (connConfig?.schema) {
+        schemaPrefix = connConfig.schema;
+      }
+    } catch {
+      // Schema prefix lookup failed, continue with unqualified name
+    }
+
+    const qualifiedTableName = schemaPrefix
+      ? `${quoteIdentifier(schemaPrefix)}.${quoteIdentifier(sourceTable.name)}`
+      : quoteIdentifier(sourceTable.name);
 
     const selectParts: string[] = [];
     const groupByParts: string[] = [];
@@ -216,9 +235,14 @@ export class NL2SqlPipeline {
       }
     }
 
-    let metricSql = `SELECT ${selectParts.join(', ')} FROM ${sourceTableName}`;
+    let metricSql = `SELECT ${selectParts.join(', ')} FROM ${qualifiedTableName}`;
     if (whereParts.length > 0) metricSql += ` WHERE ${whereParts.join(' AND ')}`;
     if (groupByParts.length > 0) metricSql += ` GROUP BY ${groupByParts.join(', ')}`;
+
+    progress('metric_resolution', `Matched metric: ${matchedMetric.displayName}`, {
+      thinking: `Metric: ${matchedMetric.displayName} (${matchedMetric.name})\nExpression: ${matchedMetric.expression}\nSource table: ${schemaPrefix ? `${schemaPrefix}.` : ''}${sourceTable.name}\nDimensions matched: ${groupByParts.length > 0 ? groupByParts.join(', ') : 'none'}\nFilters: ${whereParts.length > 0 ? whereParts.join(' AND ') : 'none'}`,
+      data: { metricName: matchedMetric.name, table: sourceTable.name, schemaPrefix: schemaPrefix || null },
+    });
 
     return {
       resolvedVia: 'metric',
@@ -267,7 +291,7 @@ export class NL2SqlPipeline {
     conversationHistory: ConversationTurn[],
     dialect: string,
     intent: { type: string; modificationHint?: string },
-    progress: (step: string, message: string) => void,
+    progress: ProgressCallback,
     onToken?: (token: string) => void,
   ): Promise<PipelineResult> {
     // Node 1: Query Decomposition — detect if query needs multi-step reasoning
@@ -276,11 +300,11 @@ export class NL2SqlPipeline {
 
     // Node 2: Schema Linking (embedding recall)
     progress('schema_linking', '正在匹配数据模型...');
-    let schema = await this.schemaLinker.linkSchema(input.datasourceId, input.userQuery);
+    let schema = await this.schemaLinker.linkSchema(input.datasourceId, input.userQuery, progress);
 
     // Node 3: Schema Rerank (LLM precision filter for large schemas)
     progress('schema_rerank', '正在精选相关表结构...');
-    schema = await this.schemaReranker.rerank(input.userQuery, schema);
+    schema = await this.schemaReranker.rerank(input.userQuery, schema, progress);
 
     // Node 4: Load glossary
     const glossaryRows = await this.db
@@ -342,19 +366,39 @@ export class NL2SqlPipeline {
       result = await this.sqlGenerator.generate(context, onToken);
     }
 
-    // Node 8: SQL Self-Verification — LLM checks its own output for logical correctness
+    // Node 8: Verification Loop — dual-stage (static + LLM semantic) with scoring
     progress('sql_verification', '正在审查 SQL 正确性...');
     if (result.sql && result.confidence < PIPELINE.verificationThreshold) {
-      const verification = await this.sqlVerifier.verify(input.userQuery, result.sql, schema);
+      const anthropicBase = this.config.anthropicBaseUrl ?? process.env.ANTHROPIC_BASE_URL;
+      const loopResult = await runVerificationLoop(
+        result.sql,
+        input.userQuery,
+        schema,
+        dialect,
+        progress,
+        this.config.anthropicApiKey,
+        anthropicBase,
+      );
 
-      if (!verification.isCorrect && verification.suggestedFix) {
+      if (loopResult.finalSql !== result.sql) {
+        const issuesSummary = loopResult.rounds
+          .flatMap((r) => [...r.staticIssues, ...r.semanticIssues])
+          .filter(Boolean);
         result = {
           ...result,
-          sql: verification.suggestedFix,
-          explanation: `${result.explanation}\n（已自动修正：${verification.issues.join('；')}）`,
-          confidence: Math.min(result.confidence + 0.1, 0.95),
+          sql: loopResult.finalSql,
+          explanation: issuesSummary.length > 0
+            ? `${result.explanation}\n（已自动修正：${issuesSummary.slice(0, 3).join('；')}）`
+            : result.explanation,
         };
       }
+
+      // Adjust confidence based on verification score
+      const scoreRatio = loopResult.finalScore / 100;
+      result = {
+        ...result,
+        confidence: Math.min(result.confidence * 0.5 + scoreRatio * 0.5, 0.99),
+      };
     }
 
     return {
