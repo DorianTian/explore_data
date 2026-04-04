@@ -38,7 +38,30 @@ interface SchemaColumnResponse {
 
 type ViewMode = 'tree' | 'er';
 
-export function SchemaBrowser() {
+/** Map raw DB type to a semantic type icon + color */
+function getTypeIcon(dataType: string): { icon: string; color: string } {
+  const t = dataType.toUpperCase();
+  if (t.includes('INT') || t.includes('DECIMAL') || t.includes('FLOAT') || t.includes('DOUBLE') || t.includes('NUMERIC'))
+    return { icon: '#', color: 'text-violet-500' };
+  if (t.includes('DATE') || t.includes('TIME') || t.includes('TIMESTAMP'))
+    return { icon: '◷', color: 'text-sky-500' };
+  if (t.includes('BOOL'))
+    return { icon: '◉', color: 'text-emerald-500' };
+  if (t.includes('TEXT') || t.includes('CHAR') || t.includes('VARCHAR') || t.includes('STRING'))
+    return { icon: 'T', color: 'text-muted' };
+  if (t.includes('JSON') || t.includes('JSONB'))
+    return { icon: '{ }', color: 'text-orange-500' };
+  if (t.includes('BLOB') || t.includes('BINARY') || t.includes('BYTEA'))
+    return { icon: '◫', color: 'text-muted' };
+  return { icon: '·', color: 'text-muted' };
+}
+
+interface SchemaBrowserProps {
+  /** When set, only show tables matching these names (query context mode) */
+  filterTables?: string[];
+}
+
+export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
   const { currentDatasourceId } = useProjectStore();
   const { tables, relationships, setTables, setRelationships } =
     useSchemaStore();
@@ -68,11 +91,16 @@ export function SchemaBrowser() {
     return names;
   }, [messages]);
 
-  /* Filtered tables */
+  /* Filtered tables — apply filterTables first, then search */
   const filteredTables = useMemo(() => {
-    if (!search.trim()) return tables;
+    let base = tables;
+    if (filterTables && filterTables.length > 0) {
+      const filterSet = new Set(filterTables.map((n) => n.toLowerCase()));
+      base = tables.filter((t) => filterSet.has(t.name.toLowerCase()));
+    }
+    if (!search.trim()) return base;
     const q = search.toLowerCase();
-    return tables.filter(
+    return base.filter(
       (t) =>
         t.name.toLowerCase().includes(q) ||
         t.comment?.toLowerCase().includes(q) ||
@@ -82,7 +110,7 @@ export function SchemaBrowser() {
             c.comment?.toLowerCase().includes(q),
         ),
     );
-  }, [tables, search]);
+  }, [tables, search, filterTables]);
 
   /* Load schema on mount */
   const loadSchema = useCallback(async () => {
@@ -186,7 +214,9 @@ export function SchemaBrowser() {
           </button>
         </div>
 
-        <span className="text-[11px] text-muted ml-auto">{tables.length} 表</span>
+        <span className="text-[11px] text-muted ml-auto">
+          {filterTables ? `${filteredTables.length} 张涉及表` : `${tables.length} 张表`}
+        </span>
 
         <button
           type="button"
@@ -201,7 +231,7 @@ export function SchemaBrowser() {
       {viewMode === 'tree' ? (
         <>
           {/* Search */}
-          <div className="mb-2">
+          <div className="mb-2.5">
             <Input
               placeholder="搜索表名 / 列名..."
               value={search}
@@ -209,72 +239,112 @@ export function SchemaBrowser() {
             />
           </div>
 
-          {/* Table list */}
-          <div className="space-y-0.5 max-h-[calc(100vh-280px)] overflow-y-auto">
+          {/* Table list — DataGrip-inspired with Supabase density */}
+          <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
             {filteredTables.map((table) => {
               const isExpanded = expandedIds.has(table.id);
               const isUsed = usedTableNames.has(table.name.toLowerCase());
 
               return (
-                <div key={table.id}>
+                <div key={table.id} className="group/table">
                   {/* Table row */}
                   <button
                     type="button"
                     onClick={() => toggleExpand(table.id)}
-                    className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
-                      isUsed
-                        ? 'bg-primary/5 text-primary font-medium'
-                        : 'text-foreground hover:bg-surface-hover'
+                    className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-lg text-[13px] transition-colors cursor-pointer ${
+                      isExpanded
+                        ? 'bg-surface'
+                        : isUsed
+                          ? 'bg-primary/5 hover:bg-primary/8'
+                          : 'hover:bg-surface-hover'
                     }`}
                   >
                     <Icon
                       name={isExpanded ? 'chevronDown' : 'chevronRight'}
-                      size={12}
-                      className="text-muted shrink-0"
+                      size={11}
+                      className="text-muted/60 shrink-0"
                     />
-                    <Icon
-                      name="table"
-                      size={14}
-                      className={`shrink-0 ${isUsed ? 'text-primary' : 'text-muted'}`}
-                    />
-                    <span className="truncate">{table.name}</span>
-                    <span className="ml-auto text-xs text-muted shrink-0">
+                    {/* Table icon — green tint like DataGrip */}
+                    <span className={`shrink-0 w-[18px] h-[18px] rounded flex items-center justify-center text-[10px] font-bold ${
+                      isUsed
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-emerald-50 text-emerald-600'
+                    }`}>
+                      T
+                    </span>
+                    <span className={`truncate font-medium ${isUsed ? 'text-primary' : 'text-foreground'}`}>
+                      {table.name}
+                    </span>
+                    {table.comment && (
+                      <span className="text-[11px] text-muted truncate ml-0.5 opacity-0 group-hover/table:opacity-100 transition-opacity max-w-[120px]">
+                        {table.comment}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[11px] text-muted/50 tabular-nums shrink-0">
                       {table.columns.length}
                     </span>
                   </button>
 
-                  {/* Columns */}
+                  {/* Columns — card with DataGrip composite icons */}
                   {isExpanded && (
-                    <div className="ml-5 mr-1 mt-0.5 mb-1.5 rounded-lg border border-border/50 overflow-hidden bg-surface/30">
+                    <div className="ml-3 mr-0.5 mt-1 mb-0.5">
                       {table.columns.map((col) => {
                         const isFK = fkColumnIds.has(col.id);
+                        const isPK = col.isPrimaryKey;
+                        const typeInfo = getTypeIcon(col.dataType);
+
                         return (
                           <div
                             key={col.id}
-                            className="flex items-center gap-2 px-2.5 py-[5px] text-[12px] border-b border-border/30 last:border-0 hover:bg-surface-hover/40 transition-colors"
+                            className="flex items-center gap-1.5 px-2 py-[5px] rounded-md hover:bg-surface-hover/60 transition-colors group/col"
                           >
-                            <span className="text-foreground truncate flex-1 font-mono text-[12px]">
+                            {/* Composite icon: type icon base + PK/FK overlay */}
+                            <span className="relative shrink-0 w-5 h-5 flex items-center justify-center">
+                              <span className={`text-[11px] font-bold font-mono ${typeInfo.color}`}>
+                                {typeInfo.icon}
+                              </span>
+                              {/* PK gold key overlay — top-right corner */}
+                              {isPK && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 border border-background flex items-center justify-center">
+                                  <span className="text-[6px] text-white font-bold">K</span>
+                                </span>
+                              )}
+                              {/* FK blue link overlay — top-right corner */}
+                              {isFK && !isPK && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-blue-500 border border-background flex items-center justify-center">
+                                  <span className="text-[6px] text-white font-bold">F</span>
+                                </span>
+                              )}
+                            </span>
+
+                            {/* Column name */}
+                            <span className={`text-[12.5px] truncate flex-1 ${isPK ? 'font-semibold text-foreground' : 'text-foreground/80'}`}>
                               {col.name}
                             </span>
-                            <span className="text-[11px] text-muted font-mono shrink-0">
-                              {col.dataType}
+
+                            {/* Type + constraint tags */}
+                            <span className="flex items-center gap-1 shrink-0">
+                              <span className="text-[10.5px] text-muted/60 font-mono">
+                                {col.dataType}
+                              </span>
+                              {isPK && (
+                                <span className="text-[9px] font-bold tracking-wider text-amber-700 bg-amber-100 px-1 py-px rounded-sm">
+                                  PK
+                                </span>
+                              )}
+                              {isFK && (
+                                <span className="text-[9px] font-bold tracking-wider text-blue-700 bg-blue-100 px-1 py-px rounded-sm">
+                                  FK
+                                </span>
+                              )}
                             </span>
-                            {col.isPrimaryKey && (
-                              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-px rounded shrink-0">
-                                PK
-                              </span>
-                            )}
-                            {isFK && (
-                              <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-px rounded shrink-0">
-                                FK
-                              </span>
-                            )}
                           </div>
                         );
                       })}
+                      {/* Table comment footer */}
                       {table.comment && (
-                        <div className="px-2.5 py-1.5 bg-surface/50 border-t border-border/30">
-                          <span className="text-[11px] text-muted italic">{table.comment}</span>
+                        <div className="px-2 pt-1 pb-1.5 ml-5">
+                          <span className="text-[11px] text-muted/60 leading-tight">{table.comment}</span>
                         </div>
                       )}
                     </div>
