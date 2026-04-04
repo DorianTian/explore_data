@@ -87,6 +87,29 @@ export function Sidebar() {
         <WorkspaceSelector collapsed={isCollapsed} />
       </div>
 
+      {/* Quick chat trigger — Cmd+K */}
+      <div className={`${isCollapsed ? 'px-1.5 py-1.5' : 'px-2 py-1.5'}`}>
+        {isCollapsed ? (
+          <Tooltip content="搜索查询 ⌘K" side="right">
+            <button
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+              className="flex items-center justify-center w-full p-2 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+            >
+              <Icon name="search" size={16} />
+            </button>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            className="flex items-center gap-2 w-full px-3 py-1.5 rounded-[var(--radius-md)] text-sm text-muted hover:text-foreground bg-surface border border-border/50 hover:border-border transition-colors cursor-pointer"
+          >
+            <Icon name="search" size={14} />
+            <span className="flex-1 text-left">搜索查询...</span>
+            <kbd className="text-[10px] text-muted-foreground bg-background px-1 py-0.5 rounded border border-border font-mono">⌘K</kbd>
+          </button>
+        )}
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 p-1.5 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {

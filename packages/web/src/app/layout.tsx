@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { QuickChatDialog } from '@/components/quick-chat-dialog';
 import './globals.css';
 
 const geistSans = Geist({
@@ -24,7 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" className={`h-full ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col antialiased font-sans">{children}</body>
+      <body className="min-h-full flex flex-col antialiased font-sans">
+        {children}
+        <QuickChatDialog />
+      </body>
     </html>
   );
 }

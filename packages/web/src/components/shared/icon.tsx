@@ -109,6 +109,10 @@ const ICON_PATHS: Record<string, string[]> = {
     'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   ],
   grid: ['M3 3h18v18H3z', 'M3 9h18', 'M3 15h18', 'M9 3v18', 'M15 3v18'],
+  arrowUp: ['M12 19V5', 'M5 12l7-7 7 7'],
+  command: [
+    'M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z',
+  ],
 };
 
 /** Filled icons render with fill instead of stroke */

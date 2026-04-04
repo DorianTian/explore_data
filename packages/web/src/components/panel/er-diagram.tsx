@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   Position,
   Handle,
   type Node,
@@ -235,11 +234,6 @@ export function ERDiagram() {
       <Background color="var(--border)" gap={20} size={1} />
       <Controls
         className="!bg-surface !border-border !rounded-[var(--radius-md)] !shadow-md [&>button]:!bg-surface [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-surface-hover"
-      />
-      <MiniMap
-        nodeColor="var(--surface-elevated)"
-        maskColor="rgb(10 15 26 / 0.7)"
-        className="!bg-background !border-border !rounded-[var(--radius-md)]"
       />
     </ReactFlow>
   );

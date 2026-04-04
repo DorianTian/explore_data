@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/app-shell';
 import { ChatMessage } from '@/components/chat/chat-message';
 import { ChatInput } from '@/components/chat-input';
@@ -32,10 +33,32 @@ function ChatPageInner() {
   const { sendQuery } = useSSEStream();
   useKeyboardShortcuts();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const initialQueryHandled = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  /* Handle ?q= from quick chat navigation */
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q && !initialQueryHandled.current && currentProjectId && currentDatasourceId) {
+      initialQueryHandled.current = true;
+      handleSend(q);
+      window.history.replaceState({}, '', '/chat');
+    }
+  }, [searchParams, currentProjectId, currentDatasourceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Handle quick-chat custom event from other pages */
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const query = (e as CustomEvent<string>).detail;
+      if (query) handleSend(query);
+    };
+    window.addEventListener('quick-chat', handler);
+    return () => window.removeEventListener('quick-chat', handler);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = useCallback(
     (query: string) => {
@@ -63,6 +86,33 @@ function ChatPageInner() {
   /* Right panel priority: artifact > schema browser */
   const showSchema = panelIsOpen && !artifactOpen;
   const showRightPanel = artifactOpen || showSchema;
+
+  /* Resizable right panel width */
+  const [panelWidth, setPanelWidth] = useState(480);
+  const startPanelResize = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startW = panelWidth;
+
+      const onMouseMove = (ev: MouseEvent) => {
+        const delta = startX - ev.clientX;
+        setPanelWidth(Math.max(320, Math.min(800, startW + delta)));
+      };
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [panelWidth],
+  );
 
   return (
     <AppShell>
@@ -137,9 +187,11 @@ function ChatPageInner() {
           {/* Right panel — artifact (SQL/Result/Chart) or schema browser */}
           {showRightPanel && (
             <div
-              className="shrink-0 border-l border-border bg-background-secondary animate-slide-in-right"
-              style={{ width: 'min(480px, 45vw)' }}
+              className="relative shrink-0 border-l border-border bg-background-secondary animate-slide-in-right"
+              style={{ width: panelWidth }}
             >
+              {/* Drag handle */}
+              <div className="resize-handle !left-[-3px] !right-auto" onMouseDown={startPanelResize} />
               {artifactOpen ? (
                 <ArtifactPanel />
               ) : (
@@ -174,5 +226,9 @@ function SchemaPanel({ onClose }: { onClose: () => void }) {
 }
 
 export default function ChatPage() {
-  return <ChatPageInner />;
+  return (
+    <Suspense>
+      <ChatPageInner />
+    </Suspense>
+  );
 }
