@@ -144,7 +144,7 @@ export class KnowledgeService {
     if (!row) return null;
 
     // Re-generate embedding when term or SQL expression changes
-    if (input.term !== undefined || input.sqlExpression !== undefined) {
+    if (input.term !== undefined || input.sqlExpression !== undefined || input.description !== undefined) {
       try {
         const embService = await getEmbeddingService();
         if (embService) {
