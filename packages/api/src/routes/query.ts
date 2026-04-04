@@ -240,6 +240,50 @@ export function createQueryRouter(db: DbClient): Router {
         sendSSE(stream, 'result', { ...finalResult, conversationId, requestId });
       }
 
+      // Execute SQL and recommend chart (best-effort, non-blocking)
+      let executionResult: unknown = undefined;
+      let chartRecommendation: unknown = undefined;
+
+      if (finalResult.sql) {
+        try {
+          const { DatasourceService } = await import('../services/datasource-service.js');
+          const dsService = new DatasourceService(db);
+          const ds = await dsService.getById(parsed.data.datasourceId);
+
+          if (ds?.connectionConfig) {
+            sendSSE(stream, 'status', { step: 'executing', message: '正在执行查询...' });
+
+            const { QueryExecutor, ChartRecommender } = await import('@nl2sql/engine');
+            const executor = new QueryExecutor();
+            const execResult = await executor.execute(
+              finalResult.sql,
+              ds.connectionConfig as never,
+              { timeoutMs: 30000, rowLimit: 1000 },
+            );
+
+            executionResult = {
+              rows: execResult.rows,
+              columns: execResult.columns,
+              truncated: execResult.truncated,
+              executionTimeMs: execResult.executionTimeMs,
+            };
+            sendSSE(stream, 'execution_result', executionResult);
+
+            const recommender = new ChartRecommender();
+            const chart = recommender.recommend(execResult.rows, execResult.columns);
+            if (chart) {
+              chartRecommendation = {
+                chartType: chart.chartType,
+                config: chart.config,
+              };
+              sendSSE(stream, 'chart', chartRecommendation);
+            }
+          }
+        } catch {
+          /* execution failure is non-fatal — SQL was already sent */
+        }
+      }
+
       // Persist to DB
       await conversationService.addMessage({
         conversationId,
@@ -247,6 +291,8 @@ export function createQueryRouter(db: DbClient): Router {
         content: finalResult.explanation,
         generatedSql: finalResult.sql,
         confidence: finalResult.confidence,
+        executionResult: executionResult as Record<string, unknown> | undefined,
+        chartConfig: chartRecommendation as Record<string, unknown> | undefined,
       });
 
       if (finalResult.sql) {
