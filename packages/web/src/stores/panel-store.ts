@@ -24,7 +24,7 @@ interface PanelActions {
 }
 
 export const usePanelStore = create<PanelState & PanelActions>((set) => ({
-  isOpen: false,
+  isOpen: true,
   activeTab: 'detail',
   selectedMessageId: null,
   artifactOpen: false,
