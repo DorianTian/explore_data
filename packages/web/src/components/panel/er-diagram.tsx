@@ -3,6 +3,7 @@
 import { useMemo, useEffect } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   Position,
@@ -38,22 +39,22 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
   const { label, columns, overflowCount } = data;
 
   return (
-    <div className="rounded-[var(--radius-md)] border border-border bg-surface-elevated shadow-md min-w-[180px] max-w-[240px]">
+    <div className="rounded-lg border border-border bg-white shadow-md min-w-[180px] max-w-[240px]">
       {/* Handles for edges */}
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2 !h-2 !bg-secondary !border-border"
+        className="!w-2 !h-2 !bg-blue-500 !border-white"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2 !h-2 !bg-primary !border-border"
+        className="!w-2 !h-2 !bg-amber-500 !border-white"
       />
 
       {/* Table name header */}
-      <div className="px-3 py-2 border-b border-border bg-surface rounded-t-[var(--radius-md)]">
-        <span className="text-xs font-semibold text-primary truncate block">
+      <div className="px-3 py-2 border-b border-border bg-gray-50 rounded-t-lg">
+        <span className="text-xs font-semibold text-amber-700 truncate block">
           {label}
         </span>
       </div>
@@ -66,24 +67,24 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
             className="flex items-center gap-1.5 py-0.5 text-[11px]"
           >
             {col.isPK && (
-              <span className="text-golden font-bold shrink-0 w-3 text-center">
+              <span className="text-amber-600 font-bold shrink-0 w-3 text-center">
                 K
               </span>
             )}
             {col.isFK && !col.isPK && (
-              <span className="text-secondary font-bold shrink-0 w-3 text-center">
+              <span className="text-blue-600 font-bold shrink-0 w-3 text-center">
                 F
               </span>
             )}
             {!col.isPK && !col.isFK && <span className="w-3 shrink-0" />}
-            <span className="text-foreground truncate">{col.name}</span>
-            <span className="text-muted font-mono ml-auto shrink-0 text-[10px]">
+            <span className="text-gray-700 truncate">{col.name}</span>
+            <span className="text-gray-400 font-mono ml-auto shrink-0 text-[10px]">
               {col.type}
             </span>
           </div>
         ))}
         {overflowCount > 0 && (
-          <div className="text-[10px] text-muted text-center py-0.5">
+          <div className="text-[10px] text-gray-400 text-center py-0.5">
             +{overflowCount} more
           </div>
         )}
@@ -151,7 +152,8 @@ function autoLayout(
   }));
 }
 
-export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
+/** Inner component that uses ReactFlow hooks (must be inside ReactFlowProvider) */
+function ERDiagramInner({ filterTables }: { filterTables?: string[] }) {
   const { tables: allTables, relationships: allRelationships } = useSchemaStore();
 
   /* Apply table filter if provided */
@@ -197,6 +199,7 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
         id: table.id,
         type: 'tableNode',
         position: { x: pos.x, y: pos.y },
+        draggable: true,
         data: {
           label: table.name,
           columns: visibleCols,
@@ -215,20 +218,13 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
       label: rel.relationshipType,
       type: 'smoothstep',
       animated: true,
-      style: { stroke: 'var(--border-strong)', strokeWidth: 1.5 },
-      labelStyle: {
-        fill: 'var(--muted-foreground)',
-        fontSize: 10,
-        fontFamily: 'var(--font-mono)',
-      },
-      labelBgStyle: {
-        fill: 'var(--surface)',
-        fillOpacity: 0.9,
-      },
+      style: { stroke: '#9ca3af', strokeWidth: 1.5 },
+      labelStyle: { fill: '#9ca3af', fontSize: 10 },
+      labelBgStyle: { fill: '#f9fafb', fillOpacity: 0.9 },
     }));
   }, [relationships]);
 
-  /* Interactive state — useNodesState/useEdgesState enable drag/pan/zoom */
+  /* Interactive state */
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
@@ -245,23 +241,28 @@ export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
   }
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        fitView
-        minZoom={0.2}
-        maxZoom={1.5}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="var(--border)" gap={20} size={1} />
-        <Controls
-          className="!bg-surface !border-border !rounded-[var(--radius-md)] !shadow-md [&>button]:!bg-surface [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-surface-hover"
-        />
-      </ReactFlow>
-    </div>
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      nodeTypes={nodeTypes}
+      fitView
+      minZoom={0.2}
+      maxZoom={1.5}
+      proOptions={{ hideAttribution: true }}
+    >
+      <Background color="#e5e7eb" gap={20} size={1} />
+      <Controls />
+    </ReactFlow>
+  );
+}
+
+/** Public ERDiagram component — wraps in ReactFlowProvider */
+export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
+  return (
+    <ReactFlowProvider>
+      <ERDiagramInner filterTables={filterTables} />
+    </ReactFlowProvider>
   );
 }
