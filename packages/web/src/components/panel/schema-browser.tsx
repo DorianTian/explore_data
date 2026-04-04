@@ -209,8 +209,8 @@ export function SchemaBrowser() {
             />
           </div>
 
-          {/* Table list — compact IDE-style tree */}
-          <div className="space-y-px max-h-[calc(100vh-280px)] overflow-y-auto">
+          {/* Table list */}
+          <div className="space-y-0.5 max-h-[calc(100vh-280px)] overflow-y-auto">
             {filteredTables.map((table) => {
               const isExpanded = expandedIds.has(table.id);
               const isUsed = usedTableNames.has(table.name.toLowerCase());
@@ -221,63 +221,62 @@ export function SchemaBrowser() {
                   <button
                     type="button"
                     onClick={() => toggleExpand(table.id)}
-                    className={`flex items-center gap-1.5 w-full px-1.5 py-[5px] rounded-md text-[13px] transition-colors cursor-pointer group ${
+                    className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
                       isUsed
-                        ? 'text-primary font-medium'
+                        ? 'bg-primary/5 text-primary font-medium'
                         : 'text-foreground hover:bg-surface-hover'
                     }`}
                   >
                     <Icon
                       name={isExpanded ? 'chevronDown' : 'chevronRight'}
-                      size={10}
-                      className="text-muted/60 shrink-0"
+                      size={12}
+                      className="text-muted shrink-0"
                     />
-                    <span className={`truncate font-mono text-[13px] ${isUsed ? 'text-primary' : ''}`}>
-                      {table.name}
-                    </span>
-                    {table.comment && (
-                      <span className="text-[11px] text-muted truncate ml-1 hidden group-hover:inline">
-                        {table.comment}
-                      </span>
-                    )}
-                    <span className="ml-auto text-[11px] text-muted/50 tabular-nums shrink-0">
+                    <Icon
+                      name="table"
+                      size={14}
+                      className={`shrink-0 ${isUsed ? 'text-primary' : 'text-muted'}`}
+                    />
+                    <span className="truncate">{table.name}</span>
+                    <span className="ml-auto text-xs text-muted shrink-0">
                       {table.columns.length}
                     </span>
                   </button>
 
-                  {/* Columns — compact with indent guide */}
+                  {/* Columns */}
                   {isExpanded && (
-                    <div className="relative ml-[11px] border-l border-border/40">
-                      {table.columns.map((col, idx) => {
+                    <div className="ml-5 mr-1 mt-0.5 mb-1.5 rounded-lg border border-border/50 overflow-hidden bg-surface/30">
+                      {table.columns.map((col) => {
                         const isFK = fkColumnIds.has(col.id);
-                        const isLast = idx === table.columns.length - 1;
                         return (
                           <div
                             key={col.id}
-                            className="flex items-center gap-1.5 pl-3 pr-1.5 py-[3px] text-[12px] hover:bg-surface-hover/50 transition-colors relative"
+                            className="flex items-center gap-2 px-2.5 py-[5px] text-[12px] border-b border-border/30 last:border-0 hover:bg-surface-hover/40 transition-colors"
                           >
-                            {/* Branch connector */}
-                            <span className={`absolute left-0 top-0 w-2.5 border-b border-border/40 ${isLast ? 'h-1/2' : 'h-full'}`} />
-                            {isLast && <span className="absolute left-0 top-1/2 bottom-0 w-px bg-background-secondary" />}
-
-                            {/* Column indicator */}
-                            {col.isPrimaryKey ? (
-                              <span className="text-[10px] text-amber-500 font-bold shrink-0 w-3 text-center font-mono">K</span>
-                            ) : isFK ? (
-                              <span className="text-[10px] text-blue-500 font-bold shrink-0 w-3 text-center font-mono">F</span>
-                            ) : (
-                              <span className="w-3 shrink-0" />
-                            )}
-
-                            <span className="text-foreground/80 font-mono truncate">
+                            <span className="text-foreground truncate flex-1 font-mono text-[12px]">
                               {col.name}
                             </span>
-                            <span className="text-[10px] text-muted/50 font-mono ml-auto shrink-0 tabular-nums">
+                            <span className="text-[11px] text-muted font-mono shrink-0">
                               {col.dataType}
                             </span>
+                            {col.isPrimaryKey && (
+                              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-px rounded shrink-0">
+                                PK
+                              </span>
+                            )}
+                            {isFK && (
+                              <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-px rounded shrink-0">
+                                FK
+                              </span>
+                            )}
                           </div>
                         );
                       })}
+                      {table.comment && (
+                        <div className="px-2.5 py-1.5 bg-surface/50 border-t border-border/30">
+                          <span className="text-[11px] text-muted italic">{table.comment}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
