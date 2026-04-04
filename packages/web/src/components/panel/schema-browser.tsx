@@ -11,7 +11,6 @@ import { Icon } from '@/components/shared/icon';
 
 /** Warehouse layer definitions — order matters for display */
 const LAYER_ORDER = ['ODS', 'DWD', 'DWS', 'DIM', 'ADS'] as const;
-type LayerKey = (typeof LAYER_ORDER)[number];
 
 const LAYER_COLORS: Record<string, string> = {
   ODS: 'bg-gray-100 text-gray-700',
@@ -55,6 +54,8 @@ interface SchemaTableResponse {
   id: string;
   name: string;
   comment: string | null;
+  layer?: string | null;
+  domain?: string | null;
 }
 
 interface SchemaColumnResponse {
@@ -227,7 +228,8 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
           name: t.name,
           comment: t.comment,
           columns: detail.data?.columns ?? [],
-          layer: inferLayer(t.name),
+          layer: t.layer?.toUpperCase() ?? inferLayer(t.name),
+          domain: t.domain ?? undefined,
           columnsLoaded: true,
         };
       }),

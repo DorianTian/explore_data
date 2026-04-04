@@ -164,7 +164,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       naturalLanguage: message.content,
       sql: message.sql,
       chartType: message.chartRecommendation?.chartType ?? 'table',
-      chartConfig: message.chartRecommendation?.config ?? {},
+      chartConfig: message.chartRecommendation ?? {},
       dataSnapshot: message.executionResult ?? undefined,
       messageId: message.id,
     };

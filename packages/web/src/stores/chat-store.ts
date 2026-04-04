@@ -40,7 +40,16 @@ export interface ChatMessage {
   };
   chartRecommendation?: {
     chartType: string;
-    config: unknown;
+    title?: string;
+    xField?: string;
+    yField?: string[];
+    categoryField?: string;
+    valueField?: string;
+    series?: Array<{ name: string; field: string; type?: string }>;
+    sort?: 'asc' | 'desc';
+    limit?: number;
+    stacked?: boolean;
+    score?: number;
   };
   tablesUsed?: string[];
   /** LLM-generated data insight based on execution results */

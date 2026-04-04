@@ -80,6 +80,8 @@ export class QueryExecutor {
         truncated,
       };
     } finally {
+      // Reset session state before returning connection to pool
+      try { await client.query('RESET ALL'); } catch { /* best-effort */ }
       client.release();
     }
   }

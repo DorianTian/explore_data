@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { type ChatMessage } from '@/stores/chat-store';
 import { useChatStore } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -88,11 +88,7 @@ export function ResultTab({ message }: ResultTabProps) {
       message.chartRecommendation.chartType !== 'table',
   );
 
-  const chartConfig = useMemo(() => {
-    if (!message.chartRecommendation) return null;
-    const { chartType, config } = message.chartRecommendation;
-    return { chartType, ...(config as Record<string, unknown>) };
-  }, [message.chartRecommendation]);
+  const chartConfig = message.chartRecommendation ?? null;
 
   const noContent = !message.sql && !message.executionResult;
 

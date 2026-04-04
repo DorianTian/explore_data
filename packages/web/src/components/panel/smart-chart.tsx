@@ -231,6 +231,12 @@ function buildGroupedSeries(
  * Handles: metric_card, line, bar, horizontal_bar, pie, area, scatter, heatmap, grouped_bar, table.
  */
 export function SmartChart({ config, rows, columns }: SmartChartProps) {
+  // Hooks must be called unconditionally (React Rules of Hooks)
+  const option = useMemo(
+    () => buildEChartsOption(config, rows),
+    [config, rows],
+  );
+
   /* metric_card: render MetricCard */
   if (config.chartType === 'metric_card' || config.chartType === 'kpi') {
     const valueField = config.valueField ?? columns[1]?.name ?? columns[0]?.name;
@@ -253,11 +259,6 @@ export function SmartChart({ config, rows, columns }: SmartChartProps) {
   if (config.chartType === 'table') {
     return null;
   }
-
-  const option = useMemo(
-    () => buildEChartsOption(config, rows),
-    [config, rows],
-  );
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
