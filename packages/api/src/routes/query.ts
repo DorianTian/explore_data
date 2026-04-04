@@ -443,7 +443,7 @@ ${dataPreview}`;
   let fullText = '';
   llmStream.on('text', (delta) => {
     fullText += delta;
-    sendSSE(res, 'insight_token', { text: delta });
+    sendSSE(stream, 'insight_token', { text: delta });
   });
 
   await llmStream.finalMessage();
