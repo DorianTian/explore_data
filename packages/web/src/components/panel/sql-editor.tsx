@@ -77,7 +77,7 @@ export function SqlEditor({
       <MonacoEditor
         height={height}
         language="sql"
-        theme="vs"
+        theme="vs-dark"
         value={value}
         onChange={(v) => onChange(v ?? '')}
         onMount={handleMount}
