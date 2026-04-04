@@ -32,6 +32,7 @@ function ChatPageInner() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const initialQueryHandled = useRef(false);
+  const handleSendRef = useRef<(q: string) => void>(() => {});
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,20 +43,20 @@ function ChatPageInner() {
     const q = searchParams.get('q');
     if (q && !initialQueryHandled.current && currentProjectId && currentDatasourceId) {
       initialQueryHandled.current = true;
-      handleSend(q);
+      handleSendRef.current(q);
       window.history.replaceState({}, '', '/chat');
     }
-  }, [searchParams, currentProjectId, currentDatasourceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, currentProjectId, currentDatasourceId]);
 
-  /* Handle quick-chat custom event from other pages */
+  /* Handle quick-chat custom event from other pages — use ref to avoid stale closure */
   useEffect(() => {
     const handler = (e: Event) => {
       const query = (e as CustomEvent<string>).detail;
-      if (query) handleSend(query);
+      if (query) handleSendRef.current(query);
     };
     window.addEventListener('quick-chat', handler);
     return () => window.removeEventListener('quick-chat', handler);
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSend = useCallback(
     (query: string) => {
@@ -76,6 +77,9 @@ function ChatPageInner() {
     },
     [messages, currentProjectId, currentDatasourceId, sendQuery],
   );
+
+  // Keep ref in sync for event handlers that can't have handleSend in deps
+  useEffect(() => { handleSendRef.current = handleSend; }, [handleSend]);
 
   const hasContext = currentProjectId && currentDatasourceId;
   const isEmpty = messages.length === 0;

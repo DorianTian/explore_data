@@ -9,6 +9,7 @@ import { Icon } from '@/components/shared/icon';
 import { Badge } from '@/components/ui';
 import { SqlEditor } from './sql-editor';
 import { SmartChart } from './smart-chart';
+import { ChartErrorBoundary } from './chart-error-boundary';
 
 interface ResultTabProps {
   message: ChatMessage;
@@ -198,11 +199,13 @@ export function ResultTab({ message }: ResultTabProps) {
 
       {/* ── Chart Section ── */}
       {hasChart && chartConfig && message.executionResult && (
-        <SmartChart
-          config={chartConfig}
-          rows={message.executionResult.rows}
-          columns={message.executionResult.columns}
-        />
+        <ChartErrorBoundary>
+          <SmartChart
+            config={chartConfig}
+            rows={message.executionResult.rows}
+            columns={message.executionResult.columns}
+          />
+        </ChartErrorBoundary>
       )}
 
       {/* ── Data Table Section ── */}

@@ -162,8 +162,10 @@ export function createQueryRouter(db: DbClient): Router {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': ctx.get('Origin') || '*',
-      'Access-Control-Allow-Credentials': 'true',
+      // CORS: reflect Origin when present (with credentials), fallback to * without credentials
+      ...(ctx.get('Origin')
+        ? { 'Access-Control-Allow-Origin': ctx.get('Origin'), 'Access-Control-Allow-Credentials': 'true' }
+        : { 'Access-Control-Allow-Origin': '*' }),
     });
     res.flushHeaders();
 
@@ -357,7 +359,9 @@ export function createQueryRouter(db: DbClient): Router {
       sendSSE(res, 'done', {});
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId });
+      if (!res.writableEnded) {
+        try { sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId }); } catch { /* socket closed */ }
+      }
     } finally {
       res.end();
     }

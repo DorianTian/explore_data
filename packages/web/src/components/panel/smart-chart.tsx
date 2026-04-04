@@ -53,7 +53,7 @@ const DARK_THEME = {
  * Build an ECharts option object from a ChartConfig + data rows.
  * Handles: line, bar, horizontal_bar, pie, area, scatter, heatmap, grouped_bar.
  */
-function buildEChartsOption(
+export function buildEChartsOption(
   config: ChartConfig,
   rows: Record<string, unknown>[],
 ): Record<string, unknown> {
