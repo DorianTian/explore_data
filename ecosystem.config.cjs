@@ -4,8 +4,8 @@ module.exports = {
   apps: [
     {
       name: "nl2sql-api",
-      script: "packages/api/dist/server.js",
-      cwd: "/opt/aix-ops-hub/nl2sql",
+      script: "dist/server.js",
+      cwd: "/opt/aix-ops-hub/nl2sql/packages/api",
       instances: 1,
       exec_mode: "fork",
       node_args: "--enable-source-maps",
