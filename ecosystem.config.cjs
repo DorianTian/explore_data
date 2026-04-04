@@ -30,7 +30,7 @@ module.exports = {
     },
     {
       name: "nl2sql-web",
-      script: "node_modules/.bin/next",
+      script: "node_modules/next/dist/bin/next",
       args: "start -p 3001",
       cwd: "/opt/aix-ops-hub/nl2sql/packages/web",
       instances: 1,
