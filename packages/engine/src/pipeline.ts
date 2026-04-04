@@ -11,6 +11,9 @@ import {
 import { IntentClassifier } from './intent-classifier.js';
 import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
+import { QueryDecomposer } from './query-decomposer.js';
+import { SchemaReranker } from './schema-reranker.js';
+import { SqlVerifier } from './sql-verifier.js';
 import { EmbeddingService } from './embedding-service.js';
 import type { PipelineInput, PipelineResult, ConversationTurn } from './types.js';
 
@@ -23,8 +26,11 @@ import type { PipelineInput, PipelineResult, ConversationTurn } from './types.js
  */
 export class NL2SqlPipeline {
   private intentClassifier: IntentClassifier;
+  private queryDecomposer: QueryDecomposer;
   private schemaLinker: SchemaLinker;
+  private schemaReranker: SchemaReranker;
   private sqlGenerator: SqlGenerator;
+  private sqlVerifier: SqlVerifier;
 
   constructor(
     private db: DbClient,
@@ -39,8 +45,11 @@ export class NL2SqlPipeline {
     const openaiBase = config.openaiBaseUrl ?? process.env.OPENAI_BASE_URL;
 
     this.intentClassifier = new IntentClassifier(config.anthropicApiKey, anthropicBase);
+    this.queryDecomposer = new QueryDecomposer(config.anthropicApiKey, anthropicBase);
     this.schemaLinker = new SchemaLinker(db, config.openaiApiKey, openaiBase);
+    this.schemaReranker = new SchemaReranker(config.anthropicApiKey, anthropicBase);
     this.sqlGenerator = new SqlGenerator(config.anthropicApiKey, anthropicBase);
+    this.sqlVerifier = new SqlVerifier(config.anthropicApiKey, anthropicBase);
   }
 
   async run(input: PipelineInput): Promise<PipelineResult> {
@@ -201,13 +210,19 @@ export class NL2SqlPipeline {
     dialect: string,
     intent: { type: string; modificationHint?: string },
   ): Promise<PipelineResult> {
-    // Smart schema linking — uses embeddings for large schemas
-    const schema = await this.schemaLinker.linkSchema(
+    // Node 1: Query Decomposition — detect if query needs multi-step reasoning
+    const decomposition = await this.queryDecomposer.decompose(input.userQuery);
+
+    // Node 2: Schema Linking (embedding recall)
+    let schema = await this.schemaLinker.linkSchema(
       input.datasourceId,
       input.userQuery,
     );
 
-    // Load glossary
+    // Node 3: Schema Rerank (LLM precision filter for large schemas)
+    schema = await this.schemaReranker.rerank(input.userQuery, schema);
+
+    // Node 4: Load glossary
     const glossaryRows = await this.db
       .select()
       .from(glossaryEntries)
@@ -218,20 +233,31 @@ export class NL2SqlPipeline {
       sqlExpression: g.sqlExpression,
     }));
 
-    // RAG — retrieve relevant knowledge documents
+    // Node 5: RAG — retrieve relevant knowledge documents
     const knowledgeContext = await this.retrieveKnowledgeContext(
       input.projectId,
       input.userQuery,
     );
 
-    // Data flywheel — retrieve similar accepted queries as few-shot examples
+    // Node 6: Data flywheel — retrieve similar accepted queries as few-shot examples
     const fewShotExamples = await this.retrieveFewShotExamples(
       input.projectId,
       input.userQuery,
     );
 
+    // Build generation context
+    let queryForGeneration = input.userQuery;
+
+    // If query was decomposed, include the decomposition plan as context
+    if (decomposition.isComplex && decomposition.subQueries.length > 1) {
+      const steps = decomposition.subQueries
+        .map((sq) => `Step ${sq.step}: ${sq.description}`)
+        .join('\n');
+      queryForGeneration = `${input.userQuery}\n\n[查询拆解]\n${steps}\n合并策略: ${decomposition.mergeStrategy}\n请按此拆解逻辑生成完整 SQL。`;
+    }
+
     const context = {
-      userQuery: input.userQuery,
+      userQuery: queryForGeneration,
       schema,
       glossary,
       knowledgeContext,
@@ -240,6 +266,7 @@ export class NL2SqlPipeline {
       dialect,
     };
 
+    // Node 7: SQL Generation
     let result;
     if (intent.type === 'follow_up' && conversationHistory.length > 0) {
       const lastSql = [...conversationHistory]
@@ -257,6 +284,24 @@ export class NL2SqlPipeline {
       }
     } else {
       result = await this.sqlGenerator.generate(context);
+    }
+
+    // Node 8: SQL Self-Verification — LLM checks its own output for logical correctness
+    if (result.sql && result.confidence < 0.95) {
+      const verification = await this.sqlVerifier.verify(
+        input.userQuery,
+        result.sql,
+        schema,
+      );
+
+      if (!verification.isCorrect && verification.suggestedFix) {
+        result = {
+          ...result,
+          sql: verification.suggestedFix,
+          explanation: `${result.explanation}\n（已自动修正：${verification.issues.join('；')}）`,
+          confidence: Math.min(result.confidence + 0.1, 0.95),
+        };
+      }
     }
 
     return {
