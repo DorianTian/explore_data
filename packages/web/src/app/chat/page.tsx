@@ -111,10 +111,8 @@ function ChatPageInner() {
         </div>
 
         {/* Input */}
-        <div className="shrink-0 border-t border-border px-6 py-3">
-          <div className="max-w-3xl mx-auto">
-            <ChatInput onSend={handleSend} disabled={loading || !hasContext} />
-          </div>
+        <div className="shrink-0">
+          <ChatInput onSend={handleSend} disabled={loading || !hasContext} />
         </div>
       </ToastProvider>
     </AppShell>

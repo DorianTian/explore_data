@@ -20,7 +20,6 @@ const navItems: NavItem[] = [
   { href: '/schema', label: '数据源', icon: 'database' },
   { href: '/metrics', label: '指标', icon: 'chart' },
   { href: '/knowledge', label: '知识库', icon: 'book' },
-  { href: '/dashboard', label: '看板', icon: 'layout' },
 ];
 
 export function Sidebar() {

@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               transition-all duration-300
               ${t.type === 'success' ? 'bg-emerald-600/90 text-white' : ''}
               ${t.type === 'error' ? 'bg-red-600/90 text-white' : ''}
-              ${t.type === 'info' ? 'bg-zinc-800/90 text-zinc-100 dark:bg-zinc-200/90 dark:text-zinc-900' : ''}
+              ${t.type === 'info' ? 'bg-surface-elevated text-foreground border border-border' : ''}
             `}
           >
             {t.message}
