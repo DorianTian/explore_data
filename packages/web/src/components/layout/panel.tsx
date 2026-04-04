@@ -1,59 +1,52 @@
 'use client';
 
-import { usePanelStore } from '@/stores/panel-store';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Icon } from '@/components/shared/icon';
-import { DetailTab } from '@/components/panel/detail-tab';
-import { SchemaTab } from '@/components/panel/schema-tab';
-import { HistoryTab } from '@/components/panel/history-tab';
+import { AccordionRoot, AccordionItem } from '@/components/ui/accordion';
+import { SchemaBrowser } from '@/components/panel/schema-browser';
+import { QueryHistory } from '@/components/panel/query-history';
+import { ExecutionDetail } from '@/components/panel/execution-detail';
+import { useSchemaStore } from '@/stores/schema-store';
+import { Badge } from '@/components/ui';
 
 interface PanelProps {
   onSelectQuery?: (query: string) => void;
 }
 
 export function Panel({ onSelectQuery }: PanelProps) {
-  const { activeTab, setActiveTab } = usePanelStore();
+  const tableCount = useSchemaStore((s) => s.tables.length);
 
   return (
-    <div className="flex flex-col h-full">
-      <Tabs
-        value={activeTab}
-        onChange={(v) => setActiveTab(v as 'detail' | 'schema' | 'history')}
-        className="flex flex-col h-full"
-      >
-        <TabsList className="px-2 shrink-0">
-          <TabsTrigger value="detail">
-            <span className="flex items-center gap-1.5">
-              <Icon name="table" size={14} />
-              详情
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="schema">
-            <span className="flex items-center gap-1.5">
-              <Icon name="database" size={14} />
-              Schema
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            <span className="flex items-center gap-1.5">
-              <Icon name="clock" size={14} />
-              历史
-            </span>
-          </TabsTrigger>
-        </TabsList>
+    <div className="flex flex-col h-full overflow-y-auto p-3">
+      <AccordionRoot>
+        <AccordionItem
+          title="Schema 浏览器"
+          icon={<Icon name="database" size={14} className="text-primary" />}
+          defaultOpen
+          extra={
+            tableCount > 0 ? (
+              <Badge variant="default" className="text-[10px]">
+                {tableCount}
+              </Badge>
+            ) : undefined
+          }
+        >
+          <SchemaBrowser />
+        </AccordionItem>
 
-        <TabsContent value="detail" className="flex-1 overflow-y-auto p-4">
-          <DetailTab />
-        </TabsContent>
+        <AccordionItem
+          title="查询历史"
+          icon={<Icon name="clock" size={14} className="text-secondary" />}
+        >
+          <QueryHistory />
+        </AccordionItem>
 
-        <TabsContent value="schema" className="flex-1 overflow-y-auto p-4">
-          <SchemaTab />
-        </TabsContent>
-
-        <TabsContent value="history" className="flex-1 overflow-y-auto p-4">
-          <HistoryTab onSelectQuery={onSelectQuery} />
-        </TabsContent>
-      </Tabs>
+        <AccordionItem
+          title="执行详情"
+          icon={<Icon name="table" size={14} className="text-muted" />}
+        >
+          <ExecutionDetail />
+        </AccordionItem>
+      </AccordionRoot>
     </div>
   );
 }

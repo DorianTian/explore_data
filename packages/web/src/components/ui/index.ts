@@ -6,3 +6,4 @@ export { Dialog, DialogHeader, DialogTitle, DialogBody, DialogFooter } from './d
 export { Badge } from './badge';
 export { Tooltip } from './tooltip';
 export { DropdownMenu, DropdownMenuItem } from './dropdown-menu';
+export { AccordionRoot, AccordionItem } from './accordion';

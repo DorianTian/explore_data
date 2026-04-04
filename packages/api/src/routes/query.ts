@@ -11,7 +11,7 @@ const querySchema = z.object({
   projectId: z.string().uuid(),
   datasourceId: z.string().uuid(),
   query: z.string().min(1).max(2000),
-  conversationId: z.string().uuid().optional(),
+  conversationId: z.string().uuid().nullish(),
   conversationHistory: z
     .array(
       z.object({

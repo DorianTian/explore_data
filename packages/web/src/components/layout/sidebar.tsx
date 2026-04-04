@@ -15,7 +15,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: '对话', icon: 'message' },
+  { href: '/', label: '首页', icon: 'home' },
+  { href: '/chat', label: '对话', icon: 'message' },
   { href: '/schema', label: '数据源', icon: 'database' },
   { href: '/metrics', label: '指标', icon: 'chart' },
   { href: '/knowledge', label: '知识库', icon: 'book' },
@@ -197,7 +198,9 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.href === '/'
+            ? pathname === '/'
+            : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
@@ -220,7 +223,7 @@ export function Sidebar() {
       </nav>
 
       {/* Panel toggle (chat page only) */}
-      {pathname === '/' && (
+      {pathname === '/chat' && (
         <div className="px-3 py-2 border-t border-border">
           <button
             onClick={togglePanel}

@@ -117,7 +117,7 @@ export function useSSEStream() {
           projectId: currentProjectId,
           datasourceId: currentDatasourceId,
           query,
-          conversationId,
+          conversationId: conversationId ?? undefined,
           conversationHistory,
         },
         handleEvent,

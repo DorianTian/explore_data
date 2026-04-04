@@ -65,8 +65,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   conversationId: null,
   selectedMessageId: null,
 
-  addMessage: (message) =>
-    set((s) => ({ messages: [...s.messages, message] })),
+  addMessage: (message) => set((s) => ({ messages: [...s.messages, message] })),
 
   updateMessage: (id, updates) =>
     set((s) => ({
@@ -75,8 +74,7 @@ export const useChatStore = create<ChatStore>((set) => ({
 
   setLoading: (loading) => set({ loading }),
 
-  clearMessages: () =>
-    set({ messages: [], conversationId: null, selectedMessageId: null }),
+  clearMessages: () => set({ messages: [], conversationId: null, selectedMessageId: null }),
 
   setConversationId: (conversationId) => set({ conversationId }),
 
@@ -94,15 +92,11 @@ export const useChatStore = create<ChatStore>((set) => ({
 
   appendContent: (id, chunk) =>
     set((s) => ({
-      messages: s.messages.map((m) =>
-        m.id === id ? { ...m, content: m.content + chunk } : m,
-      ),
+      messages: s.messages.map((m) => (m.id === id ? { ...m, content: m.content + chunk } : m)),
     })),
 
   setPipelineStatus: (id, pipelineStatus) =>
     set((s) => ({
-      messages: s.messages.map((m) =>
-        m.id === id ? { ...m, pipelineStatus } : m,
-      ),
+      messages: s.messages.map((m) => (m.id === id ? { ...m, pipelineStatus } : m)),
     })),
 }));
