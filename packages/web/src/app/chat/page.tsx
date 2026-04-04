@@ -167,7 +167,7 @@ function EmptyState({
       </p>
 
       {hasContext && (
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap gap-2 max-w-lg">
           {EXAMPLE_QUERIES.map((query) => (
             <button
               key={query}
