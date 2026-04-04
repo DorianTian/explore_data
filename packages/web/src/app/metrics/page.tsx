@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { ToastProvider, useToast } from '@/components/toast';
 import { useProjectStore } from '@/stores/project-store';
 import { apiPost } from '@/lib/api';
+import { Select } from '@/components/ui';
 
 interface Metric {
   id: string;
@@ -119,19 +120,11 @@ function MetricsPageInner() {
                   <label className="block text-xs font-medium text-muted mb-1.5">
                     指标类型
                   </label>
-                  <select
+                  <Select
                     value={metricType}
-                    onChange={(e) =>
-                      setMetricType(e.target.value as typeof metricType)
-                    }
-                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
-                  >
-                    {METRIC_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setMetricType(v as typeof metricType)}
+                    options={METRIC_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                  />
                 </div>
                 <button
                   onClick={handleCreate}

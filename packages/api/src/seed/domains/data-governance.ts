@@ -91,7 +91,11 @@ const odsTables: TableDef[] = [
     columns: [
       col.id('规则ID'),
       col.varchar('rule_name', 200, '规则名称', { isNullable: false }),
-      col.varchar('rule_type', 50, '规则类型: completeness/accuracy/consistency/timeliness/uniqueness/validity'),
+      col.varchar(
+        'rule_type',
+        50,
+        '规则类型: completeness/accuracy/consistency/timeliness/uniqueness/validity',
+      ),
       col.varchar('severity', 20, '严重级别: critical/major/minor/info'),
       col.fk('table_id', 'ods_meta_table', '关联表ID'),
       col.varchar('column_name', 300, '关联字段名(可空)'),
@@ -355,7 +359,11 @@ const odsTables: TableDef[] = [
     columns: [
       col.id('变更ID'),
       col.fk('table_id', 'ods_meta_table', '关联表ID'),
-      col.varchar('change_type', 30, '变更类型: add_column/drop_column/modify_column/rename/add_index/drop_index'),
+      col.varchar(
+        'change_type',
+        30,
+        '变更类型: add_column/drop_column/modify_column/rename/add_index/drop_index',
+      ),
       col.text('ddl_statement', 'DDL语句'),
       col.json('before_snapshot', '变更前快照'),
       col.json('after_snapshot', '变更后快照'),
@@ -779,7 +787,11 @@ const dwdTables: TableDef[] = [
       col.fk('profiling_id', 'ods_profiling_result', '画像结果ID'),
       col.varchar('table_name', 300, '表名'),
       col.varchar('column_name', 300, '字段名'),
-      col.varchar('anomaly_type', 50, '异常类型: null_spike/distinct_drop/value_drift/distribution_shift'),
+      col.varchar(
+        'anomaly_type',
+        50,
+        '异常类型: null_spike/distinct_drop/value_drift/distribution_shift',
+      ),
       col.decimal('expected_value', '18,6', '期望值'),
       col.decimal('actual_value', '18,6', '实际值'),
       col.decimal('deviation', '10,4', '偏差程度'),
@@ -1112,7 +1124,10 @@ const dwsTables: TableDef[] = [
     '访问风险汇总(高权限/异常访问)',
     'dws',
     [
-      { name: 'risk_type', comment: '风险类型: over_privilege/unused_grant/cross_env/sensitive_access' },
+      {
+        name: 'risk_type',
+        comment: '风险类型: over_privilege/unused_grant/cross_env/sensitive_access',
+      },
       { name: 'principal_type', comment: '主体类型' },
     ],
     [
@@ -1148,9 +1163,7 @@ const adsTables: TableDef[] = [
     'overall_health',
     '治理健康度总览(全局仪表盘)',
     'ads',
-    [
-      { name: 'domain', comment: '治理领域' },
-    ],
+    [{ name: 'domain', comment: '治理领域' }],
     [
       { name: 'score', type: 'decimal', comment: '评分(0-100)' },
       { name: 'trend', type: 'decimal', comment: '环比趋势' },
@@ -1183,9 +1196,7 @@ const adsTables: TableDef[] = [
     'lineage_dashboard',
     '血缘覆盖看板(覆盖率/断链告警)',
     'ads',
-    [
-      { name: 'database_name', comment: '数据库名称' },
-    ],
+    [{ name: 'database_name', comment: '数据库名称' }],
     [
       { name: 'table_coverage_rate', type: 'decimal', comment: '表血缘覆盖率' },
       { name: 'column_coverage_rate', type: 'decimal', comment: '字段血缘覆盖率' },
@@ -1199,9 +1210,7 @@ const adsTables: TableDef[] = [
     'metadata_dashboard',
     '元数据完整性看板',
     'ads',
-    [
-      { name: 'database_name', comment: '数据库名称' },
-    ],
+    [{ name: 'database_name', comment: '数据库名称' }],
     [
       { name: 'completeness_rate', type: 'decimal', comment: '完整性百分比' },
       { name: 'tables_missing_desc', type: 'bigint', comment: '缺描述的表数' },
@@ -1215,9 +1224,7 @@ const adsTables: TableDef[] = [
     'compliance_dashboard',
     '合规监控看板(违规/整改进度)',
     'ads',
-    [
-      { name: 'regulation', comment: '法规标准' },
-    ],
+    [{ name: 'regulation', comment: '法规标准' }],
     [
       { name: 'compliance_rate', type: 'decimal', comment: '合规率' },
       { name: 'open_violations', type: 'bigint', comment: '未关闭违规数' },
@@ -1231,9 +1238,7 @@ const adsTables: TableDef[] = [
     'sla_dashboard',
     'SLA新鲜度达标看板',
     'ads',
-    [
-      { name: 'sla_level', comment: 'SLA级别' },
-    ],
+    [{ name: 'sla_level', comment: 'SLA级别' }],
     [
       { name: 'total_tables', type: 'bigint', comment: '监控表数' },
       { name: 'met_rate', type: 'decimal', comment: '达标率' },
@@ -1247,9 +1252,7 @@ const adsTables: TableDef[] = [
     'profiling_dashboard',
     'Profiling覆盖与异常看板',
     'ads',
-    [
-      { name: 'database_name', comment: '数据库名称' },
-    ],
+    [{ name: 'database_name', comment: '数据库名称' }],
     [
       { name: 'coverage_rate', type: 'decimal', comment: 'Profiling覆盖率' },
       { name: 'total_anomalies', type: 'bigint', comment: '异常总数' },
@@ -1263,9 +1266,7 @@ const adsTables: TableDef[] = [
     'acl_risk_dashboard',
     '权限风险看板(高危权限/越权)',
     'ads',
-    [
-      { name: 'risk_type', comment: '风险类型' },
-    ],
+    [{ name: 'risk_type', comment: '风险类型' }],
     [
       { name: 'total_risks', type: 'bigint', comment: '风险总数' },
       { name: 'high_risk_count', type: 'bigint', comment: '高危数' },
@@ -1278,9 +1279,7 @@ const adsTables: TableDef[] = [
     'storage_cost_dashboard',
     '存储成本看板(按生命周期/格式)',
     'ads',
-    [
-      { name: 'lifecycle_stage', comment: '生命周期阶段' },
-    ],
+    [{ name: 'lifecycle_stage', comment: '生命周期阶段' }],
     [
       { name: 'total_size_tb', type: 'decimal', comment: '总存储(TB)' },
       { name: 'estimated_cost_usd', type: 'decimal', comment: '预估成本(USD)' },
@@ -1327,9 +1326,7 @@ const adsTables: TableDef[] = [
     'tag_governance',
     '标签治理看板(标签覆盖率/使用情况)',
     'ads',
-    [
-      { name: 'tag_category', comment: '标签分类' },
-    ],
+    [{ name: 'tag_category', comment: '标签分类' }],
     [
       { name: 'total_tags', type: 'bigint', comment: '标签总数' },
       { name: 'used_tags', type: 'bigint', comment: '已使用标签数' },
@@ -1343,9 +1340,7 @@ const adsTables: TableDef[] = [
     'dictionary_health',
     '数据字典健康度看板',
     'ads',
-    [
-      { name: 'category', comment: '字典类别' },
-    ],
+    [{ name: 'category', comment: '字典类别' }],
     [
       { name: 'total_entries', type: 'bigint', comment: '条目总数' },
       { name: 'standardized_rate', type: 'decimal', comment: '标准化率' },
@@ -1359,7 +1354,10 @@ const adsTables: TableDef[] = [
     '审计异常行为报告(异常访问模式)',
     'ads',
     [
-      { name: 'anomaly_type', comment: '异常类型: bulk_export/off_hours/sensitive_access/denied_spike' },
+      {
+        name: 'anomaly_type',
+        comment: '异常类型: bulk_export/off_hours/sensitive_access/denied_spike',
+      },
       { name: 'operator_dept', comment: '操作人部门' },
     ],
     [
@@ -1390,9 +1388,7 @@ const adsTables: TableDef[] = [
     'job_health_dashboard',
     '作业健康度看板(成功率/耗时)',
     'ads',
-    [
-      { name: 'job_type', comment: '作业类型' },
-    ],
+    [{ name: 'job_type', comment: '作业类型' }],
     [
       { name: 'total_jobs', type: 'bigint', comment: '作业总数' },
       { name: 'success_rate', type: 'decimal', comment: '成功率' },
@@ -1457,9 +1453,7 @@ const adsTables: TableDef[] = [
     'executive_summary',
     '治理Executive Summary(给管理层的一页报告)',
     'ads',
-    [
-      { name: 'report_date', comment: '报告日期' },
-    ],
+    [{ name: 'report_date', comment: '报告日期' }],
     [
       { name: 'total_tables', type: 'bigint', comment: '管理表总数' },
       { name: 'quality_score', type: 'decimal', comment: '数据质量评分' },
@@ -1554,31 +1548,41 @@ const glossary: DomainDefinition['glossary'] = [
   {
     term: '元数据',
     sqlExpression: "SELECT * FROM ods_meta_table WHERE lifecycle_status = 'active'",
-    description: '描述数据的数据，包括表名、字段名、数据类型、负责人、存储格式等结构化信息，是数据治理的基础底座',
+    description:
+      '描述数据的数据，包括表名、字段名、数据类型、负责人、存储格式等结构化信息，是数据治理的基础底座',
   },
   {
     term: '数据血缘',
-    sqlExpression: "SELECT s.table_name AS source, t.table_name AS target, l.lineage_type FROM ods_lineage_table l JOIN ods_meta_table s ON l.source_table_id = s.id JOIN ods_meta_table t ON l.target_table_id = t.id WHERE l.is_active = true",
-    description: '数据从源头到消费端的流转路径追踪，包括表级血缘和字段级血缘，用于影响分析和根因定位',
+    sqlExpression:
+      'SELECT s.table_name AS source, t.table_name AS target, l.lineage_type FROM ods_lineage_table l JOIN ods_meta_table s ON l.source_table_id = s.id JOIN ods_meta_table t ON l.target_table_id = t.id WHERE l.is_active = true',
+    description:
+      '数据从源头到消费端的流转路径追踪，包括表级血缘和字段级血缘，用于影响分析和根因定位',
   },
   {
     term: '数据质量',
-    sqlExpression: "SELECT rule_name, rule_type, severity FROM ods_dq_rule WHERE is_enabled = true ORDER BY severity",
-    description: '通过完整性、准确性、一致性、时效性、唯一性、有效性六个维度衡量数据是否满足业务使用要求',
+    sqlExpression:
+      'SELECT rule_name, rule_type, severity FROM ods_dq_rule WHERE is_enabled = true ORDER BY severity',
+    description:
+      '通过完整性、准确性、一致性、时效性、唯一性、有效性六个维度衡量数据是否满足业务使用要求',
   },
   {
     term: '数据分类',
-    sqlExpression: "SELECT sensitivity_level, category, COUNT(*) AS cnt FROM ods_classification_result GROUP BY sensitivity_level, category",
-    description: '根据数据内容的敏感程度(公开/内部/机密/受限)和类别(PII/金融/健康等)对字段进行自动或人工标注',
+    sqlExpression:
+      'SELECT sensitivity_level, category, COUNT(*) AS cnt FROM ods_classification_result GROUP BY sensitivity_level, category',
+    description:
+      '根据数据内容的敏感程度(公开/内部/机密/受限)和类别(PII/金融/健康等)对字段进行自动或人工标注',
   },
   {
     term: '数据生命周期',
-    sqlExpression: "SELECT p.policy_name, b.current_stage, COUNT(*) AS table_cnt FROM ods_lifecycle_binding b JOIN ods_lifecycle_policy p ON b.policy_id = p.id GROUP BY p.policy_name, b.current_stage",
-    description: '数据从创建到归档/删除的全过程管理，包括热/温/冷/归档四阶段流转策略，用于控制存储成本和合规要求',
+    sqlExpression:
+      'SELECT p.policy_name, b.current_stage, COUNT(*) AS table_cnt FROM ods_lifecycle_binding b JOIN ods_lifecycle_policy p ON b.policy_id = p.id GROUP BY p.policy_name, b.current_stage',
+    description:
+      '数据从创建到归档/删除的全过程管理，包括热/温/冷/归档四阶段流转策略，用于控制存储成本和合规要求',
   },
   {
     term: '数据字典',
-    sqlExpression: "SELECT dict_code, dict_name, category, item_key, item_value FROM dwd_data_dictionary WHERE is_standard = true ORDER BY dict_code, sort_order",
+    sqlExpression:
+      'SELECT dict_code, dict_name, category, item_key, item_value FROM dwd_data_dictionary WHERE is_standard = true ORDER BY dict_code, sort_order',
     description: '对业务术语、枚举值、编码规则的标准化定义集合，确保全组织对同一概念使用统一口径',
   },
 ];
