@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/toast';
 import { useChatStore } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
 import { useSSEStream } from '@/hooks/use-sse-stream';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard';
 import { Icon } from '@/components/shared/icon';
 
 const EXAMPLE_QUERIES = [
@@ -24,6 +25,7 @@ function ChatPageInner() {
   const { messages, loading, clearMessages } = useChatStore();
   const { currentProjectId, currentDatasourceId } = useProjectStore();
   const { sendQuery } = useSSEStream();
+  useKeyboardShortcuts();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ function ChatPageInner() {
   const hasContext = currentProjectId && currentDatasourceId;
 
   return (
-    <AppShell panel={<Panel />}>
+    <AppShell panel={<Panel onSelectQuery={handleSend} />}>
       <ToastProvider>
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">

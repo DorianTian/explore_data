@@ -3,8 +3,15 @@
 import { usePanelStore } from '@/stores/panel-store';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Icon } from '@/components/shared/icon';
+import { DetailTab } from '@/components/panel/detail-tab';
+import { SchemaTab } from '@/components/panel/schema-tab';
+import { HistoryTab } from '@/components/panel/history-tab';
 
-export function Panel() {
+interface PanelProps {
+  onSelectQuery?: (query: string) => void;
+}
+
+export function Panel({ onSelectQuery }: PanelProps) {
   const { activeTab, setActiveTab } = usePanelStore();
 
   return (
@@ -36,21 +43,15 @@ export function Panel() {
         </TabsList>
 
         <TabsContent value="detail" className="flex-1 overflow-y-auto p-4">
-          <div className="text-sm text-muted text-center py-8">
-            点击消息查看详情
-          </div>
+          <DetailTab />
         </TabsContent>
 
         <TabsContent value="schema" className="flex-1 overflow-y-auto p-4">
-          <div className="text-sm text-muted text-center py-8">
-            选择数据源查看 Schema
-          </div>
+          <SchemaTab />
         </TabsContent>
 
         <TabsContent value="history" className="flex-1 overflow-y-auto p-4">
-          <div className="text-sm text-muted text-center py-8">
-            查询历史
-          </div>
+          <HistoryTab onSelectQuery={onSelectQuery} />
         </TabsContent>
       </Tabs>
     </div>
