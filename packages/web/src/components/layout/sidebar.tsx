@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useProjectStore } from '@/stores/project-store';
 import { usePanelStore } from '@/stores/panel-store';
 import { Icon, type IconName } from '@/components/shared/icon';
-import { Button } from '@/components/ui';
+import { Button, Select } from '@/components/ui';
 
 interface NavItem {
   href: string;
@@ -32,6 +32,7 @@ export function Sidebar() {
     currentDatasourceId,
     loadingProjects,
     fetchProjects,
+    fetchDatasources,
     setCurrentProject,
     setCurrentDatasource,
     createProject,
@@ -50,6 +51,13 @@ export function Sidebar() {
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
+
+  // After page refresh, persist restores currentProjectId but datasources is empty — re-fetch
+  useEffect(() => {
+    if (currentProjectId && datasources.length === 0) {
+      fetchDatasources(currentProjectId);
+    }
+  }, [currentProjectId, datasources.length, fetchDatasources]);
 
   const handleCreateProject = useCallback(async () => {
     const trimmed = newProjectName.trim();
@@ -92,18 +100,13 @@ export function Sidebar() {
           {loadingProjects ? (
             <div className="skeleton h-8 rounded-md" />
           ) : (
-            <select
+            <Select
               value={currentProjectId ?? ''}
-              onChange={(e) => setCurrentProject(e.target.value || null)}
-              className="w-full h-8 rounded-[var(--radius-md)] border border-border bg-background px-2 text-sm text-foreground outline-none cursor-pointer"
-            >
-              <option value="">选择项目...</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setCurrentProject(v || null)}
+              options={projects.map((p) => ({ value: p.id, label: p.name }))}
+              placeholder="选择项目..."
+              size="sm"
+            />
           )}
         </div>
 
@@ -138,18 +141,13 @@ export function Sidebar() {
             <label className="block text-[11px] font-medium text-muted uppercase tracking-wider px-1">
               数据源
             </label>
-            <select
+            <Select
               value={currentDatasourceId ?? ''}
-              onChange={(e) => setCurrentDatasource(e.target.value || null)}
-              className="w-full h-8 rounded-[var(--radius-md)] border border-border bg-background px-2 text-sm text-foreground outline-none cursor-pointer"
-            >
-              <option value="">选择数据源...</option>
-              {datasources.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.dialect})
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setCurrentDatasource(v || null)}
+              options={datasources.map((d) => ({ value: d.id, label: `${d.name} (${d.dialect})` }))}
+              placeholder="选择数据源..."
+              size="sm"
+            />
 
             {showNewDatasource ? (
               <div className="space-y-1.5">
@@ -165,19 +163,13 @@ export function Sidebar() {
                   className="w-full h-7 rounded border border-border bg-background px-2 text-xs outline-none"
                 />
                 <div className="flex gap-1.5">
-                  <select
+                  <Select
                     value={newDsDialect}
-                    onChange={(e) => setNewDsDialect(e.target.value)}
-                    className="flex-1 h-7 rounded border border-border bg-background px-2 text-xs outline-none"
-                  >
-                    {['postgresql', 'mysql', 'hive', 'sparksql', 'flinksql'].map(
-                      (d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ),
-                    )}
-                  </select>
+                    onChange={setNewDsDialect}
+                    options={['postgresql', 'mysql', 'hive', 'sparksql', 'flinksql'].map((d) => ({ value: d, label: d }))}
+                    size="sm"
+                    className="flex-1"
+                  />
                   <Button size="sm" onClick={handleCreateDatasource}>
                     创建
                   </Button>
