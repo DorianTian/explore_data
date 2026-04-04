@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Icon } from '@/components/shared/icon';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3100';
@@ -22,19 +22,30 @@ export function DemoSection() {
   const [selectedQuery, setSelectedQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DemoResult | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  /* Abort in-flight request on unmount */
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const runDemo = useCallback(async (query: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
+
     setSelectedQuery(query);
     setLoading(true);
     setResult(null);
 
     try {
-      const projectsRes = await fetch(`${API_BASE}/api/projects`);
+      const projectsRes = await fetch(`${API_BASE}/api/projects`, { signal });
+      if (!projectsRes.ok) return;
       const projects = await projectsRes.json();
       if (!projects.success || !projects.data?.length) return;
 
       const projectId = projects.data[0].id;
-      const dsRes = await fetch(`${API_BASE}/api/datasources?projectId=${projectId}`);
+      const dsRes = await fetch(`${API_BASE}/api/datasources?projectId=${projectId}`, { signal });
+      if (!dsRes.ok) return;
       const datasources = await dsRes.json();
       if (!datasources.success || !datasources.data?.length) return;
 
@@ -44,7 +55,9 @@ export function DemoSection() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId, datasourceId, query }),
+        signal,
       });
+      if (!queryRes.ok) return;
       const queryData = await queryRes.json();
 
       if (queryData.success) {
@@ -55,9 +68,9 @@ export function DemoSection() {
         });
       }
     } catch {
-      /* Demo failure is non-critical */
+      /* Demo failure is non-critical (includes AbortError) */
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   }, []);
 

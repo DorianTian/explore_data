@@ -36,11 +36,11 @@ export function ExecutionDetail() {
   const hasSqlChanged = message?.sql !== editedSql;
 
   const handleCopySql = useCallback(async () => {
-    if (!message?.sql) return;
-    await navigator.clipboard.writeText(message.sql);
+    if (!editedSql) return;
+    await navigator.clipboard.writeText(editedSql);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  }, [message?.sql]);
+  }, [editedSql]);
 
   const handleSaveCorrection = useCallback(async () => {
     if (!message || !hasSqlChanged || !currentProjectId) return;

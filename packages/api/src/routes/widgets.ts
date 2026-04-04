@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { WidgetService } from '../services/widget-service.js';
 import type { DbClient } from '@nl2sql/db';
 
+const uuidSchema = z.string().uuid();
+
 const createWidgetSchema = z.object({
   projectId: z.string().uuid(),
   conversationId: z.string().uuid().optional(),
@@ -67,7 +69,13 @@ export function createWidgetRouter(db: DbClient): Router {
   });
 
   router.get('/:id', async (ctx) => {
-    const widget = await service.getById(ctx.params.id);
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
+    const widget = await service.getById(idResult.data);
     if (!widget) {
       ctx.status = 404;
       ctx.body = {
@@ -80,6 +88,12 @@ export function createWidgetRouter(db: DbClient): Router {
   });
 
   router.patch('/:id', async (ctx) => {
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
     const parsed = updateWidgetSchema.safeParse(ctx.request.body);
     if (!parsed.success) {
       ctx.status = 400;
@@ -89,7 +103,7 @@ export function createWidgetRouter(db: DbClient): Router {
       };
       return;
     }
-    const updated = await service.update(ctx.params.id, parsed.data);
+    const updated = await service.update(idResult.data, parsed.data);
     if (!updated) {
       ctx.status = 404;
       ctx.body = {
@@ -102,7 +116,13 @@ export function createWidgetRouter(db: DbClient): Router {
   });
 
   router.delete('/:id', async (ctx) => {
-    const deleted = await service.remove(ctx.params.id);
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
+    const deleted = await service.remove(idResult.data);
     if (!deleted) {
       ctx.status = 404;
       ctx.body = {

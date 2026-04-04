@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { DashboardService } from '../services/dashboard-service.js';
 import type { DbClient } from '@nl2sql/db';
 
+const uuidSchema = z.string().uuid();
+
 const createDashboardSchema = z.object({
   projectId: z.string().uuid(),
   title: z.string().max(200),
@@ -72,7 +74,13 @@ export function createDashboardRouter(db: DbClient): Router {
   });
 
   router.get('/:id', async (ctx) => {
-    const result = await service.getWithWidgets(ctx.params.id);
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
+    const result = await service.getWithWidgets(idResult.data);
     if (!result) {
       ctx.status = 404;
       ctx.body = {
@@ -85,6 +93,12 @@ export function createDashboardRouter(db: DbClient): Router {
   });
 
   router.patch('/:id', async (ctx) => {
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
     const parsed = updateDashboardSchema.safeParse(ctx.request.body);
     if (!parsed.success) {
       ctx.status = 400;
@@ -94,7 +108,7 @@ export function createDashboardRouter(db: DbClient): Router {
       };
       return;
     }
-    const updated = await service.update(ctx.params.id, parsed.data);
+    const updated = await service.update(idResult.data, parsed.data);
     if (!updated) {
       ctx.status = 404;
       ctx.body = {
@@ -107,7 +121,13 @@ export function createDashboardRouter(db: DbClient): Router {
   });
 
   router.delete('/:id', async (ctx) => {
-    const deleted = await service.remove(ctx.params.id);
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
+    const deleted = await service.remove(idResult.data);
     if (!deleted) {
       ctx.status = 404;
       ctx.body = {
@@ -120,6 +140,12 @@ export function createDashboardRouter(db: DbClient): Router {
   });
 
   router.post('/:id/widgets', async (ctx) => {
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
     const parsed = addWidgetSchema.safeParse(ctx.request.body);
     if (!parsed.success) {
       ctx.status = 400;
@@ -129,13 +155,19 @@ export function createDashboardRouter(db: DbClient): Router {
       };
       return;
     }
-    const placement = await service.addWidget(ctx.params.id, parsed.data);
+    const placement = await service.addWidget(idResult.data, parsed.data);
     ctx.status = 201;
     ctx.body = { success: true, data: placement };
   });
 
   router.delete('/:dashboardId/widgets/:placementId', async (ctx) => {
-    const deleted = await service.removeWidget(ctx.params.placementId);
+    const placementResult = uuidSchema.safeParse(ctx.params.placementId);
+    if (!placementResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'placementId must be a valid UUID' } };
+      return;
+    }
+    const deleted = await service.removeWidget(placementResult.data);
     if (!deleted) {
       ctx.status = 404;
       ctx.body = {
@@ -148,6 +180,12 @@ export function createDashboardRouter(db: DbClient): Router {
   });
 
   router.put('/:id/layout', async (ctx) => {
+    const idResult = uuidSchema.safeParse(ctx.params.id);
+    if (!idResult.success) {
+      ctx.status = 400;
+      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      return;
+    }
     const parsed = updateLayoutSchema.safeParse(ctx.request.body);
     if (!parsed.success) {
       ctx.status = 400;
@@ -157,7 +195,7 @@ export function createDashboardRouter(db: DbClient): Router {
       };
       return;
     }
-    const updated = await service.updateLayout(ctx.params.id, parsed.data.items);
+    const updated = await service.updateLayout(idResult.data, parsed.data.items);
     ctx.body = { success: true, data: updated };
   });
 

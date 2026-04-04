@@ -5,7 +5,6 @@ import { usePanelStore } from '@/stores/panel-store';
 
 export function useKeyboardShortcuts() {
   const togglePanel = usePanelStore((s) => s.togglePanel);
-  const setActiveTab = usePanelStore((s) => s.setActiveTab);
   const openPanel = usePanelStore((s) => s.openPanel);
 
   useEffect(() => {
@@ -33,5 +32,5 @@ export function useKeyboardShortcuts() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [togglePanel, setActiveTab, openPanel]);
+  }, [togglePanel, openPanel]);
 }
