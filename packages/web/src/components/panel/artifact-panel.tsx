@@ -34,13 +34,11 @@ export function ArtifactPanel() {
   );
 
   const [editedSql, setEditedSql] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (message?.sql) {
       setEditedSql(message.sql);
-      setIsEditing(false);
     }
   }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps — intentionally skip message.sql to preserve in-progress edits
 
@@ -62,21 +60,24 @@ export function ArtifactPanel() {
       .reverse()
       .find((m) => m.role === 'user');
 
-    await apiPost('/api/query/feedback', {
-      projectId: currentProjectId,
-      naturalLanguage: userMsg?.content ?? '',
-      generatedSql: message.sql,
-      correctedSql: editedSql,
-      status: 'accepted',
-    });
-
-    if (selectedMessageId) {
-      updateMessage(selectedMessageId, {
-        sql: editedSql,
-        feedback: 'accepted',
+    try {
+      await apiPost('/api/query/feedback', {
+        projectId: currentProjectId,
+        naturalLanguage: userMsg?.content ?? '',
+        generatedSql: message.sql,
+        correctedSql: editedSql,
+        status: 'accepted',
       });
+
+      if (selectedMessageId) {
+        updateMessage(selectedMessageId, {
+          sql: editedSql,
+          feedback: 'accepted',
+        });
+      }
+    } catch {
+      /* Feedback save failed — non-critical */
     }
-    setIsEditing(false);
   }, [message, editedSql, hasSqlChanged, selectedMessageId, currentProjectId, messages, updateMessage]);
 
   const handleExportCsv = useCallback(() => {
@@ -91,7 +92,9 @@ export function ArtifactPanel() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'result.csv';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [message?.executionResult]);
 
@@ -142,7 +145,6 @@ export function ArtifactPanel() {
           message={message}
           editedSql={editedSql}
           setEditedSql={setEditedSql}
-          setIsEditing={setIsEditing}
           hasSqlChanged={hasSqlChanged}
           handleCopySql={handleCopySql}
           handleSaveCorrection={handleSaveCorrection}
@@ -169,7 +171,6 @@ function SqlTabContent({
   message,
   editedSql,
   setEditedSql,
-  setIsEditing,
   hasSqlChanged,
   handleCopySql,
   handleSaveCorrection,
@@ -178,7 +179,6 @@ function SqlTabContent({
   message: ChatMessage;
   editedSql: string;
   setEditedSql: (v: string) => void;
-  setIsEditing: (v: boolean) => void;
   hasSqlChanged: boolean;
   handleCopySql: () => void;
   handleSaveCorrection: () => void;
@@ -230,10 +230,7 @@ function SqlTabContent({
       {/* Editor */}
       <SqlEditor
         value={editedSql}
-        onChange={(v) => {
-          setEditedSql(v);
-          setIsEditing(true);
-        }}
+        onChange={setEditedSql}
         onSave={hasSqlChanged ? handleSaveCorrection : undefined}
         height={280}
       />

@@ -7,14 +7,14 @@ const uuidSchema = z.string().uuid();
 
 const createDashboardSchema = z.object({
   projectId: z.string().uuid(),
-  title: z.string().max(200),
+  title: z.string().min(1).max(200),
   description: z.string().optional(),
   layoutConfig: z.unknown().optional(),
   isPublic: z.boolean().optional(),
 });
 
 const updateDashboardSchema = z.object({
-  title: z.string().max(200).optional(),
+  title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
   layoutConfig: z.unknown().optional(),
   isPublic: z.boolean().optional(),
@@ -22,18 +22,18 @@ const updateDashboardSchema = z.object({
 
 const addWidgetSchema = z.object({
   widgetId: z.string().uuid(),
-  positionX: z.number().int().optional(),
-  positionY: z.number().int().optional(),
-  width: z.number().int().optional(),
-  height: z.number().int().optional(),
+  positionX: z.number().int().min(0).optional(),
+  positionY: z.number().int().min(0).optional(),
+  width: z.number().int().min(1).optional(),
+  height: z.number().int().min(1).optional(),
 });
 
 const layoutItemSchema = z.object({
   id: z.string().uuid(),
-  positionX: z.number().int(),
-  positionY: z.number().int(),
-  width: z.number().int(),
-  height: z.number().int(),
+  positionX: z.number().int().min(0),
+  positionY: z.number().int().min(0),
+  width: z.number().int().min(1),
+  height: z.number().int().min(1),
 });
 
 const updateLayoutSchema = z.object({

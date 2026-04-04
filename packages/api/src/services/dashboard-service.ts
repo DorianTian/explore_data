@@ -115,7 +115,7 @@ export class DashboardService {
             width: item.width,
             height: item.height,
           })
-          .where(eq(dashboardWidgets.id, item.id))
+          .where(and(eq(dashboardWidgets.id, item.id), eq(dashboardWidgets.dashboardId, dashboardId)))
           .returning();
         results.push(updated);
       }
