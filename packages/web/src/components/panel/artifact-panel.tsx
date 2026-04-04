@@ -6,7 +6,7 @@ import { usePanelStore, type ArtifactTab } from '@/stores/panel-store';
 import { useProjectStore } from '@/stores/project-store';
 import { Icon } from '@/components/shared/icon';
 import { Badge } from '@/components/ui';
-import { useSchemaStore } from '@/stores/schema-store';
+import { SchemaBrowser } from './schema-browser';
 import { SqlEditor } from './sql-editor';
 import { apiPost } from '@/lib/api';
 import dynamic from 'next/dynamic';
@@ -24,7 +24,7 @@ export function ArtifactPanel() {
   const selectedMessageId = usePanelStore((s) => s.selectedMessageId);
   const artifactTab = usePanelStore((s) => s.artifactTab);
   const setArtifactTab = usePanelStore((s) => s.setArtifactTab);
-  const closeArtifact = usePanelStore((s) => s.closeArtifact);
+  const closePanel = usePanelStore((s) => s.closePanel);
 
   const messages = useChatStore((s) => s.messages);
   const updateMessage = useChatStore((s) => s.updateMessage);
@@ -42,7 +42,7 @@ export function ArtifactPanel() {
     if (message?.sql) {
       setEditedSql(message.sql);
     }
-  }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps — intentionally skip message.sql to preserve in-progress edits
+  }, [message?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasSqlChanged = Boolean(message?.sql) && message?.sql !== editedSql;
 
@@ -102,13 +102,11 @@ export function ArtifactPanel() {
     URL.revokeObjectURL(url);
   }, [message?.executionResult]);
 
-  if (!message) return null;
-
-  const hasResult = Boolean(message.executionResult);
+  const hasSql = Boolean(message?.sql);
+  const hasResult = Boolean(message?.executionResult);
   const hasChart = Boolean(
-    message.chartRecommendation && message.chartRecommendation.chartType !== 'table',
+    message?.chartRecommendation && message.chartRecommendation.chartType !== 'table',
   );
-  const hasSchema = Boolean(message.tablesUsed && message.tablesUsed.length > 0);
 
   return (
     <div className="flex flex-col h-full bg-background-secondary">
@@ -117,9 +115,9 @@ export function ArtifactPanel() {
         <div className="flex items-center gap-1">
           {TAB_CONFIG.map((tab) => {
             const disabled =
+              (tab.key === 'sql' && !hasSql) ||
               (tab.key === 'result' && !hasResult) ||
-              (tab.key === 'chart' && !hasChart) ||
-              (tab.key === 'schema' && !hasSchema);
+              (tab.key === 'chart' && !hasChart);
             const active = artifactTab === tab.key;
 
             return (
@@ -138,7 +136,7 @@ export function ArtifactPanel() {
           })}
         </div>
         <button
-          onClick={closeArtifact}
+          onClick={closePanel}
           className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
         >
           <Icon name="x" size={16} />
@@ -147,36 +145,44 @@ export function ArtifactPanel() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {artifactTab === 'sql' && <SqlTabContent
-          message={message}
-          editedSql={editedSql}
-          setEditedSql={setEditedSql}
-          hasSqlChanged={hasSqlChanged}
-          handleCopySql={handleCopySql}
-          handleSaveCorrection={handleSaveCorrection}
-          copied={copied}
-        />}
+        {/* 表结构 tab — ALL tables */}
+        {artifactTab === 'schema' && (
+          <div className="pt-3 h-full">
+            <SchemaBrowser />
+          </div>
+        )}
 
-        {artifactTab === 'result' && message.executionResult && (
+        {/* SQL tab — editor + involved tables below */}
+        {artifactTab === 'sql' && message && (
+          <SqlTabContent
+            message={message}
+            editedSql={editedSql}
+            setEditedSql={setEditedSql}
+            hasSqlChanged={hasSqlChanged}
+            handleCopySql={handleCopySql}
+            handleSaveCorrection={handleSaveCorrection}
+            copied={copied}
+          />
+        )}
+
+        {/* 结果 tab */}
+        {artifactTab === 'result' && message?.executionResult && (
           <ResultTabContent
             executionResult={message.executionResult}
             onExportCsv={handleExportCsv}
           />
         )}
 
-        {artifactTab === 'chart' && hasChart && (
+        {/* 图表 tab */}
+        {artifactTab === 'chart' && hasChart && message && (
           <ChartTabContent chartRecommendation={message.chartRecommendation!} />
-        )}
-
-        {artifactTab === 'schema' && hasSchema && (
-          <SchemaTabContent tablesUsed={message.tablesUsed!} />
         )}
       </div>
     </div>
   );
 }
 
-/** SQL tab: editable SQL with confidence badge */
+/** SQL tab: editor + confidence + involved table schema */
 function SqlTabContent({
   message,
   editedSql,
@@ -256,6 +262,14 @@ function SqlTabContent({
         <div className="pt-3 border-t border-border">
           <h4 className="text-xs font-medium text-muted mb-2">解释</h4>
           <p className="text-sm text-foreground leading-relaxed">{message.content}</p>
+        </div>
+      )}
+
+      {/* Involved tables — inline schema for this query */}
+      {message.tablesUsed && message.tablesUsed.length > 0 && (
+        <div className="pt-3 border-t border-border">
+          <h4 className="text-xs font-medium text-muted mb-2">涉及表结构</h4>
+          <SchemaBrowser filterTables={message.tablesUsed} />
         </div>
       )}
     </div>
@@ -363,83 +377,6 @@ function ChartTabContent({
           notMerge
         />
       </div>
-    </div>
-  );
-}
-
-/** Schema tab: show columns of tables used in the query */
-function SchemaTabContent({ tablesUsed }: { tablesUsed: string[] }) {
-  const allTables = useSchemaStore((s) => s.tables);
-  const relationships = useSchemaStore((s) => s.relationships);
-
-  const relevantTables = useMemo(
-    () => allTables.filter((t) => tablesUsed.some((name) => name.toLowerCase() === t.name.toLowerCase())),
-    [allTables, tablesUsed],
-  );
-
-  const relevantRels = useMemo(() => {
-    const tableIds = new Set(relevantTables.map((t) => t.id));
-    return relationships.filter((r) => tableIds.has(r.fromTableId) || tableIds.has(r.toTableId));
-  }, [relevantTables, relationships]);
-
-  if (relevantTables.length === 0) {
-    return (
-      <div className="p-4 text-sm text-muted text-center py-8">
-        Schema 数据未加载，请在左侧面板刷新 Schema
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 space-y-4">
-      {/* Relationships summary */}
-      {relevantRels.length > 0 && (
-        <div className="rounded-lg border border-border p-3 bg-surface">
-          <h4 className="text-xs font-medium text-muted mb-2">关联关系</h4>
-          <div className="space-y-1">
-            {relevantRels.map((rel) => {
-              const fromTable = allTables.find((t) => t.id === rel.fromTableId);
-              const toTable = allTables.find((t) => t.id === rel.toTableId);
-              const fromCol = fromTable?.columns.find((c) => c.id === rel.fromColumnId);
-              const toCol = toTable?.columns.find((c) => c.id === rel.toColumnId);
-              return (
-                <div key={rel.id} className="text-xs text-foreground font-mono">
-                  {fromTable?.name}.{fromCol?.name} → {toTable?.name}.{toCol?.name}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Table columns */}
-      {relevantTables.map((table) => (
-        <div key={table.id} className="rounded-lg border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-surface flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon name="table" size={14} className="text-primary" />
-              <span className="text-sm font-medium text-foreground">{table.name}</span>
-            </div>
-            <span className="text-xs text-muted">{table.columns.length} 列</span>
-          </div>
-          {table.comment && (
-            <div className="px-3 py-1.5 border-t border-border bg-surface/50">
-              <span className="text-xs text-muted">{table.comment}</span>
-            </div>
-          )}
-          <div className="divide-y divide-border">
-            {table.columns.map((col) => (
-              <div key={col.id} className="flex items-center gap-2 px-3 py-1.5 text-xs">
-                <span className="text-foreground flex-1 truncate">{col.name}</span>
-                <span className="text-muted font-mono shrink-0">{col.dataType}</span>
-                {col.isPrimaryKey && (
-                  <Badge variant="golden" className="text-[10px] px-1.5 py-0">PK</Badge>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
