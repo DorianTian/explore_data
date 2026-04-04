@@ -149,8 +149,21 @@ function autoLayout(
   }));
 }
 
-export function ERDiagram() {
-  const { tables, relationships } = useSchemaStore();
+export function ERDiagram({ filterTables }: { filterTables?: string[] } = {}) {
+  const { tables: allTables, relationships: allRelationships } = useSchemaStore();
+
+  /* Apply table filter if provided */
+  const tables = useMemo(() => {
+    if (!filterTables || filterTables.length === 0) return allTables;
+    const filterSet = new Set(filterTables.map((n) => n.toLowerCase()));
+    return allTables.filter((t) => filterSet.has(t.name.toLowerCase()));
+  }, [allTables, filterTables]);
+
+  /* Only show relationships between visible tables */
+  const relationships = useMemo(() => {
+    const tableIds = new Set(tables.map((t) => t.id));
+    return allRelationships.filter((r) => tableIds.has(r.fromTableId) && tableIds.has(r.toTableId));
+  }, [allRelationships, tables]);
 
   /* FK column lookup */
   const fkColumnIds = useMemo(() => {

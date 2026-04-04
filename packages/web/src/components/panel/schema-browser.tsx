@@ -356,7 +356,7 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
         </>
       ) : (
         <div className="h-[400px] rounded-lg border border-border overflow-hidden">
-          <ERDiagram />
+          <ERDiagram filterTables={filterTables} />
         </div>
       )}
     </div>
