@@ -2433,7 +2433,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Transfer Summaries ----------
   generateSummaryTable(
-    'dws', 'transfer_summary_monthly', '月度调拨汇总表', 'dws',
+    'dws',
+    'transfer_summary_monthly',
+    '月度调拨汇总表',
+    'dws',
     [...scDimensions.warehouse.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'transfer_out_count', type: 'bigint', comment: '调出次数' },
@@ -2447,8 +2450,15 @@ const dwsTables: TableDef[] = [
 
   // ---------- Scrap Summary ----------
   generateSummaryTable(
-    'dws', 'scrap_loss_summary', '报废损失汇总表', 'dws',
-    [{ name: 'scrap_type', comment: '报废类型' }, { name: 'reason_category', comment: '原因分类' }, ...scDimensions.timePeriod],
+    'dws',
+    'scrap_loss_summary',
+    '报废损失汇总表',
+    'dws',
+    [
+      { name: 'scrap_type', comment: '报废类型' },
+      { name: 'reason_category', comment: '原因分类' },
+      ...scDimensions.timePeriod,
+    ],
     [
       { name: 'scrap_count', type: 'bigint', comment: '报废次数' },
       { name: 'scrap_qty', type: 'bigint', comment: '报废数量' },
@@ -2459,7 +2469,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Supplier Contract Summary ----------
   generateSummaryTable(
-    'dws', 'supplier_contract_summary', '供应商合同汇总表', 'dws',
+    'dws',
+    'supplier_contract_summary',
+    '供应商合同汇总表',
+    'dws',
     [...scDimensions.supplier.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'active_contracts', type: 'bigint', comment: '有效合同数' },
@@ -2472,7 +2485,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Safety Stock Compliance ----------
   generateSummaryTable(
-    'dws', 'safety_stock_compliance', '安全库存达标率表', 'dws',
+    'dws',
+    'safety_stock_compliance',
+    '安全库存达标率表',
+    'dws',
     [...scDimensions.warehouse.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'total_sku', type: 'bigint', comment: '总SKU数' },
@@ -2485,7 +2501,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Insurance Summary ----------
   generateSummaryTable(
-    'dws', 'shipment_insurance_summary', '物流保险汇总表', 'dws',
+    'dws',
+    'shipment_insurance_summary',
+    '物流保险汇总表',
+    'dws',
     [...scDimensions.carrier.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'insured_shipments', type: 'bigint', comment: '投保发运数' },
@@ -2500,7 +2519,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Supplier Cert Expiry ----------
   generateSummaryTable(
-    'dws', 'supplier_cert_status_summary', '供应商资质到期汇总表', 'dws',
+    'dws',
+    'supplier_cert_status_summary',
+    '供应商资质到期汇总表',
+    'dws',
     [...scDimensions.supplier.slice(0, 2)],
     [
       { name: 'total_certs', type: 'bigint', comment: '总证书数' },
@@ -2514,7 +2536,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Price Volatility ----------
   generateSummaryTable(
-    'dws', 'material_price_volatility', '物料价格波动汇总表', 'dws',
+    'dws',
+    'material_price_volatility',
+    '物料价格波动汇总表',
+    'dws',
     [...scDimensions.material.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'avg_price', type: 'decimal', comment: '平均价格' },
@@ -2528,7 +2553,10 @@ const dwsTables: TableDef[] = [
 
   // ---------- Receiving Efficiency ----------
   generateSummaryTable(
-    'dws', 'receiving_efficiency_summary', '收货效率汇总表', 'dws',
+    'dws',
+    'receiving_efficiency_summary',
+    '收货效率汇总表',
+    'dws',
     [...scDimensions.warehouse.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'receiving_count', type: 'bigint', comment: '收货单数' },
@@ -2990,8 +3018,15 @@ const adsTables: TableDef[] = [
 
   // ---------- Transfer Analytics ----------
   generateSummaryTable(
-    'ads', 'inter_warehouse_flow_analysis', '仓间调拨流向分析', 'ads',
-    [{ name: 'from_warehouse', comment: '调出仓库' }, { name: 'to_warehouse', comment: '调入仓库' }, ...scDimensions.timePeriod],
+    'ads',
+    'inter_warehouse_flow_analysis',
+    '仓间调拨流向分析',
+    'ads',
+    [
+      { name: 'from_warehouse', comment: '调出仓库' },
+      { name: 'to_warehouse', comment: '调入仓库' },
+      ...scDimensions.timePeriod,
+    ],
     [
       { name: 'transfer_count', type: 'bigint', comment: '调拨次数' },
       { name: 'transfer_qty', type: 'bigint', comment: '调拨总量' },
@@ -3003,7 +3038,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Scrap Analytics ----------
   generateSummaryTable(
-    'ads', 'scrap_loss_trend', '报废损失趋势分析', 'ads',
+    'ads',
+    'scrap_loss_trend',
+    '报废损失趋势分析',
+    'ads',
     [{ name: 'scrap_type', comment: '报废类型' }, ...scDimensions.timePeriod],
     [
       { name: 'scrap_qty', type: 'bigint', comment: '报废数量' },
@@ -3016,7 +3054,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Material Risk Analysis ----------
   generateSummaryTable(
-    'ads', 'material_supply_risk', '物料供应风险分析', 'ads',
+    'ads',
+    'material_supply_risk',
+    '物料供应风险分析',
+    'ads',
     [...scDimensions.material.slice(0, 2)],
     [
       { name: 'supplier_count', type: 'bigint', comment: '供应商数量' },
@@ -3031,7 +3072,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Contract Compliance ----------
   generateSummaryTable(
-    'ads', 'contract_compliance_report', '合同合规报告', 'ads',
+    'ads',
+    'contract_compliance_report',
+    '合同合规报告',
+    'ads',
     [...scDimensions.supplier.slice(0, 2), ...scDimensions.timePeriod],
     [
       { name: 'active_contracts', type: 'bigint', comment: '有效合同数' },
@@ -3045,7 +3089,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Inventory Forecast ----------
   generateSummaryTable(
-    'ads', 'inventory_replenishment_plan', '补货计划推荐', 'ads',
+    'ads',
+    'inventory_replenishment_plan',
+    '补货计划推荐',
+    'ads',
     [...scDimensions.material.slice(0, 2), ...scDimensions.warehouse.slice(0, 2)],
     [
       { name: 'current_stock', type: 'bigint', comment: '当前库存' },
@@ -3060,7 +3107,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Supplier Diversity ----------
   generateSummaryTable(
-    'ads', 'supplier_diversity_report', '供应商多样性报告', 'ads',
+    'ads',
+    'supplier_diversity_report',
+    '供应商多样性报告',
+    'ads',
     [...scDimensions.timePeriod],
     [
       { name: 'total_suppliers', type: 'bigint', comment: '供应商总数' },
@@ -3076,7 +3126,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Warehouse Comparison ----------
   generateSummaryTable(
-    'ads', 'warehouse_comparison_report', '仓库对比分析报告', 'ads',
+    'ads',
+    'warehouse_comparison_report',
+    '仓库对比分析报告',
+    'ads',
     [...scDimensions.warehouse],
     [
       { name: 'utilization_rate', type: 'decimal', comment: '利用率' },
@@ -3091,7 +3144,10 @@ const adsTables: TableDef[] = [
 
   // ---------- YoY Comparison ----------
   generateSummaryTable(
-    'ads', 'supply_chain_yoy_comparison', '供应链同比分析', 'ads',
+    'ads',
+    'supply_chain_yoy_comparison',
+    '供应链同比分析',
+    'ads',
     scDimensions.timePeriod,
     [
       { name: 'procurement_cost_yoy', type: 'decimal', comment: '采购成本同比' },
@@ -3105,7 +3161,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Procurement Cycle Analysis ----------
   generateSummaryTable(
-    'ads', 'procurement_cycle_analysis', '采购周期分析', 'ads',
+    'ads',
+    'procurement_cycle_analysis',
+    '采购周期分析',
+    'ads',
     [{ name: 'category', comment: '物料分类' }, ...scDimensions.timePeriod],
     [
       { name: 'avg_requisition_to_po_days', type: 'decimal', comment: '申请到下单平均天数' },
@@ -3118,7 +3177,10 @@ const adsTables: TableDef[] = [
 
   // ---------- Emergency Procurement ----------
   generateSummaryTable(
-    'ads', 'emergency_procurement_analysis', '紧急采购分析', 'ads',
+    'ads',
+    'emergency_procurement_analysis',
+    '紧急采购分析',
+    'ads',
     [{ name: 'category', comment: '物料分类' }, ...scDimensions.timePeriod],
     [
       { name: 'emergency_po_count', type: 'bigint', comment: '紧急采购次数' },
@@ -3133,8 +3195,15 @@ const adsTables: TableDef[] = [
 
   // ---------- OEE Dashboard ----------
   generateSummaryTable(
-    'ads', 'production_oee_dashboard', '生产OEE综合看板', 'ads',
-    [{ name: 'factory', comment: '工厂' }, { name: 'line_name', comment: '生产线' }, ...scDimensions.timePeriod],
+    'ads',
+    'production_oee_dashboard',
+    '生产OEE综合看板',
+    'ads',
+    [
+      { name: 'factory', comment: '工厂' },
+      { name: 'line_name', comment: '生产线' },
+      ...scDimensions.timePeriod,
+    ],
     [
       { name: 'availability', type: 'decimal', comment: '设备可用率' },
       { name: 'performance', type: 'decimal', comment: '性能效率' },

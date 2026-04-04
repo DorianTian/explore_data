@@ -165,7 +165,8 @@ async function seed() {
 
   const project = await projSvc.create({
     name: 'NL2SQL Enterprise Demo',
-    description: '企业级数据平台示例，覆盖电商、金融、用户增长、供应链、营销、客服、数据治理 7 大业务域',
+    description:
+      '企业级数据平台示例，覆盖电商、金融、用户增长、供应链、营销、客服、数据治理 7 大业务域',
   });
   logger.info({ projectId: project.id }, 'Project created');
 

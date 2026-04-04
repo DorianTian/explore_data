@@ -90,7 +90,9 @@ function validateDomain(domain: DomainDefinition): ValidationResult {
   for (const table of domain.tables) {
     for (const col of table.columns) {
       if (col.referencesTable && !tableNames.has(col.referencesTable)) {
-        warnings.push(`FK target not in domain: ${table.name}.${col.name} -> ${col.referencesTable}`);
+        warnings.push(
+          `FK target not in domain: ${table.name}.${col.name} -> ${col.referencesTable}`,
+        );
       }
     }
   }
@@ -132,9 +134,9 @@ for (const domain of ALL_DOMAINS) {
   const status = result.errors.length === 0 ? 'PASS' : 'FAIL';
   console.log(
     `[${status}] ${result.domain}: ${result.tables} tables ` +
-    `(ODS:${result.layers.ods} DWD:${result.layers.dwd} DWS:${result.layers.dws} ADS:${result.layers.ads}) ` +
-    `| ${result.metrics} metrics | ${result.glossary} glossary | ${result.docs} docs ` +
-    `| ${result.conversations} convs | ${result.queries} queries`,
+      `(ODS:${result.layers.ods} DWD:${result.layers.dwd} DWS:${result.layers.dws} ADS:${result.layers.ads}) ` +
+      `| ${result.metrics} metrics | ${result.glossary} glossary | ${result.docs} docs ` +
+      `| ${result.conversations} convs | ${result.queries} queries`,
   );
 
   if (result.errors.length > 0) {
@@ -148,7 +150,9 @@ for (const domain of ALL_DOMAINS) {
   }
 }
 
-console.log(`\n=== Total: ${totalTables} tables | ${totalErrors} errors | ${totalWarnings} warnings ===\n`);
+console.log(
+  `\n=== Total: ${totalTables} tables | ${totalErrors} errors | ${totalWarnings} warnings ===\n`,
+);
 
 if (totalErrors > 0) {
   process.exit(1);

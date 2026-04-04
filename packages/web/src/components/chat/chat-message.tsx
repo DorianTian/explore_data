@@ -74,9 +74,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     );
                   }
                   return (
-                    <pre className="bg-zinc-900 dark:bg-zinc-950 p-3 rounded-[var(--radius-md)] overflow-x-auto my-2">
+                    <pre className="bg-background p-3 rounded-[var(--radius-md)] overflow-x-auto my-2">
                       <code
-                        className="text-[13px] font-mono text-zinc-100"
+                        className="text-[13px] font-mono text-foreground"
                         {...props}
                       >
                         {children}

@@ -2325,7 +2325,10 @@ export const userGrowthDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'ads', 'geo_growth_report', '地域增长报表', 'ads',
+      'ads',
+      'geo_growth_report',
+      '地域增长报表',
+      'ads',
       [
         { name: 'country', comment: '国家' },
         { name: 'city', comment: '城市' },
@@ -2339,10 +2342,11 @@ export const userGrowthDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'ads', 'feature_impact_report', '功能影响力报表', 'ads',
-      [
-        { name: 'feature_name', comment: '功能名称' },
-      ],
+      'ads',
+      'feature_impact_report',
+      '功能影响力报表',
+      'ads',
+      [{ name: 'feature_name', comment: '功能名称' }],
       [
         { name: 'adoption_rate', type: 'decimal', comment: '采纳率' },
         { name: 'retention_lift', type: 'decimal', comment: '留存提升' },
@@ -2351,7 +2355,10 @@ export const userGrowthDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'ads', 'device_performance_report', '设备性能报表', 'ads',
+      'ads',
+      'device_performance_report',
+      '设备性能报表',
+      'ads',
       [
         { name: 'device_model', comment: '设备型号' },
         { name: 'os_version', comment: 'OS版本' },
@@ -2365,7 +2372,10 @@ export const userGrowthDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'ads', 'push_time_recommendation', '推送最佳时段推荐', 'ads',
+      'ads',
+      'push_time_recommendation',
+      '推送最佳时段推荐',
+      'ads',
       [
         { name: 'segment_name', comment: '分群名称' },
         { name: 'best_hour', comment: '最佳发送小时' },

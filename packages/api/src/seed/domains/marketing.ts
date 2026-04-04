@@ -2070,7 +2070,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Automation aggregations ───
     generateSummaryTable(
-      'dws', 'automation_workflow_stats', '自动化工作流效果汇总', 'dws',
+      'dws',
+      'automation_workflow_stats',
+      '自动化工作流效果汇总',
+      'dws',
       [
         { name: 'workflow_id', comment: '工作流ID' },
         { name: 'workflow_name', comment: '工作流名称' },
@@ -2084,7 +2087,10 @@ export const marketingDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'dws', 'spend_daily_by_objective', '投放目标维度每日花费汇总', 'dws',
+      'dws',
+      'spend_daily_by_objective',
+      '投放目标维度每日花费汇总',
+      'dws',
       [
         { name: 'objective', comment: '活动目标' },
         { name: 'channel_type', comment: '渠道类型' },
@@ -2098,7 +2104,10 @@ export const marketingDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'dws', 'device_targeting_stats', '设备定向投放效果汇总', 'dws',
+      'dws',
+      'device_targeting_stats',
+      '设备定向投放效果汇总',
+      'dws',
       [
         { name: 'device_type', comment: '设备类型' },
         { name: 'os', comment: '操作系统' },
@@ -2113,7 +2122,10 @@ export const marketingDomain: DomainDefinition = {
       ],
     ),
     generateSummaryTable(
-      'dws', 'hourly_performance_stats', '分时段投放效果汇总', 'dws',
+      'dws',
+      'hourly_performance_stats',
+      '分时段投放效果汇总',
+      'dws',
       [
         { name: 'hour_of_day', comment: '小时(0-23)' },
         { name: 'day_of_week', comment: '周几(1-7)' },
@@ -2612,7 +2624,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Automation analytics ───
     generateSummaryTable(
-      'ads', 'automation_effectiveness_report', '自动化营销效果报告', 'ads',
+      'ads',
+      'automation_effectiveness_report',
+      '自动化营销效果报告',
+      'ads',
       [
         { name: 'workflow_id', comment: '工作流ID' },
         { name: 'workflow_name', comment: '工作流名称' },
@@ -2628,7 +2643,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Competitive benchmarking ───
     generateSummaryTable(
-      'ads', 'channel_benchmark_report', '渠道效果基准对比', 'ads',
+      'ads',
+      'channel_benchmark_report',
+      '渠道效果基准对比',
+      'ads',
       [
         { name: 'channel_name', comment: '渠道名称' },
         { name: 'metric_name', comment: '指标名称' },
@@ -2643,7 +2661,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Incrementality testing ───
     generateSummaryTable(
-      'ads', 'incrementality_test_results', '增量测试结果', 'ads',
+      'ads',
+      'incrementality_test_results',
+      '增量测试结果',
+      'ads',
       [
         { name: 'test_id', comment: '测试ID' },
         { name: 'channel_name', comment: '渠道名称' },
@@ -2659,7 +2680,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Frequency capping ───
     generateSummaryTable(
-      'ads', 'frequency_impact_analysis', '广告频次影响分析', 'ads',
+      'ads',
+      'frequency_impact_analysis',
+      '广告频次影响分析',
+      'ads',
       [
         { name: 'frequency_bucket', comment: '频次区间' },
         { name: 'channel_name', comment: '渠道名称' },
@@ -2674,7 +2698,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── SMS analytics ───
     generateSummaryTable(
-      'ads', 'sms_effectiveness_report', '短信营销效果报告', 'ads',
+      'ads',
+      'sms_effectiveness_report',
+      '短信营销效果报告',
+      'ads',
       [{ name: 'sms_campaign_id', comment: '短信活动ID' }],
       [
         { name: 'total_sent', type: 'bigint', comment: '发送数' },
@@ -2688,7 +2715,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Keyword analytics ───
     generateSummaryTable(
-      'ads', 'keyword_opportunity_report', '关键词机会分析', 'ads',
+      'ads',
+      'keyword_opportunity_report',
+      '关键词机会分析',
+      'ads',
       [
         { name: 'keyword', comment: '关键词' },
         { name: 'source', comment: '来源: seo/sem' },
@@ -2704,7 +2734,10 @@ export const marketingDomain: DomainDefinition = {
 
     // ─── Creative insights ───
     generateSummaryTable(
-      'ads', 'creative_fatigue_monitor', '素材疲劳度监控', 'ads',
+      'ads',
+      'creative_fatigue_monitor',
+      '素材疲劳度监控',
+      'ads',
       [
         { name: 'creative_id', comment: '素材ID' },
         { name: 'creative_name', comment: '素材名称' },

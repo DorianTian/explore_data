@@ -10,7 +10,7 @@ const MonacoEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[200px] bg-zinc-900 rounded-[var(--radius-md)] skeleton" />
+      <div className="h-[200px] bg-background rounded-[var(--radius-md)] skeleton" />
     ),
   },
 );
@@ -43,8 +43,8 @@ export function SqlEditor({
   return (
     <div className="rounded-[var(--radius-lg)] overflow-hidden border border-border">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800">
-        <span className="text-xs text-zinc-400 font-mono">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-background border-b border-border">
+        <span className="text-xs text-muted font-mono">
           {dialect.toUpperCase()}
         </span>
         <div className="flex items-center gap-1">
@@ -52,7 +52,7 @@ export function SqlEditor({
             <Button
               variant="ghost"
               size="sm"
-              className="text-zinc-300 hover:text-white h-6 px-2 text-xs"
+              className="text-muted hover:text-foreground h-6 px-2 text-xs"
               onClick={onRun}
             >
               <Icon name="play" size={12} />
@@ -63,7 +63,7 @@ export function SqlEditor({
             <Button
               variant="ghost"
               size="sm"
-              className="text-zinc-300 hover:text-white h-6 px-2 text-xs"
+              className="text-muted hover:text-foreground h-6 px-2 text-xs"
               onClick={onSave}
             >
               <Icon name="save" size={12} />

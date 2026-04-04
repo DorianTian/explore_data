@@ -2358,7 +2358,11 @@ const dwsTables: TableDef[] = [
   ),
 
   // ── Additional DWS tables ──
-  generateSummaryTable('dws', 'favorite_daily_stats', '收藏日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'favorite_daily_stats',
+    '收藏日汇总表',
+    'dws',
     [],
     [
       { name: 'favorite_count', type: 'bigint', comment: '收藏次数' },
@@ -2366,7 +2370,11 @@ const dwsTables: TableDef[] = [
       { name: 'unfavorite_count', type: 'bigint', comment: '取消收藏次数' },
     ],
   ),
-  generateSummaryTable('dws', 'user_rfm_monthly', '用户RFM月度汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'user_rfm_monthly',
+    '用户RFM月度汇总表',
+    'dws',
     [...commonUserDims],
     [
       { name: 'recency_days', type: 'bigint', comment: '距最近下单天数' },
@@ -2375,7 +2383,11 @@ const dwsTables: TableDef[] = [
       { name: 'rfm_score', type: 'decimal', comment: 'RFM评分' },
     ],
   ),
-  generateSummaryTable('dws', 'product_funnel_daily', '商品转化漏斗日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'product_funnel_daily',
+    '商品转化漏斗日汇总表',
+    'dws',
     [...commonProductDims],
     [
       { name: 'view_uv', type: 'bigint', comment: '商品浏览UV' },
@@ -2384,8 +2396,15 @@ const dwsTables: TableDef[] = [
       { name: 'pay_uv', type: 'bigint', comment: '支付UV' },
     ],
   ),
-  generateSummaryTable('dws', 'supplier_monthly_stats', '供应商月汇总表', 'dws',
-    [{ name: 'supplier_id', comment: '供应商ID' }, { name: 'supplier_name', comment: '供应商名称' }],
+  generateSummaryTable(
+    'dws',
+    'supplier_monthly_stats',
+    '供应商月汇总表',
+    'dws',
+    [
+      { name: 'supplier_id', comment: '供应商ID' },
+      { name: 'supplier_name', comment: '供应商名称' },
+    ],
     [
       { name: 'purchase_amount', type: 'decimal', comment: '采购金额' },
       { name: 'purchase_qty', type: 'bigint', comment: '采购数量' },
@@ -2393,7 +2412,11 @@ const dwsTables: TableDef[] = [
       { name: 'on_time_rate', type: 'decimal', comment: '按时交货率' },
     ],
   ),
-  generateSummaryTable('dws', 'content_daily_stats', '内容日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'content_daily_stats',
+    '内容日汇总表',
+    'dws',
     [{ name: 'article_type', comment: '内容类型' }],
     [
       { name: 'view_count', type: 'bigint', comment: '浏览数' },
@@ -2402,7 +2425,11 @@ const dwsTables: TableDef[] = [
       { name: 'share_count', type: 'bigint', comment: '分享数' },
     ],
   ),
-  generateSummaryTable('dws', 'share_daily_stats', '分享日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'share_daily_stats',
+    '分享日汇总表',
+    'dws',
     [{ name: 'channel', comment: '分享渠道' }],
     [
       { name: 'share_count', type: 'bigint', comment: '分享次数' },
@@ -2410,7 +2437,11 @@ const dwsTables: TableDef[] = [
       { name: 'click_count', type: 'bigint', comment: '被点击次数' },
     ],
   ),
-  generateSummaryTable('dws', 'points_daily_stats', '积分日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'points_daily_stats',
+    '积分日汇总表',
+    'dws',
     [],
     [
       { name: 'earn_points', type: 'bigint', comment: '发放积分' },
@@ -2420,8 +2451,15 @@ const dwsTables: TableDef[] = [
       { name: 'redeem_user_count', type: 'bigint', comment: '使用积分用户数' },
     ],
   ),
-  generateSummaryTable('dws', 'order_source_monthly', '订单来源月汇总表', 'dws',
-    [{ name: 'order_source', comment: '订单来源' }, { name: 'month_key', comment: '月份' }],
+  generateSummaryTable(
+    'dws',
+    'order_source_monthly',
+    '订单来源月汇总表',
+    'dws',
+    [
+      { name: 'order_source', comment: '订单来源' },
+      { name: 'month_key', comment: '月份' },
+    ],
     [
       { name: 'order_count', type: 'bigint', comment: '订单数' },
       { name: 'pay_amount', type: 'decimal', comment: '支付金额' },
@@ -2429,7 +2467,11 @@ const dwsTables: TableDef[] = [
       { name: 'avg_order_amount', type: 'decimal', comment: '客单价' },
     ],
   ),
-  generateSummaryTable('dws', 'warehouse_throughput_daily', '仓库吞吐日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'warehouse_throughput_daily',
+    '仓库吞吐日汇总表',
+    'dws',
     [{ name: 'warehouse_id', comment: '仓库ID' }],
     [
       { name: 'inbound_qty', type: 'bigint', comment: '入库数量' },
@@ -2438,16 +2480,30 @@ const dwsTables: TableDef[] = [
       { name: 'outbound_orders', type: 'bigint', comment: '出库单数' },
     ],
   ),
-  generateSummaryTable('dws', 'coupon_type_monthly', '优惠券类型月汇总表', 'dws',
-    [{ name: 'coupon_type', comment: '优惠券类型' }, { name: 'month_key', comment: '月份' }],
+  generateSummaryTable(
+    'dws',
+    'coupon_type_monthly',
+    '优惠券类型月汇总表',
+    'dws',
+    [
+      { name: 'coupon_type', comment: '优惠券类型' },
+      { name: 'month_key', comment: '月份' },
+    ],
     [
       { name: 'issued_count', type: 'bigint', comment: '发放数' },
       { name: 'used_count', type: 'bigint', comment: '使用数' },
       { name: 'discount_amount', type: 'decimal', comment: '优惠金额' },
     ],
   ),
-  generateSummaryTable('dws', 'membership_level_monthly', '会员等级月汇总表', 'dws',
-    [{ name: 'membership_level', comment: '会员等级' }, { name: 'month_key', comment: '月份' }],
+  generateSummaryTable(
+    'dws',
+    'membership_level_monthly',
+    '会员等级月汇总表',
+    'dws',
+    [
+      { name: 'membership_level', comment: '会员等级' },
+      { name: 'month_key', comment: '月份' },
+    ],
     [
       { name: 'member_count', type: 'bigint', comment: '会员数' },
       { name: 'upgrade_count', type: 'bigint', comment: '升级人数' },
@@ -2455,8 +2511,16 @@ const dwsTables: TableDef[] = [
       { name: 'gmv_contribution', type: 'decimal', comment: 'GMV贡献' },
     ],
   ),
-  generateSummaryTable('dws', 'brand_monthly_sales', '品牌月销售汇总表', 'dws',
-    [{ name: 'brand_id', comment: '品牌ID' }, { name: 'brand_name', comment: '品牌名称' }, { name: 'month_key', comment: '月份' }],
+  generateSummaryTable(
+    'dws',
+    'brand_monthly_sales',
+    '品牌月销售汇总表',
+    'dws',
+    [
+      { name: 'brand_id', comment: '品牌ID' },
+      { name: 'brand_name', comment: '品牌名称' },
+      { name: 'month_key', comment: '月份' },
+    ],
     [
       { name: 'sales_amount', type: 'decimal', comment: '销售金额' },
       { name: 'sold_qty', type: 'bigint', comment: '销量' },
@@ -2464,7 +2528,11 @@ const dwsTables: TableDef[] = [
       { name: 'gross_profit', type: 'decimal', comment: '毛利' },
     ],
   ),
-  generateSummaryTable('dws', 'review_sentiment_daily', '评价情感日汇总表', 'dws',
+  generateSummaryTable(
+    'dws',
+    'review_sentiment_daily',
+    '评价情感日汇总表',
+    'dws',
     [],
     [
       { name: 'total_reviews', type: 'bigint', comment: '总评价数' },
@@ -2968,8 +3036,15 @@ const adsTables: TableDef[] = [
   ),
 
   // ── Additional ADS tables ──
-  generateSummaryTable('ads', 'new_user_acquisition_report', '新客获取分析报表', 'ads',
-    [{ name: 'register_source', comment: '注册来源' }, { name: 'channel', comment: '渠道' }],
+  generateSummaryTable(
+    'ads',
+    'new_user_acquisition_report',
+    '新客获取分析报表',
+    'ads',
+    [
+      { name: 'register_source', comment: '注册来源' },
+      { name: 'channel', comment: '渠道' },
+    ],
     [
       { name: 'new_users', type: 'bigint', comment: '新注册数' },
       { name: 'first_order_users', type: 'bigint', comment: '首单转化数' },
@@ -2978,7 +3053,11 @@ const adsTables: TableDef[] = [
       { name: 'cac', type: 'decimal', comment: '获客成本' },
     ],
   ),
-  generateSummaryTable('ads', 'repurchase_analysis', '复购分析报表', 'ads',
+  generateSummaryTable(
+    'ads',
+    'repurchase_analysis',
+    '复购分析报表',
+    'ads',
     [{ name: 'category_l1', comment: '一级类目' }],
     [
       { name: 'buyer_count', type: 'bigint', comment: '购买用户数' },
@@ -2988,16 +3067,30 @@ const adsTables: TableDef[] = [
       { name: 'repurchase_gmv', type: 'decimal', comment: '复购GMV' },
     ],
   ),
-  generateSummaryTable('ads', 'cross_sell_analysis', '连带销售分析表', 'ads',
-    [{ name: 'category_a', comment: '品类A' }, { name: 'category_b', comment: '品类B' }],
+  generateSummaryTable(
+    'ads',
+    'cross_sell_analysis',
+    '连带销售分析表',
+    'ads',
+    [
+      { name: 'category_a', comment: '品类A' },
+      { name: 'category_b', comment: '品类B' },
+    ],
     [
       { name: 'co_purchase_count', type: 'bigint', comment: '同时购买次数' },
       { name: 'confidence', type: 'decimal', comment: '置信度' },
       { name: 'lift', type: 'decimal', comment: '提升度' },
     ],
   ),
-  generateSummaryTable('ads', 'supplier_performance_report', '供应商绩效报表', 'ads',
-    [{ name: 'supplier_id', comment: '供应商ID' }, { name: 'supplier_name', comment: '供应商名称' }],
+  generateSummaryTable(
+    'ads',
+    'supplier_performance_report',
+    '供应商绩效报表',
+    'ads',
+    [
+      { name: 'supplier_id', comment: '供应商ID' },
+      { name: 'supplier_name', comment: '供应商名称' },
+    ],
     [
       { name: 'purchase_amount', type: 'decimal', comment: '采购金额' },
       { name: 'defect_rate', type: 'decimal', comment: '次品率' },
@@ -3005,8 +3098,15 @@ const adsTables: TableDef[] = [
       { name: 'avg_lead_time_days', type: 'decimal', comment: '平均交货周期(天)' },
     ],
   ),
-  generateSummaryTable('ads', 'inventory_health_report', '库存健康度报表', 'ads',
-    [{ name: 'category_l1', comment: '一级类目' }, { name: 'warehouse_id', comment: '仓库ID' }],
+  generateSummaryTable(
+    'ads',
+    'inventory_health_report',
+    '库存健康度报表',
+    'ads',
+    [
+      { name: 'category_l1', comment: '一级类目' },
+      { name: 'warehouse_id', comment: '仓库ID' },
+    ],
     [
       { name: 'total_sku', type: 'bigint', comment: '总SKU数' },
       { name: 'stockout_sku', type: 'bigint', comment: '缺货SKU数' },
@@ -3015,15 +3115,26 @@ const adsTables: TableDef[] = [
       { name: 'inventory_value', type: 'decimal', comment: '库存货值' },
     ],
   ),
-  generateSummaryTable('ads', 'price_elasticity_report', '价格弹性分析表', 'ads',
-    [{ name: 'product_id', comment: '商品ID' }, { name: 'category_l1', comment: '类目' }],
+  generateSummaryTable(
+    'ads',
+    'price_elasticity_report',
+    '价格弹性分析表',
+    'ads',
+    [
+      { name: 'product_id', comment: '商品ID' },
+      { name: 'category_l1', comment: '类目' },
+    ],
     [
       { name: 'price_change_pct', type: 'decimal', comment: '价格变动幅度' },
       { name: 'demand_change_pct', type: 'decimal', comment: '需求变动幅度' },
       { name: 'elasticity', type: 'decimal', comment: '价格弹性系数' },
     ],
   ),
-  generateSummaryTable('ads', 'user_lifecycle_report', '用户生命周期分析表', 'ads',
+  generateSummaryTable(
+    'ads',
+    'user_lifecycle_report',
+    '用户生命周期分析表',
+    'ads',
     [{ name: 'lifecycle_stage', comment: '生命周期阶段' }],
     [
       { name: 'user_count', type: 'bigint', comment: '用户数' },
@@ -3033,15 +3144,26 @@ const adsTables: TableDef[] = [
       { name: 'gmv_contribution', type: 'decimal', comment: 'GMV贡献' },
     ],
   ),
-  generateSummaryTable('ads', 'hour_peak_analysis', '高峰时段分析表', 'ads',
-    [{ name: 'hour_of_day', comment: '小时(0-23)' }, { name: 'day_of_week', comment: '星期几' }],
+  generateSummaryTable(
+    'ads',
+    'hour_peak_analysis',
+    '高峰时段分析表',
+    'ads',
+    [
+      { name: 'hour_of_day', comment: '小时(0-23)' },
+      { name: 'day_of_week', comment: '星期几' },
+    ],
     [
       { name: 'order_count', type: 'bigint', comment: '订单数' },
       { name: 'gmv', type: 'decimal', comment: 'GMV' },
       { name: 'uv', type: 'bigint', comment: 'UV' },
     ],
   ),
-  generateSummaryTable('ads', 'group_buy_performance', '拼团业绩报表', 'ads',
+  generateSummaryTable(
+    'ads',
+    'group_buy_performance',
+    '拼团业绩报表',
+    'ads',
     [],
     [
       { name: 'total_groups', type: 'bigint', comment: '发起团数' },
@@ -3051,7 +3173,11 @@ const adsTables: TableDef[] = [
       { name: 'avg_group_size', type: 'decimal', comment: '平均成团人数' },
     ],
   ),
-  generateSummaryTable('ads', 'flash_sale_performance', '秒杀业绩报表', 'ads',
+  generateSummaryTable(
+    'ads',
+    'flash_sale_performance',
+    '秒杀业绩报表',
+    'ads',
     [{ name: 'time_slot', comment: '秒杀时段' }],
     [
       { name: 'item_count', type: 'bigint', comment: '商品数' },
@@ -3061,7 +3187,11 @@ const adsTables: TableDef[] = [
       { name: 'new_user_count', type: 'bigint', comment: '新客数' },
     ],
   ),
-  generateSummaryTable('ads', 'content_roi_report', '内容营销ROI报表', 'ads',
+  generateSummaryTable(
+    'ads',
+    'content_roi_report',
+    '内容营销ROI报表',
+    'ads',
     [{ name: 'article_type', comment: '内容类型' }],
     [
       { name: 'article_count', type: 'bigint', comment: '文章数' },
@@ -3070,7 +3200,11 @@ const adsTables: TableDef[] = [
       { name: 'associated_gmv', type: 'decimal', comment: '关联GMV' },
     ],
   ),
-  generateSummaryTable('ads', 'platform_comparison', '平台渠道对比表', 'ads',
+  generateSummaryTable(
+    'ads',
+    'platform_comparison',
+    '平台渠道对比表',
+    'ads',
     [{ name: 'platform', comment: '平台: app/web/h5/wechat' }],
     [
       { name: 'dau', type: 'bigint', comment: 'DAU' },

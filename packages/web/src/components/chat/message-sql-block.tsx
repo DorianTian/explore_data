@@ -55,9 +55,9 @@ export function MessageSqlBlock({
   return (
     <div className="mt-3 rounded-[var(--radius-lg)] overflow-hidden border border-border">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 dark:bg-zinc-950">
+      <div className="flex items-center justify-between px-4 py-2 bg-background">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-400">SQL</span>
+          <span className="text-xs text-muted">SQL</span>
           {confidence !== undefined && (
             <span
               className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -76,7 +76,7 @@ export function MessageSqlBlock({
           <Button
             variant="ghost"
             size="icon"
-            className="text-zinc-400 hover:text-white h-7 w-7"
+            className="text-muted hover:text-foreground h-7 w-7"
             onClick={() => selectMessage(messageId)}
             title="在面板中编辑"
           >
@@ -85,7 +85,7 @@ export function MessageSqlBlock({
           <Button
             variant="ghost"
             size="icon"
-            className="text-zinc-400 hover:text-white h-7 w-7"
+            className="text-muted hover:text-foreground h-7 w-7"
             onClick={handleCopy}
           >
             <Icon name={copied ? 'check' : 'copy'} size={14} />
@@ -94,15 +94,15 @@ export function MessageSqlBlock({
       </div>
 
       {/* SQL Code */}
-      <pre className="px-4 py-3 bg-zinc-900 dark:bg-zinc-950 overflow-x-auto">
+      <pre className="px-4 py-3 bg-background overflow-x-auto">
         <code className="text-[13px] font-mono leading-relaxed">
           {parts.map((part, i) => (
             <span
               key={i}
               className={
                 part.isKeyword
-                  ? 'text-blue-400 font-semibold'
-                  : 'text-emerald-400'
+                  ? 'text-primary font-semibold'
+                  : 'text-foreground/80'
               }
             >
               {part.text}

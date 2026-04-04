@@ -36,7 +36,7 @@ export function Tooltip({
       {children}
       {show && (
         <div
-          className={`absolute z-50 px-2.5 py-1.5 text-xs rounded-[var(--radius-md)] bg-zinc-900 text-white shadow-md whitespace-nowrap animate-fade-in pointer-events-none ${positionClass[side]}`}
+          className={`absolute z-50 px-2.5 py-1.5 text-xs rounded-[var(--radius-md)] bg-surface-elevated text-foreground border border-border shadow-lg whitespace-nowrap animate-fade-in pointer-events-none ${positionClass[side]}`}
         >
           {content}
         </div>
