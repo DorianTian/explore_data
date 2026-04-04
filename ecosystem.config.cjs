@@ -12,6 +12,7 @@ module.exports = {
       env_production: {
         NODE_ENV: "production",
         API_PORT: 3100,
+        NODE_EXTRA_CA_CERTS: "/certs/global-bundle.pem",
       },
       // Graceful shutdown
       kill_timeout: 10000,
