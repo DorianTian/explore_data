@@ -210,7 +210,15 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   deleteWidget: async (id) => {
     const res = await apiDelete(`/api/widgets/${id}`);
     if (res.success) {
-      set((s) => ({ widgets: s.widgets.filter((w) => w.id !== id) }));
+      set((s) => ({
+        widgets: s.widgets.filter((w) => w.id !== id),
+        currentDashboard: s.currentDashboard
+          ? {
+              ...s.currentDashboard,
+              widgets: s.currentDashboard.widgets.filter((p) => p.widget.id !== id),
+            }
+          : null,
+      }));
       return true;
     }
     return false;

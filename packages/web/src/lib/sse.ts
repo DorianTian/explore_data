@@ -54,13 +54,15 @@ export function connectSSE(
             currentEvent = line.slice(7).trim();
           } else if (line.startsWith('data: ')) {
             currentData = currentData ? `${currentData}\n${line.slice(6)}` : line.slice(6);
-          } else if (line === '' && currentData) {
-            const eventName = currentEvent || 'message';
-            try {
-              const parsed = JSON.parse(currentData);
-              onEvent({ event: eventName, data: parsed });
-            } catch {
-              onEvent({ event: eventName, data: currentData });
+          } else if (line === '') {
+            if (currentData) {
+              const eventName = currentEvent || 'message';
+              try {
+                const parsed = JSON.parse(currentData);
+                onEvent({ event: eventName, data: parsed });
+              } catch {
+                onEvent({ event: eventName, data: currentData });
+              }
             }
             currentEvent = '';
             currentData = '';

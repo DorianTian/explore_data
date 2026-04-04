@@ -5,7 +5,7 @@ import type { DbClient } from '@nl2sql/db';
 
 const toggleFavoriteSchema = z.object({
   projectId: z.string().uuid(),
-  targetType: z.string().max(20),
+  targetType: z.enum(['widget', 'dashboard']),
   targetId: z.string().uuid(),
 });
 

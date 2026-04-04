@@ -51,19 +51,23 @@ export function ExecutionDetail() {
       .reverse()
       .find((m) => m.role === 'user');
 
-    await apiPost('/api/query/feedback', {
-      projectId: currentProjectId,
-      naturalLanguage: userMsg?.content ?? '',
-      generatedSql: message.sql,
-      correctedSql: editedSql,
-      status: 'accepted',
-    });
-
-    if (selectedMessageId) {
-      updateMessage(selectedMessageId, {
-        sql: editedSql,
-        feedback: 'accepted',
+    try {
+      await apiPost('/api/query/feedback', {
+        projectId: currentProjectId,
+        naturalLanguage: userMsg?.content ?? '',
+        generatedSql: message.sql,
+        correctedSql: editedSql,
+        status: 'accepted',
       });
+
+      if (selectedMessageId) {
+        updateMessage(selectedMessageId, {
+          sql: editedSql,
+          feedback: 'accepted',
+        });
+      }
+    } catch {
+      /* Feedback save failed — non-critical, message state unchanged */
     }
   }, [
     message,
