@@ -11,13 +11,7 @@ import { useChatStore } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
 import { apiPost } from '@/lib/api';
 
-interface QueryResponse {
-  resolvedVia: 'metric' | 'nl2sql' | 'clarification';
-  sql?: string;
-  explanation: string;
-  confidence: number;
-  clarificationQuestion?: string;
-}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3100';
 
 const EXAMPLE_QUERIES = [
   { text: '查询最近 7 天的日活用户数', icon: '📊' },
@@ -34,6 +28,8 @@ function ChatPageInner() {
     updateMessage,
     setLoading,
     setFeedback,
+    conversationId: currentConversationId,
+    setConversationId,
   } = useChatStore();
   const { currentProjectId, currentDatasourceId } = useProjectStore();
   const { toast } = useToast();
@@ -47,28 +43,14 @@ function ChatPageInner() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  /** Simulate streaming by revealing text character by character */
-  const simulateStreaming = useCallback(
-    (messageId: string, fullText: string, sql?: string, confidence?: number) => {
-      let index = 0;
-      const chunkSize = 3;
-      const interval = setInterval(() => {
-        index += chunkSize;
-        if (index >= fullText.length) {
-          clearInterval(interval);
-          updateMessage(messageId, {
-            content: fullText,
-            sql,
-            confidence,
-            isStreaming: false,
-          });
-        } else {
-          updateMessage(messageId, { content: fullText.slice(0, index) });
-        }
-      }, 20);
-    },
-    [updateMessage],
-  );
+  const abortRef = useRef<AbortController | null>(null);
+
+  /** Clean up in-flight SSE request on unmount */
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const handleSend = useCallback(
     async (content: string) => {
@@ -77,64 +59,158 @@ function ChatPageInner() {
         return;
       }
 
-      const userMessage = {
+      /* abort any previous in-flight stream */
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      /* 1. user message */
+      addMessage({
         id: crypto.randomUUID(),
-        role: 'user' as const,
+        role: 'user',
         content,
-      };
-      addMessage(userMessage);
+      });
+
+      /* 2. assistant placeholder */
+      const assistantId = crypto.randomUUID();
+      addMessage({ id: assistantId, role: 'assistant', content: '', isStreaming: true });
       setLoading(true);
 
       try {
-        const conversationHistory = messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          sql: m.sql,
-        }));
-
-        const result = await apiPost<QueryResponse>('/api/query', {
-          projectId: currentProjectId,
-          datasourceId: currentDatasourceId,
-          query: content,
-          conversationHistory,
+        const response = await fetch(`${API_BASE}/api/query/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            projectId: currentProjectId,
+            datasourceId: currentDatasourceId,
+            query: content,
+            conversationId: currentConversationId,
+            conversationHistory: messages.slice(-8).map((m) => ({
+              role: m.role,
+              content: m.content,
+              sql: m.sql,
+            })),
+          }),
         });
 
-        const assistantId = crypto.randomUUID();
-        const explanation =
-          result.data?.explanation ?? '抱歉，处理请求时出了点问题。';
+        if (!response.ok || !response.body) {
+          updateMessage(assistantId, {
+            content: `请求失败 (${response.status})，请检查后端服务。`,
+            isStreaming: false,
+          });
+          return;
+        }
 
-        addMessage({
-          id: assistantId,
-          role: 'assistant',
-          content: '',
-          isStreaming: true,
-        });
+        /* 3. parse SSE stream */
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let currentEvent = '';
 
-        simulateStreaming(
-          assistantId,
-          explanation,
-          result.data?.sql,
-          result.data?.confidence,
-        );
-      } catch {
-        addMessage({
-          id: crypto.randomUUID(),
-          role: 'assistant',
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim();
+              continue;
+            }
+
+            if (!line.startsWith('data: ')) continue;
+
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              switch (currentEvent) {
+                case 'status':
+                  updateMessage(assistantId, { content: data.message ?? data.step ?? '' });
+                  break;
+
+                case 'result':
+                  updateMessage(assistantId, {
+                    content: data.explanation ?? '',
+                    sql: data.sql,
+                    confidence: data.confidence,
+                    executionResult: data.executionResult,
+                    chartRecommendation: data.chartRecommendation,
+                  });
+                  break;
+
+                case 'conversation':
+                  setConversationId(data.conversationId ?? data.id ?? null);
+                  break;
+
+                case 'error':
+                  updateMessage(assistantId, {
+                    content: data.message ?? '处理请求时出了点问题。',
+                    isStreaming: false,
+                  });
+                  break;
+
+                case 'done':
+                  updateMessage(assistantId, { isStreaming: false });
+                  break;
+              }
+            } catch {
+              /* skip malformed data lines */
+            }
+          }
+        }
+
+        /* stream ended — ensure streaming flag is off */
+        updateMessage(assistantId, { isStreaming: false });
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        updateMessage(assistantId, {
           content: '无法连接到 API 服务器，请确认后端服务是否正常运行。',
+          isStreaming: false,
         });
       } finally {
         setLoading(false);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
       }
     },
     [
       messages,
       currentProjectId,
       currentDatasourceId,
+      currentConversationId,
       addMessage,
+      updateMessage,
       setLoading,
-      simulateStreaming,
+      setConversationId,
       toast,
     ],
+  );
+
+  const handleFeedback = useCallback(
+    async (id: string, feedback: 'up' | 'down') => {
+      setFeedback(id, feedback);
+      const msg = messages.find((m) => m.id === id);
+      if (msg?.sql && currentProjectId) {
+        /* find the user message immediately before this assistant message */
+        const msgIndex = messages.findIndex((m) => m.id === id);
+        const userMsg = messages
+          .slice(0, msgIndex)
+          .reverse()
+          .find((m) => m.role === 'user');
+        await apiPost('/api/query/feedback', {
+          projectId: currentProjectId,
+          naturalLanguage: userMsg?.content ?? '',
+          generatedSql: msg.sql,
+          wasAccepted: feedback === 'up' ? 1 : 0,
+        });
+      }
+    },
+    [messages, currentProjectId, setFeedback],
   );
 
   const handleExampleClick = useCallback(
@@ -178,7 +254,7 @@ function ChatPageInner() {
                       confidence={msg.confidence}
                       feedback={msg.feedback}
                       isStreaming={msg.isStreaming}
-                      onFeedback={setFeedback}
+                      onFeedback={handleFeedback}
                     />
                     {msg.chartRecommendation &&
                       msg.chartRecommendation.chartType !== 'table' && (

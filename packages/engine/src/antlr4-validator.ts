@@ -18,10 +18,7 @@ export interface Antlr4ValidationResult {
 
 /** Strip surrounding quotes or backticks from an identifier. */
 function stripQuotes(raw: string): string {
-  if (
-    (raw.startsWith('"') && raw.endsWith('"')) ||
-    (raw.startsWith('`') && raw.endsWith('`'))
-  ) {
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith('`') && raw.endsWith('`'))) {
     return raw.slice(1, -1);
   }
   return raw;
@@ -46,9 +43,15 @@ function createErrorCollector(errors: string[]) {
     ) {
       errors.push(`line ${line}:${column} ${msg}`);
     },
-    reportAmbiguity() { /* no-op */ },
-    reportAttemptingFullContext() { /* no-op */ },
-    reportContextSensitivity() { /* no-op */ },
+    reportAmbiguity() {
+      /* no-op */
+    },
+    reportAttemptingFullContext() {
+      /* no-op */
+    },
+    reportContextSensitivity() {
+      /* no-op */
+    },
   };
 }
 
@@ -165,9 +168,21 @@ export function validateSql(sql: string): Antlr4ValidationResult {
 
   // Reject non-SELECT
   if (statementType !== 'select' && statementType !== 'unknown') {
-    errors.push(
-      `Only SELECT statements are allowed, got: ${statementType.toUpperCase()}`,
-    );
+    errors.push(`Only SELECT statements are allowed, got: ${statementType.toUpperCase()}`);
+  }
+
+  // 'unknown' statement type with no errors means the parser couldn't classify it
+  // but also didn't find syntax errors — treat as potentially valid but flag it
+  if (statementType === 'unknown' && errors.length === 0 && tables.length === 0) {
+    // If we got no tables and unknown type, this is suspicious — don't mark as valid
+    // Let the fallback parser handle it
+    return {
+      valid: false,
+      errors: ['Could not determine statement type — falling back to secondary parser'],
+      tables: [],
+      columns: [],
+      statementType: 'unknown',
+    };
   }
 
   return {

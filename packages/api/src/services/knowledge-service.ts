@@ -1,10 +1,5 @@
 import { eq } from 'drizzle-orm';
-import {
-  knowledgeDocs,
-  knowledgeChunks,
-  glossaryEntries,
-  type DbClient,
-} from '@nl2sql/db';
+import { knowledgeDocs, knowledgeChunks, glossaryEntries, type DbClient } from '@nl2sql/db';
 import type { z } from 'zod';
 import type {
   createKnowledgeDocSchema,
@@ -16,17 +11,16 @@ type CreateDocInput = z.infer<typeof createKnowledgeDocSchema>;
 type CreateGlossaryInput = z.infer<typeof createGlossaryEntrySchema>;
 type UpdateGlossaryInput = z.infer<typeof updateGlossaryEntrySchema>;
 
-const CHUNK_SIZE = 500;
-const CHUNK_OVERLAP = 50;
+/** Chunk size in characters (not words — supports Chinese text without spaces) */
+const CHUNK_SIZE = 800;
+/** Overlap in characters for context continuity */
+const CHUNK_OVERLAP = 100;
 
 /** Try to get embedding service — returns null if no API key */
 async function getEmbeddingService() {
   if (!process.env.OPENAI_API_KEY) return null;
   const { EmbeddingService } = await import('@nl2sql/engine');
-  return new EmbeddingService(
-    process.env.OPENAI_API_KEY,
-    process.env.OPENAI_BASE_URL,
-  );
+  return new EmbeddingService(process.env.OPENAI_API_KEY, process.env.OPENAI_BASE_URL);
 }
 
 export class KnowledgeService {
@@ -82,10 +76,7 @@ export class KnowledgeService {
   }
 
   async getDoc(docId: string) {
-    const [doc] = await this.db
-      .select()
-      .from(knowledgeDocs)
-      .where(eq(knowledgeDocs.id, docId));
+    const [doc] = await this.db.select().from(knowledgeDocs).where(eq(knowledgeDocs.id, docId));
     if (!doc) return null;
 
     const chunks = await this.db
@@ -149,7 +140,30 @@ export class KnowledgeService {
       .set(input)
       .where(eq(glossaryEntries.id, id))
       .returning();
-    return row ?? null;
+
+    if (!row) return null;
+
+    // Re-generate embedding when term or SQL expression changes
+    if (input.term !== undefined || input.sqlExpression !== undefined) {
+      try {
+        const embService = await getEmbeddingService();
+        if (embService) {
+          let embeddingText = row.term;
+          if (row.description) embeddingText += ` — ${row.description}`;
+          embeddingText += `. SQL: ${row.sqlExpression}`;
+
+          const embedding = await embService.embedSingle(embeddingText);
+          await this.db
+            .update(glossaryEntries)
+            .set({ embedding })
+            .where(eq(glossaryEntries.id, id));
+        }
+      } catch {
+        // Embedding re-generation is best-effort
+      }
+    }
+
+    return row;
   }
 
   async removeGlossaryEntry(id: string): Promise<boolean> {
@@ -160,19 +174,50 @@ export class KnowledgeService {
     return row !== undefined;
   }
 
-  /** Split text into overlapping chunks for embedding */
+  /** Split text into overlapping chunks for embedding (character-based, supports Chinese) */
   private splitIntoChunks(text: string): string[] {
-    const chunks: string[] = [];
-    const words = text.split(/\s+/);
-
-    if (words.length <= CHUNK_SIZE) {
-      return [text];
+    if (text.length <= CHUNK_SIZE) {
+      return [text.trim()].filter(Boolean);
     }
 
-    for (let i = 0; i < words.length; i += CHUNK_SIZE - CHUNK_OVERLAP) {
-      const chunk = words.slice(i, i + CHUNK_SIZE).join(' ');
-      if (chunk.trim()) chunks.push(chunk);
-      if (i + CHUNK_SIZE >= words.length) break;
+    // Split on sentence boundaries: Chinese (。！？；) and English (. ! ? ;) plus newlines
+    const sentences = text.split(/(?<=[。！？；\.\!\?\n])\s*/);
+
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    for (const sentence of sentences) {
+      // If a single sentence exceeds CHUNK_SIZE, split it at CHUNK_SIZE boundaries
+      if (sentence.length > CHUNK_SIZE) {
+        // Flush whatever we have first
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
+        for (let i = 0; i < sentence.length; i += CHUNK_SIZE - CHUNK_OVERLAP) {
+          const slice = sentence.slice(i, i + CHUNK_SIZE).trim();
+          if (slice) chunks.push(slice);
+          if (i + CHUNK_SIZE >= sentence.length) break;
+        }
+        continue;
+      }
+
+      // Would adding this sentence exceed the limit?
+      if (currentChunk.length + sentence.length > CHUNK_SIZE) {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+        }
+        // Start new chunk with overlap from end of previous chunk
+        const overlap = currentChunk.slice(-CHUNK_OVERLAP);
+        currentChunk = overlap + sentence;
+      } else {
+        currentChunk += sentence;
+      }
+    }
+
+    // Flush remaining
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
     }
 
     return chunks;

@@ -1,11 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  boolean,
-  integer,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer } from 'drizzle-orm/pg-core';
 import { schemaTables } from './schema-tables.js';
 
 export const schemaColumns = pgTable('schema_columns', {

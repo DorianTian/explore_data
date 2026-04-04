@@ -70,9 +70,9 @@ describe('SchemaService', () => {
   });
 
   it('throws on invalid DDL', async () => {
-    await expect(
-      service.ingestDdl(datasourceId, 'SELECT * FROM foo'),
-    ).rejects.toThrow('No valid CREATE TABLE statements found');
+    await expect(service.ingestDdl(datasourceId, 'SELECT * FROM foo')).rejects.toThrow(
+      'No valid CREATE TABLE statements found',
+    );
   });
 
   it('lists tables after ingest', async () => {
@@ -133,10 +133,7 @@ describe('SchemaService', () => {
   });
 
   it('deletes a table', async () => {
-    const result = await service.ingestDdl(
-      datasourceId,
-      'CREATE TABLE temp (id INT PRIMARY KEY);',
-    );
+    const result = await service.ingestDdl(datasourceId, 'CREATE TABLE temp (id INT PRIMARY KEY);');
 
     const deleted = await service.removeTable(result.tables[0].table.id);
     expect(deleted).toBe(true);

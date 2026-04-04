@@ -31,10 +31,7 @@ export function createConversationRouter(db: DbClient): Router {
       };
       return;
     }
-    const conv = await service.createConversation(
-      parsed.data.projectId,
-      parsed.data.title,
-    );
+    const conv = await service.createConversation(parsed.data.projectId, parsed.data.title);
     ctx.status = 201;
     ctx.body = { success: true, data: conv };
   });

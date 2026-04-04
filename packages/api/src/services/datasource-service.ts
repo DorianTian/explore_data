@@ -33,10 +33,7 @@ export class DatasourceService {
   }
 
   async getById(id: string) {
-    const [row] = await this.db
-      .select()
-      .from(datasources)
-      .where(eq(datasources.id, id));
+    const [row] = await this.db.select().from(datasources).where(eq(datasources.id, id));
     return row ?? null;
   }
 
@@ -50,10 +47,7 @@ export class DatasourceService {
   }
 
   async remove(id: string): Promise<boolean> {
-    const [row] = await this.db
-      .delete(datasources)
-      .where(eq(datasources.id, id))
-      .returning();
+    const [row] = await this.db.delete(datasources).where(eq(datasources.id, id)).returning();
     return row !== undefined;
   }
 }

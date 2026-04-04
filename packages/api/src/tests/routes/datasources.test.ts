@@ -11,9 +11,7 @@ describe('Datasources API', () => {
     await db.delete(datasources);
     await db.delete(projects);
 
-    const res = await createTestAgent()
-      .post('/api/projects')
-      .send({ name: 'Test Project' });
+    const res = await createTestAgent().post('/api/projects').send({ name: 'Test Project' });
     projectId = res.body.data.id;
   });
 
@@ -43,16 +41,10 @@ describe('Datasources API', () => {
   describe('GET /api/datasources?projectId=xxx', () => {
     it('lists datasources for a project', async () => {
       const agent = createTestAgent();
-      await agent
-        .post('/api/datasources')
-        .send({ projectId, name: 'DS1', dialect: 'mysql' });
-      await agent
-        .post('/api/datasources')
-        .send({ projectId, name: 'DS2', dialect: 'hive' });
+      await agent.post('/api/datasources').send({ projectId, name: 'DS1', dialect: 'mysql' });
+      await agent.post('/api/datasources').send({ projectId, name: 'DS2', dialect: 'hive' });
 
-      const res = await createTestAgent().get(
-        `/api/datasources?projectId=${projectId}`,
-      );
+      const res = await createTestAgent().get(`/api/datasources?projectId=${projectId}`);
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);
     });

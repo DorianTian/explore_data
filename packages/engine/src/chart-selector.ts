@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { ChartType } from './chart-recommender.js';
+import { extractText, extractJson, withRetry } from './llm-utils.js';
+import { MODEL, TIMEOUT } from './config.js';
 
 const CHART_PROMPT = `你是一个数据可视化专家。根据用户的查询意图和返回的数据结构，推荐最合适的图表类型。
 
@@ -45,38 +47,35 @@ export class ChartSelector {
     columns: Array<{ name: string; dataType: string }>,
     rowCount: number,
   ): Promise<{ chartType: ChartType; reason: string }> {
-    const colDesc = columns
-      .map((c) => `${c.name} (${c.dataType})`)
-      .join(', ');
+    const colDesc = columns.map((c) => `${c.name} (${c.dataType})`).join(', ');
 
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        system: CHART_PROMPT,
-        messages: [
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
           {
-            role: 'user',
-            content: `查询: "${userQuery}"\n返回列: ${colDesc}\n行数: ${rowCount}`,
+            model: MODEL.classification,
+            max_tokens: 200,
+            system: CHART_PROMPT,
+            messages: [
+              {
+                role: 'user',
+                content: `查询: "${userQuery}"\n返回列: ${colDesc}\n行数: ${rowCount}`,
+              },
+            ],
           },
-        ],
-      },
-      { timeout: 10_000 },
+          { timeout: TIMEOUT.chart },
+        ),
+      { label: 'ChartSelector' },
     );
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = extractText(response);
+    const result = extractJson<{ chartType: string; reason?: string }>(text);
 
-    try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const result = JSON.parse(match[0]);
-        return {
-          chartType: result.chartType as ChartType,
-          reason: result.reason ?? '',
-        };
-      }
-    } catch {
-      // fallback
+    if (result) {
+      return {
+        chartType: result.chartType as ChartType,
+        reason: result.reason ?? '',
+      };
     }
 
     return { chartType: 'table', reason: 'default' };

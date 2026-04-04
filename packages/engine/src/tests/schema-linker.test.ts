@@ -9,9 +9,27 @@ describe('SchemaLinker', () => {
         name: 'users',
         comment: 'User accounts',
         columns: [
-          { name: 'id', dataType: 'BIGINT', comment: 'User ID', sampleValues: null, isPrimaryKey: true },
-          { name: 'name', dataType: 'VARCHAR(100)', comment: 'Full name', sampleValues: ['Alice', 'Bob'], isPrimaryKey: false },
-          { name: 'email', dataType: 'VARCHAR(200)', comment: null, sampleValues: null, isPrimaryKey: false },
+          {
+            name: 'id',
+            dataType: 'BIGINT',
+            comment: 'User ID',
+            sampleValues: null,
+            isPrimaryKey: true,
+          },
+          {
+            name: 'name',
+            dataType: 'VARCHAR(100)',
+            comment: 'Full name',
+            sampleValues: ['Alice', 'Bob'],
+            isPrimaryKey: false,
+          },
+          {
+            name: 'email',
+            dataType: 'VARCHAR(200)',
+            comment: null,
+            sampleValues: null,
+            isPrimaryKey: false,
+          },
         ],
       },
       {
@@ -19,8 +37,20 @@ describe('SchemaLinker', () => {
         comment: 'Order records',
         columns: [
           { name: 'id', dataType: 'INT', comment: null, sampleValues: null, isPrimaryKey: true },
-          { name: 'user_id', dataType: 'INT', comment: 'FK to users', sampleValues: null, isPrimaryKey: false },
-          { name: 'amount', dataType: 'DECIMAL(10,2)', comment: 'Order amount', sampleValues: ['99.99', '150.00'], isPrimaryKey: false },
+          {
+            name: 'user_id',
+            dataType: 'INT',
+            comment: 'FK to users',
+            sampleValues: null,
+            isPrimaryKey: false,
+          },
+          {
+            name: 'amount',
+            dataType: 'DECIMAL(10,2)',
+            comment: 'Order amount',
+            sampleValues: ['99.99', '150.00'],
+            isPrimaryKey: false,
+          },
         ],
       },
     ],

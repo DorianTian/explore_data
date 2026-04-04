@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { SchemaContext } from './types.js';
+import { extractText, extractJson, withRetry } from './llm-utils.js';
+import { MODEL, TIMEOUT } from './config.js';
 
 export interface VerificationResult {
   isCorrect: boolean;
@@ -42,13 +44,19 @@ export class SqlVerifier {
     userQuery: string,
     generatedSql: string,
     schema: SchemaContext,
+    rawDdl?: string,
   ): Promise<VerificationResult> {
-    const schemaDesc = schema.tables
-      .map((t) => {
-        const cols = t.columns.map((c) => `${c.name}(${c.dataType})`).join(', ');
-        return `${t.name}${t.comment ? `(${t.comment})` : ''}: ${cols}`;
-      })
-      .join('\n');
+    let schemaDesc: string;
+    if (rawDdl) {
+      schemaDesc = rawDdl;
+    } else {
+      schemaDesc = schema.tables
+        .map((t) => {
+          const cols = t.columns.map((c) => `${c.name}(${c.dataType})`).join(', ');
+          return `${t.name}${t.comment ? `(${t.comment})` : ''}: ${cols}`;
+        })
+        .join('\n');
+    }
 
     const userPrompt = `用户问题: "${userQuery}"
 
@@ -62,25 +70,23 @@ ${generatedSql}
 
 请审查这条 SQL 是否正确回答了用户的问题。`;
 
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        system: VERIFY_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-      },
-      { timeout: 15_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.classification,
+            max_tokens: 500,
+            system: VERIFY_PROMPT,
+            messages: [{ role: 'user', content: userPrompt }],
+          },
+          { timeout: TIMEOUT.fast },
+        ),
+      { label: 'SqlVerifier' },
     );
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = extractText(response);
+    const parsed = extractJson<VerificationResult>(text);
 
-    try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]) as VerificationResult;
-    } catch {
-      // parse failed
-    }
-
-    return { isCorrect: true, issues: [] };
+    return parsed ?? { isCorrect: true, issues: [] };
   }
 }

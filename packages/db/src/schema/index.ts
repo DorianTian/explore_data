@@ -4,10 +4,5 @@ export { schemaTables } from './schema-tables.js';
 export { schemaColumns } from './schema-columns.js';
 export { schemaRelationships } from './schema-relationships.js';
 export { metrics } from './metrics.js';
-export {
-  knowledgeDocs,
-  knowledgeChunks,
-  glossaryEntries,
-  columnEmbeddings,
-} from './knowledge.js';
+export { knowledgeDocs, knowledgeChunks, glossaryEntries, columnEmbeddings } from './knowledge.js';
 export { conversations, messages, queryHistory } from './conversations.js';

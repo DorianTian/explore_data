@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { PIPELINE } from './config.js';
 
 export interface ExecutionConfig {
   host: string;
@@ -17,45 +18,36 @@ export interface ExecutionResult {
   truncated: boolean;
 }
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_ROW_LIMIT = 1000;
-
 /**
  * Query Execution Sandbox — execute SQL safely against user's database.
  *
  * Safety guarantees:
  * - Read-only connection (SET default_transaction_read_only = ON)
- * - Statement timeout
+ * - Statement timeout via parameterized SET
  * - Row limit via LIMIT injection
- * - Isolated connection pool (not shared with app DB)
+ * - Pooled connections cached per config (not recreated per query)
+ * - SSL certificate verification configurable per environment
  */
 export class QueryExecutor {
+  /** Cache pools by connection key to avoid TCP overhead per query */
+  private static poolCache = new Map<string, pg.Pool>();
+
   async execute(
     sql: string,
     config: ExecutionConfig,
     options: { timeoutMs?: number; rowLimit?: number } = {},
   ): Promise<ExecutionResult> {
-    const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    const rowLimit = options.rowLimit ?? DEFAULT_ROW_LIMIT;
+    const timeoutMs = Math.max(1, Math.floor(options.timeoutMs ?? PIPELINE.defaultQueryTimeout));
+    const rowLimit = Math.max(1, Math.floor(options.rowLimit ?? PIPELINE.defaultRowLimit));
 
-    const pool = new pg.Pool({
-      host: config.host,
-      port: config.port,
-      database: config.database,
-      user: config.username,
-      password: config.password,
-      ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
-      max: 1,
-      idleTimeoutMillis: 5000,
-    });
-
+    const pool = this.getOrCreatePool(config);
     const client = await pool.connect();
     const start = Date.now();
 
     try {
-      // Set read-only mode and statement timeout
+      // Set read-only mode and statement timeout (parameterized, not interpolated)
       await client.query('SET default_transaction_read_only = ON');
-      await client.query(`SET statement_timeout = '${timeoutMs}ms'`);
+      await client.query('SET statement_timeout = $1', [`${timeoutMs}ms`]);
 
       // Add LIMIT if not present
       const limitedSql = this.ensureLimit(sql, rowLimit);
@@ -80,13 +72,41 @@ export class QueryExecutor {
       };
     } finally {
       client.release();
-      await pool.end();
     }
+  }
+
+  /** Close all cached pools — call on shutdown */
+  static async closeAll(): Promise<void> {
+    const pools = [...QueryExecutor.poolCache.values()];
+    QueryExecutor.poolCache.clear();
+    await Promise.all(pools.map((p) => p.end()));
+  }
+
+  private getOrCreatePool(config: ExecutionConfig): pg.Pool {
+    const key = `${config.host}:${config.port}/${config.database}/${config.username}`;
+    let pool = QueryExecutor.poolCache.get(key);
+    if (!pool) {
+      pool = new pg.Pool({
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.username,
+        password: config.password,
+        ssl: config.ssl ? { rejectUnauthorized: process.env.NODE_ENV === 'production' } : undefined,
+        max: 3,
+        idleTimeoutMillis: 30_000,
+      });
+      QueryExecutor.poolCache.set(key, pool);
+    }
+    return pool;
   }
 
   private ensureLimit(sql: string, limit: number): string {
     const trimmed = sql.trim().replace(/;\s*$/, '');
-    if (/\bLIMIT\s+\d+/i.test(trimmed)) {
+    // Only check for LIMIT at the outer query level (after last closing paren or at end)
+    // Find the last SELECT that isn't inside parentheses
+    const hasOuterLimit = /\bLIMIT\s+\d+\s*$/i.test(trimmed);
+    if (hasOuterLimit) {
       return trimmed;
     }
     return `${trimmed} LIMIT ${limit}`;

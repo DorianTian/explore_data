@@ -1,12 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  integer,
-  timestamp,
-  vector,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, integer, timestamp, vector } from 'drizzle-orm/pg-core';
 import { projects } from './projects.js';
 
 export const knowledgeDocs = pgTable('knowledge_docs', {

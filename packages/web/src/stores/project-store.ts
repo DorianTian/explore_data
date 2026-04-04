@@ -71,9 +71,7 @@ export const useProjectStore = create<ProjectStore>()(
       fetchDatasources: async (projectId) => {
         set({ loadingDatasources: true });
         try {
-          const res = await apiFetch<Datasource[]>(
-            `/api/datasources?projectId=${projectId}`,
-          );
+          const res = await apiFetch<Datasource[]>(`/api/datasources?projectId=${projectId}`);
           if (res.success && res.data) {
             set({ datasources: res.data });
             if (res.data.length === 1) {

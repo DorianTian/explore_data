@@ -44,6 +44,7 @@ describe('MetricService', () => {
       displayName: '付费用户数',
       expression: 'COUNT(DISTINCT user_id)',
       metricType: 'atomic',
+      format: 'number',
     });
 
     const base2 = await service.create({
@@ -52,6 +53,7 @@ describe('MetricService', () => {
       displayName: '活跃用户数',
       expression: 'COUNT(DISTINCT user_id)',
       metricType: 'atomic',
+      format: 'number',
     });
 
     const derived = await service.create({
@@ -75,6 +77,7 @@ describe('MetricService', () => {
       displayName: 'M1',
       expression: 'COUNT(*)',
       metricType: 'atomic',
+      format: 'number',
     });
     await service.create({
       projectId,
@@ -82,6 +85,7 @@ describe('MetricService', () => {
       displayName: 'M2',
       expression: 'SUM(amount)',
       metricType: 'atomic',
+      format: 'number',
     });
 
     const list = await service.listByProject(projectId);
@@ -95,6 +99,7 @@ describe('MetricService', () => {
       displayName: 'GMV',
       expression: 'SUM(amount)',
       metricType: 'atomic',
+      format: 'number',
     });
 
     const found = await service.findByName(projectId, 'gmv');
@@ -109,6 +114,7 @@ describe('MetricService', () => {
       displayName: 'GMV',
       expression: 'SUM(order_amount)',
       metricType: 'atomic',
+      format: 'currency',
       filters: [{ column: 'status', op: '=', value: 'completed' }],
     });
 
@@ -120,7 +126,7 @@ describe('MetricService', () => {
       limit: 10,
     });
 
-    expect(sql).toContain("SUM(order_amount) AS gmv");
+    expect(sql).toContain('SUM(order_amount) AS gmv');
     expect(sql).toContain("status = 'completed'");
     expect(sql).toContain("order_date >= '2026-03-01'");
     expect(sql).toContain('GROUP BY region');
@@ -135,6 +141,7 @@ describe('MetricService', () => {
       displayName: 'Temp',
       expression: 'COUNT(*)',
       metricType: 'atomic',
+      format: 'number',
     });
     const deleted = await service.remove(created.id);
     expect(deleted).toBe(true);

@@ -21,9 +21,7 @@ describe('Schema API', () => {
     await db.delete(projects);
 
     const agent = createTestAgent();
-    const projectRes = await agent
-      .post('/api/projects')
-      .send({ name: 'Test' });
+    const projectRes = await agent.post('/api/projects').send({ name: 'Test' });
     const dsRes = await agent.post('/api/datasources').send({
       projectId: projectRes.body.data.id,
       name: 'TestDB',
@@ -34,14 +32,16 @@ describe('Schema API', () => {
 
   describe('POST /api/schema/ingest/ddl', () => {
     it('ingests a single table', async () => {
-      const res = await createTestAgent().post('/api/schema/ingest/ddl').send({
-        datasourceId,
-        ddl: `CREATE TABLE users (
+      const res = await createTestAgent()
+        .post('/api/schema/ingest/ddl')
+        .send({
+          datasourceId,
+          ddl: `CREATE TABLE users (
           id BIGINT PRIMARY KEY,
           name VARCHAR(100) NOT NULL,
           email VARCHAR(200)
         );`,
-      });
+        });
 
       expect(res.status).toBe(201);
       expect(res.body.data.tables).toHaveLength(1);
@@ -50,9 +50,11 @@ describe('Schema API', () => {
     });
 
     it('ingests multiple tables with relationships', async () => {
-      const res = await createTestAgent().post('/api/schema/ingest/ddl').send({
-        datasourceId,
-        ddl: `
+      const res = await createTestAgent()
+        .post('/api/schema/ingest/ddl')
+        .send({
+          datasourceId,
+          ddl: `
           CREATE TABLE users (id INT PRIMARY KEY, name TEXT);
           CREATE TABLE orders (
             id INT PRIMARY KEY,
@@ -60,7 +62,7 @@ describe('Schema API', () => {
             amount DECIMAL(10,2)
           );
         `,
-      });
+        });
 
       expect(res.status).toBe(201);
       expect(res.body.data.tables).toHaveLength(2);
@@ -85,9 +87,7 @@ describe('Schema API', () => {
               CREATE TABLE t2 (id INT PRIMARY KEY);`,
       });
 
-      const res = await createTestAgent().get(
-        `/api/schema/tables?datasourceId=${datasourceId}`,
-      );
+      const res = await createTestAgent().get(`/api/schema/tables?datasourceId=${datasourceId}`);
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);
     });

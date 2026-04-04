@@ -24,11 +24,16 @@ export function createApp(db: DbClient) {
 
   app.use(errorHandler(logger));
   app.use(requestLogger(logger));
-  app.use(cors());
-  app.use(bodyParser());
+  app.use(
+    cors({
+      origin: process.env.CORS_ORIGIN ?? '*',
+      credentials: true,
+    }),
+  );
+  app.use(bodyParser({ jsonLimit: '2mb' }));
 
   const routers = [
-    createHealthRouter(),
+    createHealthRouter(db),
     createProjectRouter(db),
     createDatasourceRouter(db),
     createSchemaRouter(db),

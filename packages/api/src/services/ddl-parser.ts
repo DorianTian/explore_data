@@ -102,8 +102,8 @@ export class DdlParser {
     line: string,
     tableLevelPks: Set<string>,
   ): DdlParseResult['columns'][number] {
-    const nameMatch = line.match(/^["'`]([\w][\w\s-]*)["'`]\s+(.+)/i)
-      ?? line.match(/^(\w+)\s+(.+)/i);
+    const nameMatch =
+      line.match(/^["'`]([\w][\w\s-]*)["'`]\s+(.+)/i) ?? line.match(/^(\w+)\s+(.+)/i);
     if (!nameMatch) {
       return {
         name: line.trim(),
@@ -148,9 +148,7 @@ export class DdlParser {
   }
 
   private extractTableComment(ddl: string): string | null {
-    const match = ddl.match(
-      /\)\s*(?:ENGINE\s*=\s*\w+\s*)?COMMENT\s*=\s*['"]([^'"]*)['"]/i,
-    );
+    const match = ddl.match(/\)\s*(?:ENGINE\s*=\s*\w+\s*)?COMMENT\s*=\s*['"]([^'"]*)['"]/i);
     return match ? match[1] : null;
   }
 
@@ -189,13 +187,9 @@ export class DdlParser {
     columnName: string | undefined,
   ): DdlParseResult['foreignKeys'] {
     if (!columnName) return [];
-    const match = line.match(
-      /REFERENCES\s+["'`]?(\w+)["'`]?\s*\(\s*["'`]?(\w+)["'`]?\s*\)/i,
-    );
+    const match = line.match(/REFERENCES\s+["'`]?(\w+)["'`]?\s*\(\s*["'`]?(\w+)["'`]?\s*\)/i);
     if (!match) return [];
-    return [
-      { column: columnName, referencedTable: match[1], referencedColumn: match[2] },
-    ];
+    return [{ column: columnName, referencedTable: match[1], referencedColumn: match[2] }];
   }
 
   private extractPgComments(
@@ -208,10 +202,7 @@ export class DdlParser {
     };
 
     const tableCommentMatch = ddl.match(
-      new RegExp(
-        `COMMENT\\s+ON\\s+TABLE\\s+["'\`]?${tableName}["'\`]?\\s+IS\\s+'([^']*)'`,
-        'i',
-      ),
+      new RegExp(`COMMENT\\s+ON\\s+TABLE\\s+["'\`]?${tableName}["'\`]?\\s+IS\\s+'([^']*)'`, 'i'),
     );
     if (tableCommentMatch) result.table = tableCommentMatch[1];
 

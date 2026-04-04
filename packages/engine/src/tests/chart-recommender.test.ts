@@ -85,9 +85,7 @@ describe('ChartRecommender', () => {
   });
 
   it('recommends table for empty results', () => {
-    const result = recommender.recommend([], [
-      { name: 'id', dataType: 'integer' },
-    ]);
+    const result = recommender.recommend([], [{ name: 'id', dataType: 'integer' }]);
     expect(result.chartType).toBe('table');
   });
 

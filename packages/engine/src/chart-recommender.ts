@@ -102,10 +102,7 @@ export class ChartRecommender {
     return { name: col.name, type, distinctCount: distinctValues.size };
   }
 
-  private inferType(
-    dataType: string,
-    values: unknown[],
-  ): ColumnAnalysis['type'] {
+  private inferType(dataType: string, values: unknown[]): ColumnAnalysis['type'] {
     const dt = dataType.toLowerCase();
 
     if (['date', 'timestamp', 'timestamptz', 'datetime'].some((t) => dt.includes(t))) {
@@ -113,8 +110,8 @@ export class ChartRecommender {
     }
 
     if (
-      ['int', 'bigint', 'smallint', 'numeric', 'decimal', 'real', 'double', 'float'].some(
-        (t) => dt.includes(t),
+      ['int', 'bigint', 'smallint', 'numeric', 'decimal', 'real', 'double', 'float'].some((t) =>
+        dt.includes(t),
       )
     ) {
       return 'numeric';
@@ -132,10 +129,7 @@ export class ChartRecommender {
     return 'unknown';
   }
 
-  private buildKpi(
-    row: Record<string, unknown>,
-    numCol: ColumnAnalysis,
-  ): ChartRecommendation {
+  private buildKpi(row: Record<string, unknown>, numCol: ColumnAnalysis): ChartRecommendation {
     return {
       chartType: 'kpi',
       config: {
@@ -156,9 +150,7 @@ export class ChartRecommender {
       config: {
         xAxis: { type: 'category', data: rows.map((r) => r[catCol.name]) },
         yAxis: { type: 'value' },
-        series: [
-          { name: numCol.name, type: 'bar', data: rows.map((r) => r[numCol.name]) },
-        ],
+        series: [{ name: numCol.name, type: 'bar', data: rows.map((r) => r[numCol.name]) }],
       },
       alternativeTypes: ['horizontal_bar', 'pie', 'table'],
     };
@@ -174,9 +166,7 @@ export class ChartRecommender {
       config: {
         xAxis: { type: 'value' },
         yAxis: { type: 'category', data: rows.map((r) => r[catCol.name]) },
-        series: [
-          { name: numCol.name, type: 'bar', data: rows.map((r) => r[numCol.name]) },
-        ],
+        series: [{ name: numCol.name, type: 'bar', data: rows.map((r) => r[numCol.name]) }],
       },
       alternativeTypes: ['bar', 'table'],
     };
@@ -192,9 +182,7 @@ export class ChartRecommender {
       config: {
         xAxis: { type: 'category', data: rows.map((r) => r[timeCol.name]) },
         yAxis: { type: 'value' },
-        series: [
-          { name: numCol.name, type: 'line', data: rows.map((r) => r[numCol.name]) },
-        ],
+        series: [{ name: numCol.name, type: 'line', data: rows.map((r) => r[numCol.name]) }],
       },
       alternativeTypes: ['bar', 'table'],
     };

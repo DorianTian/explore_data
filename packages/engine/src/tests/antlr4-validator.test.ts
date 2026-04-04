@@ -35,9 +35,7 @@ describe('ANTLR4 SQL Validator', () => {
     });
 
     it('parses aggregation with GROUP BY', () => {
-      const result = validateSql(
-        'SELECT status, SUM(amount) AS total FROM orders GROUP BY status',
-      );
+      const result = validateSql('SELECT status, SUM(amount) AS total FROM orders GROUP BY status');
       expect(result.valid).toBe(true);
       expect(result.tables).toContain('orders');
     });
@@ -50,9 +48,7 @@ describe('ANTLR4 SQL Validator', () => {
     });
 
     it('parses ORDER BY with ASC/DESC', () => {
-      const result = validateSql(
-        'SELECT name, amount FROM orders ORDER BY amount DESC, name ASC',
-      );
+      const result = validateSql('SELECT name, amount FROM orders ORDER BY amount DESC, name ASC');
       expect(result.valid).toBe(true);
     });
 
@@ -83,16 +79,12 @@ describe('ANTLR4 SQL Validator', () => {
     });
 
     it('parses UNION', () => {
-      const result = validateSql(
-        'SELECT name FROM users UNION SELECT name FROM admins',
-      );
+      const result = validateSql('SELECT name FROM users UNION SELECT name FROM admins');
       expect(result.valid).toBe(true);
     });
 
     it('parses UNION ALL', () => {
-      const result = validateSql(
-        'SELECT name FROM users UNION ALL SELECT name FROM admins',
-      );
+      const result = validateSql('SELECT name FROM users UNION ALL SELECT name FROM admins');
       expect(result.valid).toBe(true);
     });
 
@@ -111,30 +103,22 @@ describe('ANTLR4 SQL Validator', () => {
     });
 
     it('parses CAST expression', () => {
-      const result = validateSql(
-        'SELECT CAST(amount AS DECIMAL(10, 2)) FROM orders',
-      );
+      const result = validateSql('SELECT CAST(amount AS DECIMAL(10, 2)) FROM orders');
       expect(result.valid).toBe(true);
     });
 
     it('parses IS NULL / IS NOT NULL', () => {
-      const result = validateSql(
-        'SELECT name FROM users WHERE email IS NOT NULL',
-      );
+      const result = validateSql('SELECT name FROM users WHERE email IS NOT NULL');
       expect(result.valid).toBe(true);
     });
 
     it('parses BETWEEN', () => {
-      const result = validateSql(
-        'SELECT id FROM orders WHERE amount BETWEEN 10 AND 100',
-      );
+      const result = validateSql('SELECT id FROM orders WHERE amount BETWEEN 10 AND 100');
       expect(result.valid).toBe(true);
     });
 
     it('parses LIKE', () => {
-      const result = validateSql(
-        "SELECT name FROM users WHERE name LIKE '%alice%'",
-      );
+      const result = validateSql("SELECT name FROM users WHERE name LIKE '%alice%'");
       expect(result.valid).toBe(true);
     });
 
@@ -197,17 +181,13 @@ describe('ANTLR4 SQL Validator', () => {
     });
 
     it('extracts tables from subqueries', () => {
-      const result = validateSql(
-        'SELECT name FROM users WHERE id IN (SELECT user_id FROM orders)',
-      );
+      const result = validateSql('SELECT name FROM users WHERE id IN (SELECT user_id FROM orders)');
       expect(result.tables).toContain('users');
       expect(result.tables).toContain('orders');
     });
 
     it('deduplicates table names', () => {
-      const result = validateSql(
-        'SELECT a.id FROM users a JOIN users b ON a.id = b.id',
-      );
+      const result = validateSql('SELECT a.id FROM users a JOIN users b ON a.id = b.id');
       expect(result.tables).toEqual(['users']);
     });
 

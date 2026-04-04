@@ -7,7 +7,8 @@ import type { ToolDefinition } from './types.js';
 export const SKILL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'schema_search',
-    description: '搜索数据库 schema，获取相关的表和列信息。当你需要了解数据库结构来生成 SQL 时使用。',
+    description:
+      '搜索数据库 schema，获取相关的表和列信息。当你需要了解数据库结构来生成 SQL 时使用。',
     input_schema: {
       type: 'object',
       properties: {
@@ -71,7 +72,8 @@ export const SKILL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'sql_review',
-    description: '审查生成的 SQL 是否正确回答了用户问题。检查语义、JOIN、过滤条件、聚合粒度等。如果有问题会返回修正建议。',
+    description:
+      '审查生成的 SQL 是否正确回答了用户问题。检查语义、JOIN、过滤条件、聚合粒度等。如果有问题会返回修正建议。',
     input_schema: {
       type: 'object',
       properties: {
@@ -93,7 +95,8 @@ export const SKILL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'sql_validate',
-    description: '校验 SQL 的语法和安全性。检查是否有 DDL/DML 语句、SQL 注入风险、表/列是否存在等。',
+    description:
+      '校验 SQL 的语法和安全性。检查是否有 DDL/DML 语句、SQL 注入风险、表/列是否存在等。',
     input_schema: {
       type: 'object',
       properties: {

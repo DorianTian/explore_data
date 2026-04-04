@@ -1,55 +1,60 @@
 import { eq, desc, sql } from 'drizzle-orm';
-import {
-  metrics,
-  glossaryEntries,
-  knowledgeChunks,
-  knowledgeDocs,
-  schemaTables,
-  queryHistory,
-  type DbClient,
-} from '@nl2sql/db';
-import { IntentClassifier } from './intent-classifier.js';
+import { metrics, glossaryEntries, schemaTables, queryHistory, type DbClient } from '@nl2sql/db';
 import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
 import { QueryDecomposer } from './query-decomposer.js';
 import { SchemaReranker } from './schema-reranker.js';
 import { SqlVerifier } from './sql-verifier.js';
 import { EmbeddingService } from './embedding-service.js';
+import { QueryRouter } from './skills/router.js';
+import { AgentOrchestrator } from './skills/agent-orchestrator.js';
+import { PIPELINE, RAG } from './config.js';
 import type { PipelineInput, PipelineResult, ConversationTurn } from './types.js';
+
+/** Engine-wide config passed to pipeline constructor */
+export interface EngineConfig {
+  anthropicApiKey?: string;
+  anthropicBaseUrl?: string;
+  openaiApiKey?: string;
+  openaiBaseUrl?: string;
+}
 
 /**
  * NL2SQL Pipeline — dual-channel architecture:
  * 1. Metric Resolution: if user query matches a known metric, compose SQL directly
- * 2. Full NL2SQL: intent → schema linking → glossary + few-shot → SQL generation
+ * 2. Full NL2SQL: router → (simple: full pipeline / complex: agent orchestrator)
+ *
+ * Full pipeline stages: decompose → schema link → rerank → glossary + RAG + few-shot → generate → verify
+ * Agent path: LLM tool-use loop with skills for complex multi-step reasoning
  *
  * Data flywheel: user corrections get recorded and retrieved as few-shot examples
  */
 export class NL2SqlPipeline {
-  private intentClassifier: IntentClassifier;
+  private router: QueryRouter;
+  private orchestrator: AgentOrchestrator;
   private queryDecomposer: QueryDecomposer;
   private schemaLinker: SchemaLinker;
   private schemaReranker: SchemaReranker;
   private sqlGenerator: SqlGenerator;
   private sqlVerifier: SqlVerifier;
+  private embeddingService: EmbeddingService | null;
 
   constructor(
     private db: DbClient,
-    private config: {
-      anthropicApiKey?: string;
-      anthropicBaseUrl?: string;
-      openaiApiKey?: string;
-      openaiBaseUrl?: string;
-    } = {},
+    private config: EngineConfig = {},
   ) {
     const anthropicBase = config.anthropicBaseUrl ?? process.env.ANTHROPIC_BASE_URL;
     const openaiBase = config.openaiBaseUrl ?? process.env.OPENAI_BASE_URL;
+    const openaiKey = config.openaiApiKey ?? process.env.OPENAI_API_KEY;
 
-    this.intentClassifier = new IntentClassifier(config.anthropicApiKey, anthropicBase);
+    this.router = new QueryRouter(config.anthropicApiKey, anthropicBase);
+    this.orchestrator = new AgentOrchestrator(db, config);
     this.queryDecomposer = new QueryDecomposer(config.anthropicApiKey, anthropicBase);
-    this.schemaLinker = new SchemaLinker(db, config.openaiApiKey, openaiBase);
+    this.schemaLinker = new SchemaLinker(db, openaiKey, openaiBase);
     this.schemaReranker = new SchemaReranker(config.anthropicApiKey, anthropicBase);
     this.sqlGenerator = new SqlGenerator(config.anthropicApiKey, anthropicBase);
     this.sqlVerifier = new SqlVerifier(config.anthropicApiKey, anthropicBase);
+    this.embeddingService = openaiKey ? new EmbeddingService(openaiKey, openaiBase) : null;
   }
 
   async run(input: PipelineInput): Promise<PipelineResult> {
@@ -57,17 +62,11 @@ export class NL2SqlPipeline {
     const dialect = input.dialect ?? 'postgresql';
 
     // Step 1: Router — classify intent + complexity
-    const { QueryRouter } = await import('./skills/index.js');
-    const router = new QueryRouter(
-      this.config.anthropicApiKey,
-      this.config.anthropicBaseUrl ?? process.env.ANTHROPIC_BASE_URL,
-    );
-    const classification = await router.classify(input.userQuery, conversationHistory);
+    const classification = await this.router.classify(input.userQuery, conversationHistory);
 
+    // Off-topic / clarification → agent handles conversationally
     if (classification.type === 'off_topic' || classification.type === 'clarification') {
-      const skillsMod = await import('./skills/index.js');
-      const orch = new skillsMod.AgentOrchestrator(this.db, this.config);
-      return orch.run(input.userQuery, classification, {
+      return this.orchestrator.run(input.userQuery, classification, {
         projectId: input.projectId,
         datasourceId: input.datasourceId,
         dialect,
@@ -79,20 +78,25 @@ export class NL2SqlPipeline {
     const metricResult = await this.tryMetricResolution(input);
     if (metricResult) return metricResult;
 
-    // Step 3: Agent orchestrator — routes to simple or agent path based on complexity
-    const skills = await import('./skills/index.js');
-    const orchestrator = new skills.AgentOrchestrator(this.db, this.config);
-    return orchestrator.run(input.userQuery, classification, {
-      projectId: input.projectId,
-      datasourceId: input.datasourceId,
-      dialect,
-      conversationHistory,
+    // Step 3: Route by complexity
+    if (classification.complexity === 'complex') {
+      // Complex queries → agent orchestrator with tool-use loop
+      return this.orchestrator.run(input.userQuery, classification, {
+        projectId: input.projectId,
+        datasourceId: input.datasourceId,
+        dialect,
+        conversationHistory,
+      });
+    }
+
+    // Simple/moderate queries → full deterministic pipeline
+    return this.runFullPipeline(input, conversationHistory, dialect, {
+      type: classification.type,
+      modificationHint: classification.modificationHint,
     });
   }
 
-  private async tryMetricResolution(
-    input: PipelineInput,
-  ): Promise<PipelineResult | null> {
+  private async tryMetricResolution(input: PipelineInput): Promise<PipelineResult | null> {
     const projectMetrics = await this.db
       .select()
       .from(metrics)
@@ -102,23 +106,54 @@ export class NL2SqlPipeline {
 
     const queryLower = input.userQuery.toLowerCase();
 
-    // Find all matching metrics
-    const matchedMetrics = projectMetrics.filter(
-      (m) =>
-        queryLower.includes(m.name.toLowerCase()) ||
-        queryLower.includes(m.displayName.toLowerCase()),
-    );
+    // Find matching metrics using word-boundary matching (not substring)
+    const matchedMetrics = projectMetrics.filter((m) => {
+      const namePattern = new RegExp(`\\b${escapeRegex(m.name.toLowerCase())}\\b`);
+      const displayPattern = new RegExp(`\\b${escapeRegex(m.displayName.toLowerCase())}\\b`);
+      return (
+        namePattern.test(queryLower) ||
+        displayPattern.test(queryLower) ||
+        queryLower.includes(m.displayName.toLowerCase())
+      );
+    });
 
     // If multiple metrics match or none match, skip metric resolution
     // Multi-metric queries need full NL2SQL for proper JOIN and grouping
     if (matchedMetrics.length !== 1) return null;
 
     // If query has complex intent indicators, prefer full NL2SQL
-    const complexIndicators = ['对比', '趋势', '同比', '环比', '占比', '分布', '关联', '和', '以及'];
+    const complexIndicators = [
+      '对比',
+      '趋势',
+      '同比',
+      '环比',
+      '占比',
+      '分布',
+      '关联',
+      '和',
+      '以及',
+      'compare',
+      'trend',
+      'versus',
+      'vs',
+      'distribution',
+      'correlation',
+    ];
     const hasComplexIntent = complexIndicators.some((w) => queryLower.includes(w));
 
     // If query mentions tables/entities not related to the metric, prefer full NL2SQL
-    const crossTableIndicators = ['用户', '商品', '产品', '分类', '品类', '品牌'];
+    const crossTableIndicators = [
+      '用户',
+      '商品',
+      '产品',
+      '分类',
+      '品类',
+      '品牌',
+      'user',
+      'product',
+      'category',
+      'brand',
+    ];
     const hasCrossTable = crossTableIndicators.some((w) => queryLower.includes(w));
 
     if (hasComplexIntent || hasCrossTable) return null;
@@ -134,7 +169,7 @@ export class NL2SqlPipeline {
 
     if (!sourceTable) return null;
 
-    const sourceTableName = sourceTable.name;
+    const sourceTableName = quoteIdentifier(sourceTable.name);
 
     const selectParts: string[] = [];
     const groupByParts: string[] = [];
@@ -143,13 +178,13 @@ export class NL2SqlPipeline {
     if (matchedMetric.dimensions) {
       for (const dim of matchedMetric.dimensions) {
         if (this.dimensionMatchesQuery(dim, queryLower)) {
-          selectParts.push(dim);
-          groupByParts.push(dim);
+          selectParts.push(quoteIdentifier(dim));
+          groupByParts.push(quoteIdentifier(dim));
         }
       }
     }
 
-    selectParts.push(`${matchedMetric.expression} AS ${matchedMetric.name}`);
+    selectParts.push(`${matchedMetric.expression} AS ${quoteIdentifier(matchedMetric.name)}`);
 
     if (matchedMetric.filters && Array.isArray(matchedMetric.filters)) {
       for (const f of matchedMetric.filters as Array<{
@@ -157,24 +192,25 @@ export class NL2SqlPipeline {
         op: string;
         value: unknown;
       }>) {
+        const quotedCol = quoteIdentifier(f.column);
         const val =
           typeof f.value === 'string'
             ? `'${String(f.value).replace(/'/g, "''")}'`
             : String(f.value);
-        whereParts.push(`${f.column} ${f.op} ${val}`);
+        whereParts.push(`${quotedCol} ${f.op} ${val}`);
       }
     }
 
-    let sql = `SELECT ${selectParts.join(', ')} FROM ${sourceTableName}`;
-    if (whereParts.length > 0) sql += ` WHERE ${whereParts.join(' AND ')}`;
-    if (groupByParts.length > 0) sql += ` GROUP BY ${groupByParts.join(', ')}`;
+    let metricSql = `SELECT ${selectParts.join(', ')} FROM ${sourceTableName}`;
+    if (whereParts.length > 0) metricSql += ` WHERE ${whereParts.join(' AND ')}`;
+    if (groupByParts.length > 0) metricSql += ` GROUP BY ${groupByParts.join(', ')}`;
 
     return {
       resolvedVia: 'metric',
-      sql,
+      sql: metricSql,
       explanation: `基于指标「${matchedMetric.displayName}」生成查询：${matchedMetric.expression}`,
       confidence: 0.9,
-      tablesUsed: [sourceTableName],
+      tablesUsed: [sourceTable.name],
     };
   }
 
@@ -207,6 +243,10 @@ export class NL2SqlPipeline {
     return dimAliases.some((alias) => query.includes(alias));
   }
 
+  /**
+   * Full deterministic pipeline for simple/moderate queries.
+   * Decompose → Schema Link → Rerank → Glossary + RAG + FewShot → Generate → Verify
+   */
   private async runFullPipeline(
     input: PipelineInput,
     conversationHistory: ConversationTurn[],
@@ -217,10 +257,7 @@ export class NL2SqlPipeline {
     const decomposition = await this.queryDecomposer.decompose(input.userQuery);
 
     // Node 2: Schema Linking (embedding recall)
-    let schema = await this.schemaLinker.linkSchema(
-      input.datasourceId,
-      input.userQuery,
-    );
+    let schema = await this.schemaLinker.linkSchema(input.datasourceId, input.userQuery);
 
     // Node 3: Schema Rerank (LLM precision filter for large schemas)
     schema = await this.schemaReranker.rerank(input.userQuery, schema);
@@ -236,17 +273,11 @@ export class NL2SqlPipeline {
       sqlExpression: g.sqlExpression,
     }));
 
-    // Node 5: RAG — retrieve relevant knowledge documents
-    const knowledgeContext = await this.retrieveKnowledgeContext(
-      input.projectId,
-      input.userQuery,
-    );
+    // Node 5: RAG �� retrieve relevant knowledge documents
+    const knowledgeContext = await this.retrieveKnowledgeContext(input.projectId, input.userQuery);
 
     // Node 6: Data flywheel — retrieve similar accepted queries as few-shot examples
-    const fewShotExamples = await this.retrieveFewShotExamples(
-      input.projectId,
-      input.userQuery,
-    );
+    const fewShotExamples = await this.retrieveFewShotExamples(input.projectId, input.userQuery);
 
     // Build generation context
     let queryForGeneration = input.userQuery;
@@ -272,9 +303,7 @@ export class NL2SqlPipeline {
     // Node 7: SQL Generation
     let result;
     if (intent.type === 'follow_up' && conversationHistory.length > 0) {
-      const lastSql = [...conversationHistory]
-        .reverse()
-        .find((t) => t.sql)?.sql;
+      const lastSql = [...conversationHistory].reverse().find((t) => t.sql)?.sql;
 
       if (lastSql) {
         result = await this.sqlGenerator.generateFollowUp(
@@ -290,12 +319,8 @@ export class NL2SqlPipeline {
     }
 
     // Node 8: SQL Self-Verification — LLM checks its own output for logical correctness
-    if (result.sql && result.confidence < 0.95) {
-      const verification = await this.sqlVerifier.verify(
-        input.userQuery,
-        result.sql,
-        schema,
-      );
+    if (result.sql && result.confidence < PIPELINE.verificationThreshold) {
+      const verification = await this.sqlVerifier.verify(input.userQuery, result.sql, schema);
 
       if (!verification.isCorrect && verification.suggestedFix) {
         result = {
@@ -318,18 +343,54 @@ export class NL2SqlPipeline {
 
   /**
    * Data flywheel: retrieve previously accepted queries as few-shot examples.
-   * Uses simple text matching for now; will upgrade to embedding similarity later.
+   * Uses embedding similarity when available, falls back to recent history.
    */
   private async retrieveFewShotExamples(
     projectId: string,
-    _userQuery: string,
+    userQuery: string,
   ): Promise<Array<{ question: string; sql: string }>> {
+    // Try embedding-based retrieval first
+    if (this.embeddingService) {
+      try {
+        const queryEmbedding = await this.embeddingService.embedSingle(userQuery);
+        const vectorStr = `[${queryEmbedding.join(',')}]`;
+
+        const results = await this.db.execute<{
+          natural_language: string;
+          generated_sql: string;
+          corrected_sql: string | null;
+          distance: number;
+        }>(sql`
+          SELECT qh.natural_language, qh.generated_sql, qh.corrected_sql,
+                 qh.natural_language <-> ${vectorStr}::vector AS distance
+          FROM query_history qh
+          WHERE qh.project_id = ${projectId}
+            AND (qh.corrected_sql IS NOT NULL OR qh.was_accepted > 0.5)
+          ORDER BY distance ASC
+          LIMIT ${PIPELINE.maxFewShotExamples}
+        `);
+
+        if (results.rows && results.rows.length > 0) {
+          return results.rows
+            .filter((r) => r.distance < RAG.distanceThreshold)
+            .map((r) => ({
+              question: r.natural_language,
+              sql: r.corrected_sql ?? r.generated_sql,
+            }));
+        }
+      } catch {
+        // Embedding search not available (no vector column on query_history),
+        // fall through to recency-based retrieval
+      }
+    }
+
+    // Fallback: recency-based retrieval
     const history = await this.db
       .select()
       .from(queryHistory)
       .where(eq(queryHistory.projectId, projectId))
       .orderBy(desc(queryHistory.createdAt))
-      .limit(5);
+      .limit(PIPELINE.maxFewShotExamples);
 
     return history
       .filter((h) => h.correctedSql || (h.wasAccepted && h.wasAccepted > 0.5))
@@ -341,20 +402,13 @@ export class NL2SqlPipeline {
 
   /**
    * RAG: retrieve relevant knowledge chunks via pgvector similarity.
-   * Returns top-5 most relevant document chunks for the user query.
+   * Returns top-K most relevant document chunks for the user query.
    */
-  private async retrieveKnowledgeContext(
-    projectId: string,
-    userQuery: string,
-  ): Promise<string[]> {
-    if (!process.env.OPENAI_API_KEY) return [];
+  private async retrieveKnowledgeContext(projectId: string, userQuery: string): Promise<string[]> {
+    if (!this.embeddingService) return [];
 
     try {
-      const embService = new EmbeddingService(
-        process.env.OPENAI_API_KEY,
-        process.env.OPENAI_BASE_URL,
-      );
-      const queryEmbedding = await embService.embedSingle(userQuery);
+      const queryEmbedding = await this.embeddingService.embedSingle(userQuery);
       const vectorStr = `[${queryEmbedding.join(',')}]`;
 
       const results = await this.db.execute<{
@@ -369,17 +423,30 @@ export class NL2SqlPipeline {
         WHERE kd.project_id = ${projectId}
           AND kc.embedding IS NOT NULL
         ORDER BY distance ASC
-        LIMIT 5
+        LIMIT ${RAG.topK}
       `);
 
       if (!results.rows || results.rows.length === 0) return [];
 
-      // Only include chunks with reasonable similarity (distance < 0.7)
       return results.rows
-        .filter((r) => r.distance < 0.7)
+        .filter((r) => r.distance < RAG.distanceThreshold)
         .map((r) => `[${r.title}] ${r.content}`);
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        JSON.stringify({ level: 'warn', msg: 'Knowledge retrieval failed', error: msg }) + '\n',
+      );
       return [];
     }
   }
+}
+
+/** Quote a SQL identifier to prevent injection and handle reserved words */
+function quoteIdentifier(name: string): string {
+  return `"${name.replace(/"/g, '""')}"`;
+}
+
+/** Escape special regex characters in a string */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

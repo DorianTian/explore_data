@@ -2,12 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { KnowledgeService } from '../../services/knowledge-service.js';
 import { ProjectService } from '../../services/project-service.js';
 import { getTestDb } from '../setup.js';
-import {
-  knowledgeDocs,
-  knowledgeChunks,
-  glossaryEntries,
-  projects,
-} from '@nl2sql/db';
+import { knowledgeDocs, knowledgeChunks, glossaryEntries, projects } from '@nl2sql/db';
 
 describe('KnowledgeService', () => {
   let service: KnowledgeService;

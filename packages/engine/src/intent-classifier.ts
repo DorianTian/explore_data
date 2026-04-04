@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { IntentResult, ConversationTurn } from './types.js';
+import { extractText, extractJson, withRetry } from './llm-utils.js';
+import { MODEL, TIMEOUT } from './config.js';
 
 const INTENT_PROMPT = `你是一个 NL2SQL 系统的意图分类器。将用户的消息分类为以下类别之一：
 
@@ -52,28 +54,23 @@ export class IntentClassifier {
       });
     }
 
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        system: INTENT_PROMPT,
-        messages,
-      },
-      { timeout: 15_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.classification,
+            max_tokens: 200,
+            system: INTENT_PROMPT,
+            messages,
+          },
+          { timeout: TIMEOUT.fast },
+        ),
+      { label: 'IntentClassifier' },
     );
 
-    const text =
-      response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = extractText(response);
+    const parsed = extractJson<IntentResult>(text);
 
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]) as IntentResult;
-      }
-    } catch {
-      // parse error, fallback
-    }
-
-    return { type: 'sql_query', confidence: 0.5 };
+    return parsed ?? { type: 'sql_query', confidence: 0.5 };
   }
 }

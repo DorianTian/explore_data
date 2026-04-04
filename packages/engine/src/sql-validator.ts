@@ -1,6 +1,7 @@
 import pkg from 'node-sql-parser';
 const { Parser } = pkg;
 import { validateSql as antlr4Validate } from './antlr4-validator.js';
+import { VALIDATION } from './config.js';
 import type { SchemaContext } from './types.js';
 
 export interface ValidationResult {
@@ -15,9 +16,6 @@ export interface ValidationError {
   message: string;
   severity: 'error' | 'warning';
 }
-
-const MAX_SUBQUERY_DEPTH = 3;
-const MAX_JOIN_COUNT = 5;
 
 /**
  * SQL Validator — safety checks, schema validation, and danger pattern detection.
@@ -51,7 +49,10 @@ export class SqlValidator {
     if (antlr4Result.valid) {
       tablesReferenced = antlr4Result.tables;
       columnsReferenced = antlr4Result.columns;
-    } else if (antlr4Result.statementType !== 'select' && antlr4Result.statementType !== 'unknown') {
+    } else if (
+      antlr4Result.statementType !== 'select' &&
+      antlr4Result.statementType !== 'unknown'
+    ) {
       // ANTLR4 detected non-SELECT — reject immediately
       for (const errMsg of antlr4Result.errors) {
         errors.push({ code: 'BLOCKED_STATEMENT', message: errMsg, severity: 'error' });
@@ -63,7 +64,11 @@ export class SqlValidator {
       if (!fallbackResult.valid) {
         // Both parsers failed — report ANTLR4 errors (more precise grammar)
         for (const errMsg of antlr4Result.errors) {
-          errors.push({ code: 'PARSE_ERROR', message: `SQL syntax error: ${errMsg}`, severity: 'error' });
+          errors.push({
+            code: 'PARSE_ERROR',
+            message: `SQL syntax error: ${errMsg}`,
+            severity: 'error',
+          });
         }
         return { valid: false, errors, tablesReferenced: [], columnsReferenced: [] };
       }
@@ -131,7 +136,10 @@ export class SqlValidator {
     const cleaned = sql.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 
     const blockedPatterns = [
-      { pattern: /\bDROP\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW)/i, msg: 'DROP statements are not allowed' },
+      {
+        pattern: /\bDROP\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW)/i,
+        msg: 'DROP statements are not allowed',
+      },
       { pattern: /\bTRUNCATE\s+/i, msg: 'TRUNCATE is not allowed' },
       { pattern: /\bALTER\s+(TABLE|DATABASE|SCHEMA)/i, msg: 'ALTER statements are not allowed' },
       { pattern: /\bDELETE\s+FROM/i, msg: 'DELETE is not allowed' },
@@ -153,8 +161,11 @@ export class SqlValidator {
   }
 
   private checkDangerPatterns(sql: string, errors: ValidationError[]): void {
+    // Strip string literals before pattern matching to avoid false positives
+    const stripped = this.stripStringLiterals(sql);
+
     // CROSS JOIN detection
-    if (/\bCROSS\s+JOIN\b/i.test(sql)) {
+    if (/\bCROSS\s+JOIN\b/i.test(stripped)) {
       errors.push({
         code: 'CROSS_JOIN',
         message: 'CROSS JOIN detected — may produce a cartesian product.',
@@ -162,8 +173,8 @@ export class SqlValidator {
       });
     }
 
-    // SELECT * without LIMIT
-    if (/\bSELECT\s+\*/i.test(sql) && !/\bLIMIT\s+\d/i.test(sql)) {
+    // SELECT * without LIMIT (only check outer query)
+    if (/\bSELECT\s+\*/i.test(stripped) && !/\bLIMIT\s+\d/i.test(stripped)) {
       errors.push({
         code: 'SELECT_STAR_NO_LIMIT',
         message: 'SELECT * without LIMIT may return excessive rows.',
@@ -172,21 +183,21 @@ export class SqlValidator {
     }
 
     // Subquery depth
-    const depth = this.countSubqueryDepth(sql);
-    if (depth > MAX_SUBQUERY_DEPTH) {
+    const depth = this.countSubqueryDepth(stripped);
+    if (depth > VALIDATION.maxSubqueryDepth) {
       errors.push({
         code: 'DEEP_SUBQUERY',
-        message: `Subquery depth is ${depth} (max ${MAX_SUBQUERY_DEPTH}).`,
+        message: `Subquery depth is ${depth} (max ${VALIDATION.maxSubqueryDepth}).`,
         severity: 'warning',
       });
     }
 
     // Join count
-    const joinCount = (sql.match(/\bJOIN\b/gi) || []).length;
-    if (joinCount > MAX_JOIN_COUNT) {
+    const joinCount = (stripped.match(/\bJOIN\b/gi) || []).length;
+    if (joinCount > VALIDATION.maxJoinCount) {
       errors.push({
         code: 'TOO_MANY_JOINS',
-        message: `Query has ${joinCount} JOINs (max ${MAX_JOIN_COUNT}).`,
+        message: `Query has ${joinCount} JOINs (max ${VALIDATION.maxJoinCount}).`,
         severity: 'warning',
       });
     }
@@ -219,7 +230,7 @@ export class SqlValidator {
     }
 
     for (const col of columns) {
-      if (col === '*' || col === '(.*)')  continue;
+      if (col === '*' || col === '(.*)') continue;
       const colLower = col.toLowerCase();
       const parts = colLower.split('.');
       const colName = parts[parts.length - 1];
@@ -234,28 +245,46 @@ export class SqlValidator {
     }
   }
 
+  /**
+   * Strip string literals from SQL to prevent false positives in pattern matching.
+   * Replaces 'content' with '' to preserve SQL structure.
+   */
+  private stripStringLiterals(sql: string): string {
+    return sql.replace(/'(?:[^'\\]|\\.)*'/g, "''");
+  }
+
+  /**
+   * Count subquery nesting depth using parenthesis tracking.
+   * Previous approach (counting SELECT keywords) miscounted strings and CTEs.
+   */
   private countSubqueryDepth(sql: string): number {
     let maxDepth = 0;
-    let currentDepth = 0;
+    let subqueryDepth = 0;
+    const upper = sql.toUpperCase();
 
-    for (const token of sql.split(/\b/)) {
-      if (token.trim().toUpperCase() === 'SELECT') {
-        currentDepth++;
-        if (currentDepth > maxDepth) maxDepth = currentDepth;
+    for (let i = 0; i < upper.length; i++) {
+      if (upper[i] === '(') {
+        const rest = upper.slice(i + 1).trimStart();
+        if (rest.startsWith('SELECT')) {
+          subqueryDepth++;
+          maxDepth = Math.max(maxDepth, subqueryDepth);
+        }
+      } else if (upper[i] === ')') {
+        if (subqueryDepth > 0) subqueryDepth--;
       }
     }
 
-    return Math.max(0, maxDepth - 1);
+    return maxDepth;
   }
 
   private mapDialect(): string {
     const map: Record<string, string> = {
       mysql: 'MySQL',
-      postgresql: 'PostgresQL',
+      postgresql: 'PostgreSQL',
       hive: 'Hive',
       sparksql: 'SparkSQL',
       flinksql: 'FlinkSQL',
     };
-    return map[this.dialect.toLowerCase()] ?? 'PostgresQL';
+    return map[this.dialect.toLowerCase()] ?? 'PostgreSQL';
   }
 }

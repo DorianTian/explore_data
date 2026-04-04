@@ -62,10 +62,7 @@ export class MetricService {
   }
 
   async remove(id: string): Promise<boolean> {
-    const [row] = await this.db
-      .delete(metrics)
-      .where(eq(metrics.id, id))
-      .returning();
+    const [row] = await this.db.delete(metrics).where(eq(metrics.id, id)).returning();
     return row !== undefined;
   }
 
@@ -73,13 +70,16 @@ export class MetricService {
    * Compose SQL from a metric definition + user-specified dimensions and time range.
    * This is the core of the "指标组装" approach — no LLM needed for known metrics.
    */
-  composeSql(metric: typeof metrics.$inferSelect, params: {
-    dimensions?: string[];
-    timeColumn?: string;
-    timeRange?: { start: string; end: string };
-    orderBy?: string;
-    limit?: number;
-  }): string {
+  composeSql(
+    metric: typeof metrics.$inferSelect,
+    params: {
+      dimensions?: string[];
+      timeColumn?: string;
+      timeRange?: { start: string; end: string };
+      orderBy?: string;
+      limit?: number;
+    },
+  ): string {
     const selectParts: string[] = [];
     const groupByParts: string[] = [];
 
@@ -101,12 +101,8 @@ export class MetricService {
     }
 
     if (params.timeColumn && params.timeRange) {
-      whereParts.push(
-        `${params.timeColumn} >= '${params.timeRange.start}'`,
-      );
-      whereParts.push(
-        `${params.timeColumn} < '${params.timeRange.end}'`,
-      );
+      whereParts.push(`${params.timeColumn} >= '${params.timeRange.start}'`);
+      whereParts.push(`${params.timeColumn} < '${params.timeRange.end}'`);
     }
 
     let sql = `SELECT ${selectParts.join(', ')}`;

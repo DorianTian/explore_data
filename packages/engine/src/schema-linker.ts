@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import {
   schemaTables,
   schemaColumns,
@@ -26,9 +26,7 @@ export class SchemaLinker {
     openaiApiKey?: string,
     openaiBaseUrl?: string,
   ) {
-    this.embeddingService = openaiApiKey
-      ? new EmbeddingService(openaiApiKey, openaiBaseUrl)
-      : null;
+    this.embeddingService = openaiApiKey ? new EmbeddingService(openaiApiKey, openaiBaseUrl) : null;
   }
 
   async loadSchema(datasourceId: string): Promise<SchemaContext> {
@@ -39,12 +37,36 @@ export class SchemaLinker {
 
     const schemaContext: SchemaContext = { tables: [], relationships: [] };
 
+    // Batch load ALL columns for this datasource's tables in one query
+    const tableIds = tables.map((t) => t.id);
+    const allColumns =
+      tableIds.length > 0
+        ? await this.db
+            .select()
+            .from(schemaColumns)
+            .where(inArray(schemaColumns.tableId, tableIds))
+            .orderBy(schemaColumns.ordinalPosition)
+        : [];
+
+    // Group columns by tableId for O(1) lookup
+    const columnsByTableId = new Map<string, typeof allColumns>();
+    for (const col of allColumns) {
+      const group = columnsByTableId.get(col.tableId);
+      if (group) {
+        group.push(col);
+      } else {
+        columnsByTableId.set(col.tableId, [col]);
+      }
+    }
+
+    // Build column-by-id map for relationship resolution (no extra queries)
+    const columnById = new Map<string, (typeof allColumns)[number]>();
+    for (const col of allColumns) {
+      columnById.set(col.id, col);
+    }
+
     for (const table of tables) {
-      const columns = await this.db
-        .select()
-        .from(schemaColumns)
-        .where(eq(schemaColumns.tableId, table.id))
-        .orderBy(schemaColumns.ordinalPosition);
+      const columns = columnsByTableId.get(table.id) ?? [];
 
       schemaContext.tables.push({
         name: table.name,
@@ -69,14 +91,8 @@ export class SchemaLinker {
       const toTable = tables.find((t) => t.id === rel.toTableId);
       if (!fromTable || !toTable) continue;
 
-      const [fromCol] = await this.db
-        .select()
-        .from(schemaColumns)
-        .where(eq(schemaColumns.id, rel.fromColumnId));
-      const [toCol] = await this.db
-        .select()
-        .from(schemaColumns)
-        .where(eq(schemaColumns.id, rel.toColumnId));
+      const fromCol = columnById.get(rel.fromColumnId);
+      const toCol = columnById.get(rel.toColumnId);
 
       if (fromCol && toCol) {
         schemaContext.relationships.push({
@@ -91,16 +107,10 @@ export class SchemaLinker {
     return schemaContext;
   }
 
-  async linkSchema(
-    datasourceId: string,
-    userQuery: string,
-  ): Promise<SchemaContext> {
+  async linkSchema(datasourceId: string, userQuery: string): Promise<SchemaContext> {
     const fullSchema = await this.loadSchema(datasourceId);
 
-    const totalColumns = fullSchema.tables.reduce(
-      (sum, t) => sum + t.columns.length,
-      0,
-    );
+    const totalColumns = fullSchema.tables.reduce((sum, t) => sum + t.columns.length, 0);
 
     if (totalColumns <= 50 || !this.embeddingService) {
       return fullSchema;
@@ -150,9 +160,7 @@ export class SchemaLinker {
 
       for (let i = 0; i < columns.length; i++) {
         // Delete existing embedding for this column (upsert pattern)
-        await this.db
-          .delete(columnEmbeddings)
-          .where(eq(columnEmbeddings.columnId, columns[i].id));
+        await this.db.delete(columnEmbeddings).where(eq(columnEmbeddings.columnId, columns[i].id));
 
         await this.db.insert(columnEmbeddings).values({
           columnId: columns[i].id,
@@ -225,9 +233,7 @@ export class SchemaLinker {
     }
 
     const filtered: SchemaContext = {
-      tables: fullSchema.tables.filter((t) =>
-        relevantTableNames.has(t.name.toLowerCase()),
-      ),
+      tables: fullSchema.tables.filter((t) => relevantTableNames.has(t.name.toLowerCase())),
       relationships: fullSchema.relationships.filter(
         (r) =>
           relevantTableNames.has(r.fromTable.toLowerCase()) &&
@@ -247,24 +253,23 @@ export class SchemaLinker {
         if (col.isPrimaryKey) def += ' PRIMARY KEY';
         if (col.comment) def += ` -- ${col.comment}`;
         if (col.sampleValues && col.sampleValues.length > 0) {
-          def += `, e.g. ${col.sampleValues.slice(0, 3).map((v) => `'${v}'`).join(', ')}`;
+          def += `, e.g. ${col.sampleValues
+            .slice(0, 3)
+            .map((v) => `'${v}'`)
+            .join(', ')}`;
         }
         return def;
       });
 
       let tableComment = '';
       if (table.comment) tableComment = `-- ${table.comment}\n`;
-      parts.push(
-        `${tableComment}CREATE TABLE ${table.name} (\n${colDefs.join(',\n')}\n);`,
-      );
+      parts.push(`${tableComment}CREATE TABLE ${table.name} (\n${colDefs.join(',\n')}\n);`);
     }
 
     if (schema.relationships.length > 0) {
       parts.push('\n-- Relationships:');
       for (const rel of schema.relationships) {
-        parts.push(
-          `-- ${rel.fromTable}.${rel.fromColumn} → ${rel.toTable}.${rel.toColumn}`,
-        );
+        parts.push(`-- ${rel.fromTable}.${rel.fromColumn} → ${rel.toTable}.${rel.toColumn}`);
       }
     }
 

@@ -9,8 +9,20 @@ const testSchema: SchemaContext = {
       comment: null,
       columns: [
         { name: 'id', dataType: 'INT', comment: null, sampleValues: null, isPrimaryKey: true },
-        { name: 'name', dataType: 'VARCHAR', comment: null, sampleValues: null, isPrimaryKey: false },
-        { name: 'email', dataType: 'VARCHAR', comment: null, sampleValues: null, isPrimaryKey: false },
+        {
+          name: 'name',
+          dataType: 'VARCHAR',
+          comment: null,
+          sampleValues: null,
+          isPrimaryKey: false,
+        },
+        {
+          name: 'email',
+          dataType: 'VARCHAR',
+          comment: null,
+          sampleValues: null,
+          isPrimaryKey: false,
+        },
       ],
     },
     {
@@ -18,9 +30,27 @@ const testSchema: SchemaContext = {
       comment: null,
       columns: [
         { name: 'id', dataType: 'INT', comment: null, sampleValues: null, isPrimaryKey: true },
-        { name: 'user_id', dataType: 'INT', comment: null, sampleValues: null, isPrimaryKey: false },
-        { name: 'amount', dataType: 'DECIMAL', comment: null, sampleValues: null, isPrimaryKey: false },
-        { name: 'status', dataType: 'VARCHAR', comment: null, sampleValues: null, isPrimaryKey: false },
+        {
+          name: 'user_id',
+          dataType: 'INT',
+          comment: null,
+          sampleValues: null,
+          isPrimaryKey: false,
+        },
+        {
+          name: 'amount',
+          dataType: 'DECIMAL',
+          comment: null,
+          sampleValues: null,
+          isPrimaryKey: false,
+        },
+        {
+          name: 'status',
+          dataType: 'VARCHAR',
+          comment: null,
+          sampleValues: null,
+          isPrimaryKey: false,
+        },
       ],
     },
   ],
@@ -46,7 +76,7 @@ describe('SqlValidator', () => {
 
     it('accepts aggregation queries', () => {
       const result = validator.validate(
-        "SELECT status, SUM(amount) AS total FROM orders GROUP BY status",
+        'SELECT status, SUM(amount) AS total FROM orders GROUP BY status',
       );
       expect(result.valid).toBe(true);
     });
@@ -102,18 +132,12 @@ describe('SqlValidator', () => {
 
   describe('schema cross-validation', () => {
     it('rejects unknown table', () => {
-      const result = validator.validate(
-        'SELECT * FROM nonexistent LIMIT 10',
-        testSchema,
-      );
+      const result = validator.validate('SELECT * FROM nonexistent LIMIT 10', testSchema);
       expect(result.errors.some((e) => e.code === 'UNKNOWN_TABLE')).toBe(true);
     });
 
     it('accepts known table', () => {
-      const result = validator.validate(
-        'SELECT id, name FROM users LIMIT 10',
-        testSchema,
-      );
+      const result = validator.validate('SELECT id, name FROM users LIMIT 10', testSchema);
       const tableErrors = result.errors.filter((e) => e.code === 'UNKNOWN_TABLE');
       expect(tableErrors).toHaveLength(0);
     });

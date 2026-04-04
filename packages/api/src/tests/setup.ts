@@ -8,8 +8,7 @@ export function getTestDb(): DbClient {
 }
 
 beforeAll(() => {
-  const url =
-    process.env.DATABASE_URL ?? 'postgresql://tianqiyin:@localhost:5432/nl2sql';
+  const url = process.env.DATABASE_URL ?? 'postgresql://tianqiyin:@localhost:5432/nl2sql';
   db = createDbClient(url);
 });
 

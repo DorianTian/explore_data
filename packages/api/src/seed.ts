@@ -4,6 +4,7 @@
  *
  * Usage: tsx packages/api/src/seed.ts
  */
+import pino from 'pino';
 import { createDbClient } from '@nl2sql/db';
 import { ProjectService } from './services/project-service.js';
 import { DatasourceService } from './services/datasource-service.js';
@@ -11,25 +12,30 @@ import { SchemaService } from './services/schema-service.js';
 import { MetricService } from './services/metric-service.js';
 import { KnowledgeService } from './services/knowledge-service.js';
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? 'postgresql://tianqiyin:@localhost:5432/nl2sql';
+const logger = pino({ level: 'info' });
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+  logger.error('DATABASE_URL environment variable is required');
+  process.exit(1);
+}
 
 async function seed() {
-  const db = createDbClient(DATABASE_URL);
+  const db = createDbClient(DATABASE_URL!);
   const projectService = new ProjectService(db);
   const datasourceService = new DatasourceService(db);
   const schemaService = new SchemaService(db);
   const metricService = new MetricService(db);
   const knowledgeService = new KnowledgeService(db);
 
-  console.log('Seeding NL2SQL test data...\n');
+  logger.info('Seeding NL2SQL test data...\n');
 
   // 1. Create project
   const project = await projectService.create({
     name: '电商数据分析',
     description: '示例电商平台数据，包含用户、订单、商品等核心表',
   });
-  console.log(`Project created: ${project.name} (${project.id})`);
+  logger.info(`Project created: ${project.name} (${project.id})`);
 
   // 2. Create datasource
   const datasource = await datasourceService.create({
@@ -37,7 +43,7 @@ async function seed() {
     name: '电商主库',
     dialect: 'postgresql',
   });
-  console.log(`Datasource created: ${datasource.name} (${datasource.id})`);
+  logger.info(`Datasource created: ${datasource.name} (${datasource.id})`);
 
   // 3. Ingest DDL — sample e-commerce schema
   const ddl = `
@@ -98,14 +104,12 @@ async function seed() {
   `;
 
   const ingestResult = await schemaService.ingestDdl(datasource.id, ddl);
-  console.log(
+  logger.info(
     `Schema ingested: ${ingestResult.tables.length} tables, ${ingestResult.relationships.length} relationships`,
   );
 
   // 4. Create metrics
-  const ordersTable = ingestResult.tables.find(
-    (t) => t.table.name === 'orders',
-  );
+  const ordersTable = ingestResult.tables.find((t) => t.table.name === 'orders');
 
   const metricsToCreate = [
     {
@@ -155,7 +159,7 @@ async function seed() {
       projectId: project.id,
       ...m,
     });
-    console.log(`Metric created: ${metric.displayName}`);
+    logger.info(`Metric created: ${metric.displayName}`);
   }
 
   // 5. Create glossary entries
@@ -179,7 +183,7 @@ async function seed() {
     {
       term: '复购率',
       sqlExpression:
-        "COUNT(DISTINCT CASE WHEN order_count > 1 THEN user_id END) * 100.0 / COUNT(DISTINCT user_id)",
+        'COUNT(DISTINCT CASE WHEN order_count > 1 THEN user_id END) * 100.0 / COUNT(DISTINCT user_id)',
       description: '有2次及以上购买的用户占比',
     },
   ];
@@ -189,19 +193,19 @@ async function seed() {
       projectId: project.id,
       ...entry,
     });
-    console.log(`Glossary entry created: ${entry.term}`);
+    logger.info(`Glossary entry created: ${entry.term}`);
   }
 
-  console.log('\n✅ Seed complete!');
-  console.log(`\nProject ID: ${project.id}`);
-  console.log(`Datasource ID: ${datasource.id}`);
-  console.log('\nStart the servers and open http://localhost:3000');
-  console.log('Select project "电商数据分析" and datasource "电商主库" in the sidebar');
+  logger.info('\n✅ Seed complete!');
+  logger.info(`\nProject ID: ${project.id}`);
+  logger.info(`Datasource ID: ${datasource.id}`);
+  logger.info('\nStart the servers and open http://localhost:3000');
+  logger.info('Select project "电商数据分析" and datasource "电商主库" in the sidebar');
 
   process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error('Seed failed:', err);
+  logger.error({ err }, 'Seed failed');
   process.exit(1);
 });

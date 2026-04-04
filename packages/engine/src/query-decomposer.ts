@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { extractText, extractJson, withRetry } from './llm-utils.js';
+import { MODEL, TIMEOUT } from './config.js';
 
 export interface DecomposedQuery {
   isComplex: boolean;
@@ -50,29 +52,29 @@ export class QueryDecomposer {
   }
 
   async decompose(userQuery: string): Promise<DecomposedQuery> {
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        system: DECOMPOSE_PROMPT,
-        messages: [{ role: 'user', content: userQuery }],
-      },
-      { timeout: 15_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.classification,
+            max_tokens: 500,
+            system: DECOMPOSE_PROMPT,
+            messages: [{ role: 'user', content: userQuery }],
+          },
+          { timeout: TIMEOUT.fast },
+        ),
+      { label: 'QueryDecomposer' },
     );
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = extractText(response);
+    const parsed = extractJson<DecomposedQuery>(text);
 
-    try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]) as DecomposedQuery;
-    } catch {
-      // fallback
-    }
-
-    return {
-      isComplex: false,
-      subQueries: [{ step: 1, description: userQuery, dependsOn: [] }],
-      mergeStrategy: 'single',
-    };
+    return (
+      parsed ?? {
+        isComplex: false,
+        subQueries: [{ step: 1, description: userQuery, dependsOn: [] }],
+        mergeStrategy: 'single',
+      }
+    );
   }
 }

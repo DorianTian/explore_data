@@ -1,9 +1,5 @@
 import Router from '@koa/router';
-import {
-  ingestDdlSchema,
-  annotateTableSchema,
-  annotateColumnSchema,
-} from '@nl2sql/shared';
+import { ingestDdlSchema, annotateTableSchema, annotateColumnSchema } from '@nl2sql/shared';
 import { SchemaService } from '../services/schema-service.js';
 import type { DbClient } from '@nl2sql/db';
 
@@ -25,22 +21,10 @@ export function createSchemaRouter(db: DbClient): Router {
 
     const result = await service.ingestDdl(parsed.data.datasourceId, parsed.data.ddl);
 
-    // Auto-generate column embeddings if OpenAI API key is available
-    let embeddingCount = 0;
-    if (process.env.OPENAI_API_KEY) {
-      try {
-        const { SchemaLinker } = await import('@nl2sql/engine');
-        const linker = new SchemaLinker(db, process.env.OPENAI_API_KEY);
-        embeddingCount = await linker.generateColumnEmbeddings(
-          parsed.data.datasourceId,
-        );
-      } catch {
-        // Embedding generation is best-effort, don't block ingest
-      }
-    }
+    // Embedding generation already happens inside ingestDdl() — no double call needed
 
     ctx.status = 201;
-    ctx.body = { success: true, data: { ...result, embeddingCount } };
+    ctx.body = { success: true, data: result };
   });
 
   router.get('/tables', async (ctx) => {

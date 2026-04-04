@@ -62,10 +62,7 @@ export class SchemaService {
           .from(schemaColumns)
           .where(eq(schemaColumns.tableId, existing.id));
         for (const col of cols) {
-          columnNameToId.set(
-            `${existing.name.toLowerCase()}.${col.name.toLowerCase()}`,
-            col.id,
-          );
+          columnNameToId.set(`${existing.name.toLowerCase()}.${col.name.toLowerCase()}`, col.id);
         }
       }
 
@@ -73,18 +70,11 @@ export class SchemaService {
         // Skip tables that already exist in this datasource
         if (existingNames.has(def.tableName.toLowerCase())) continue;
 
-        const { table, columns } = await this.insertTableWithColumns(
-          tx,
-          datasourceId,
-          def,
-        );
+        const { table, columns } = await this.insertTableWithColumns(tx, datasourceId, def);
         tables.push({ table, columns });
         tableNameToId.set(def.tableName.toLowerCase(), table.id);
         for (const col of columns) {
-          columnNameToId.set(
-            `${def.tableName.toLowerCase()}.${col.name.toLowerCase()}`,
-            col.id,
-          );
+          columnNameToId.set(`${def.tableName.toLowerCase()}.${col.name.toLowerCase()}`, col.id);
         }
       }
 
@@ -148,10 +138,7 @@ export class SchemaService {
   }
 
   async getTableWithColumns(tableId: string) {
-    const [table] = await this.db
-      .select()
-      .from(schemaTables)
-      .where(eq(schemaTables.id, tableId));
+    const [table] = await this.db.select().from(schemaTables).where(eq(schemaTables.id, tableId));
     if (!table) return null;
 
     const columns = await this.db
@@ -185,7 +172,10 @@ export class SchemaService {
     if (!row) return null;
 
     // Re-generate embedding for this column with updated metadata
-    if (process.env.OPENAI_API_KEY && (input.comment !== undefined || input.sampleValues !== undefined)) {
+    if (
+      process.env.OPENAI_API_KEY &&
+      (input.comment !== undefined || input.sampleValues !== undefined)
+    ) {
       try {
         const [table] = await this.db
           .select()
@@ -211,9 +201,7 @@ export class SchemaService {
 
           const embedding = await embService.embedSingle(text);
 
-          await this.db
-            .delete(columnEmbeddings)
-            .where(eq(columnEmbeddings.columnId, columnId));
+          await this.db.delete(columnEmbeddings).where(eq(columnEmbeddings.columnId, columnId));
           await this.db.insert(columnEmbeddings).values({
             columnId,
             textRepresentation: text,

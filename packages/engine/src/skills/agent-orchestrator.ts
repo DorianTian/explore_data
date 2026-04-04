@@ -4,9 +4,10 @@ import { SkillExecutor } from './skill-executor.js';
 import type { ClassificationResult } from './types.js';
 import type { DbClient } from '@nl2sql/db';
 import type { PipelineResult, ConversationTurn } from '../types.js';
+import { extractText, extractJson, withRetry } from '../llm-utils.js';
+import { MODEL, TIMEOUT, PIPELINE } from '../config.js';
 
-const MAX_AGENT_TURNS = 8;
-const MAX_GENERATION_LOOPS = 3;
+const MAX_REPEATED_TOOL_CALLS = 2;
 
 const AGENT_SYSTEM_PROMPT = `你是一个专业的数据分析 Agent。你的任务是将用户的自然语言问题转化为精确的 SQL 查询。
 
@@ -17,8 +18,8 @@ const AGENT_SYSTEM_PROMPT = `你是一个专业的数据分析 Agent。你的任
 3. 如果需要了解业务规则，使用 knowledge_search 查找
 4. 使用 sql_generate 生成 SQL
 5. 使用 sql_review 审查 SQL 的正确性
-6. 如果审查发现问题，修改后再次 sql_generate
-7. 最后使用 sql_validate 做安全校验
+6. 如果审查发现问题，根据反馈修改后再次调用 sql_generate（最多 ${PIPELINE.maxGenerationLoops} 次）
+7. 审查通过后使用 sql_validate 做安全校验
 
 ## 重要规则
 
@@ -26,7 +27,8 @@ const AGENT_SYSTEM_PROMPT = `你是一个专业的数据分析 Agent。你的任
 - 严格使用 schema 中存在的表名和列名
 - 生成 SQL 后必须调用 sql_review 审查
 - 如果 sql_review 返回问题，必须修复后重新审查
-- 审查通过后再调用 sql_validate 做安全校验`;
+- 审查通过后再调用 sql_validate 做安全校验
+- 不要重复调用相同参数的工具`;
 
 const SIMPLE_SYSTEM_PROMPT = `你是一个 SQL 生成专家。根据 schema 直接生成 SQL，不需要复杂推理。
 
@@ -98,7 +100,7 @@ export class AgentOrchestrator {
 
   /**
    * Simple path — 2-3 LLM calls, fast.
-   * Schema search → direct SQL generation → validate
+   * Schema search + metric lookup (parallel) → direct SQL generation → validate
    */
   private async simplePath(
     userQuery: string,
@@ -108,52 +110,71 @@ export class AgentOrchestrator {
       dialect: string;
     },
   ): Promise<PipelineResult> {
-    // Get schema
-    const schemaResult = await this.skillExecutor.execute(
-      'schema_search',
-      { query: userQuery },
-      context,
-    );
-    const schemaDdl = (schemaResult.data as { ddl: string }).ddl;
+    // Parallel: schema search + metric lookup
+    const [schemaResult, metricResult] = await Promise.all([
+      this.executeSkillSafe('schema_search', { query: userQuery }, context),
+      this.executeSkillSafe('metric_lookup', { metricName: userQuery }, context),
+    ]);
 
-    // Check for metric match
-    const metricResult = await this.skillExecutor.execute(
-      'metric_lookup',
-      { metricName: userQuery },
-      context,
-    );
-    const metricData = metricResult.data as { found: boolean; metrics?: unknown[] };
+    const schemaDdl = schemaResult.success ? (schemaResult.data as { ddl: string }).ddl : '';
+    const metricData = metricResult.success
+      ? (metricResult.data as { found: boolean; metrics?: unknown[] })
+      : { found: false };
+
+    if (!schemaDdl) {
+      return {
+        resolvedVia: 'clarification',
+        explanation: '未能获取数据库结构信息，请确认数据源配置。',
+        confidence: 0,
+      };
+    }
 
     // Direct generation with Claude Sonnet
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: SIMPLE_SYSTEM_PROMPT,
-        messages: [{
-          role: 'user',
-          content: `Schema:\n${schemaDdl}\n${metricData.found ? `\n指标定义: ${JSON.stringify(metricData.metrics)}` : ''}\n\n问题: ${userQuery}`,
-        }],
-      },
-      { timeout: 30_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.generation,
+            max_tokens: 1500,
+            system: SIMPLE_SYSTEM_PROMPT,
+            messages: [
+              {
+                role: 'user',
+                content: `Schema:\n${schemaDdl}\n${metricData.found ? `\n指标定义: ${JSON.stringify(metricData.metrics)}` : ''}\n\n问题: ${userQuery}`,
+              },
+            ],
+          },
+          { timeout: TIMEOUT.generation },
+        ),
+      { label: 'AgentOrchestrator.simplePath' },
     );
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    let result = this.parseGenerationResult(text);
+    const text = extractText(response);
+    const result = this.parseGenerationResult(text);
 
-    // Validate
+    // Validate and check result
     const validation = await this.skillExecutor.execute(
       'sql_validate',
       { sql: result.sql },
       context,
     );
+    const validationData = validation.data as {
+      valid: boolean;
+      errors?: Array<{ message: string }>;
+    };
+
+    // If validation failed, include info in explanation
+    let explanation = result.explanation;
+    if (!validationData.valid && validationData.errors) {
+      explanation += `\n⚠️ 校验发现问题: ${validationData.errors.map((e) => e.message).join('; ')}`;
+    }
 
     return {
       resolvedVia: result.sql ? 'nl2sql' : 'clarification',
-      sql: result.sql,
-      explanation: result.explanation,
-      confidence: result.confidence,
-      tablesUsed: result.tablesUsed,
+      sql: result.sql || undefined,
+      explanation,
+      confidence: validationData.valid ? result.confidence : Math.min(result.confidence, 0.5),
+      tablesUsed: result.tablesUsed.length > 0 ? result.tablesUsed : undefined,
     };
   }
 
@@ -178,10 +199,15 @@ export class AgentOrchestrator {
 
     let historyContext = '';
     if (context.conversationHistory.length > 0) {
-      historyContext = '\n\n对话历史:\n' + context.conversationHistory
-        .slice(-4)
-        .map((t) => `${t.role === 'user' ? '用户' : '系统'}: ${t.content}${t.sql ? ` [SQL: ${t.sql}]` : ''}`)
-        .join('\n');
+      historyContext =
+        '\n\n对话历史:\n' +
+        context.conversationHistory
+          .slice(-PIPELINE.maxHistoryTurns)
+          .map(
+            (t) =>
+              `${t.role === 'user' ? '用户' : '系统'}: ${t.content}${t.sql ? ` [SQL: ${t.sql}]` : ''}`,
+          )
+          .join('\n');
     }
 
     const messages: Anthropic.MessageParam[] = [
@@ -193,77 +219,126 @@ export class AgentOrchestrator {
     let finalConfidence = 0;
     let finalTables: string[] = [];
     let turn = 0;
+    let generationLoopCount = 0;
+    const toolCallCounts = new Map<string, number>();
 
     // Agent loop — LLM decides which tools to call
-    while (turn < MAX_AGENT_TURNS) {
+    while (turn < PIPELINE.maxAgentTurns) {
       turn++;
 
-      const response = await this.client.messages.create(
-        {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          system: AGENT_SYSTEM_PROMPT,
-          tools,
-          messages,
-        },
-        { timeout: 45_000 },
-      );
+      let response: Anthropic.Message;
+      try {
+        response = await withRetry(
+          () =>
+            this.client.messages.create(
+              {
+                model: MODEL.generation,
+                max_tokens: 2000,
+                system: AGENT_SYSTEM_PROMPT,
+                tools,
+                messages,
+              },
+              { timeout: TIMEOUT.agent },
+            ),
+          { label: `AgentOrchestrator.agentPath[turn=${turn}]` },
+        );
+      } catch {
+        // LLM call failed after retries — break with whatever we have
+        break;
+      }
+
+      // Check for max_tokens truncation — response may be incomplete
+      if (response.stop_reason === 'max_tokens') {
+        for (const block of response.content) {
+          if (block.type === 'text' && block.text) {
+            const parsed = this.parseGenerationResult(block.text);
+            if (parsed.sql?.trim()) {
+              finalSql = parsed.sql;
+              finalExplanation = parsed.explanation;
+              finalConfidence = Math.min(parsed.confidence, 0.6);
+              finalTables = parsed.tablesUsed;
+            }
+          }
+        }
+        break;
+      }
 
       // Process response blocks
-      const toolResults: Anthropic.MessageParam[] = [];
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
       let hasToolUse = false;
 
       for (const block of response.content) {
         if (block.type === 'tool_use') {
           hasToolUse = true;
-          const skillResult = await this.skillExecutor.execute(
+
+          // Detect repeated identical tool calls to prevent infinite loops
+          const callKey = `${block.name}:${JSON.stringify(block.input)}`;
+          const callCount = (toolCallCounts.get(callKey) ?? 0) + 1;
+          toolCallCounts.set(callKey, callCount);
+
+          if (callCount > MAX_REPEATED_TOOL_CALLS) {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: JSON.stringify({
+                error: `已多次调用 ${block.name} 获取相同信息，请直接使用已获取的数据继续。`,
+              }),
+              is_error: true,
+            });
+            continue;
+          }
+
+          // Execute skill with error handling — never throws
+          const skillResult = await this.executeSkillSafe(
             block.name,
             block.input as Record<string, unknown>,
             context,
           );
 
           // Track SQL generation results
-          if (block.name === 'sql_generate') {
+          if (block.name === 'sql_generate' && skillResult.success) {
+            generationLoopCount++;
             const genData = skillResult.data as {
               sql: string;
               explanation: string;
               confidence: number;
               tablesUsed: string[];
             };
-            finalSql = genData.sql ?? '';
-            finalExplanation = genData.explanation ?? '';
-            finalConfidence = genData.confidence ?? 0;
-            finalTables = genData.tablesUsed ?? [];
+            if (genData.sql?.trim()) {
+              finalSql = genData.sql;
+              finalExplanation = genData.explanation ?? '';
+              finalConfidence = genData.confidence ?? 0;
+              finalTables = genData.tablesUsed ?? [];
+            }
           }
 
-          // Track review results — generation loop
-          if (block.name === 'sql_review') {
+          // Track review results — enforce generation loop limit
+          if (block.name === 'sql_review' && skillResult.success) {
             const reviewData = skillResult.data as {
               isCorrect: boolean;
               suggestedFix?: string;
             };
             if (!reviewData.isCorrect && reviewData.suggestedFix) {
-              finalSql = reviewData.suggestedFix;
+              if (generationLoopCount < PIPELINE.maxGenerationLoops) {
+                finalSql = reviewData.suggestedFix;
+              }
             }
           }
 
           toolResults.push({
-            role: 'user',
-            content: [{
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: JSON.stringify(skillResult.data),
-            }],
-          } as Anthropic.MessageParam);
+            type: 'tool_result',
+            tool_use_id: block.id,
+            content: JSON.stringify(skillResult.data),
+          });
         } else if (block.type === 'text' && block.text) {
           // LLM produced text without tool use — might contain final answer
           const parsed = this.parseGenerationResult(block.text);
-          if (parsed.sql) {
+          if (parsed.sql?.trim()) {
             finalSql = parsed.sql;
             finalExplanation = parsed.explanation;
             finalConfidence = parsed.confidence;
             finalTables = parsed.tablesUsed;
-          } else if (!finalExplanation) {
+          } else if (!finalExplanation && block.text.trim()) {
             finalExplanation = block.text;
           }
         }
@@ -271,20 +346,50 @@ export class AgentOrchestrator {
 
       if (!hasToolUse) break; // LLM done — no more tool calls
 
-      // Add tool results and continue loop
+      // Add tool results as single user message (proper Anthropic API format)
       messages.push({ role: 'assistant', content: response.content });
-      for (const tr of toolResults) {
-        messages.push(tr);
+      messages.push({ role: 'user', content: toolResults });
+    }
+
+    // Post-loop: validate final SQL
+    if (finalSql?.trim()) {
+      const validation = await this.executeSkillSafe('sql_validate', { sql: finalSql }, context);
+      if (validation.success) {
+        const vData = validation.data as { valid: boolean; errors?: Array<{ message: string }> };
+        if (!vData.valid && vData.errors) {
+          finalExplanation += `\n⚠️ 校验发现问题: ${vData.errors.map((e) => e.message).join('; ')}`;
+          finalConfidence = Math.min(finalConfidence, 0.5);
+        }
       }
     }
 
     return {
-      resolvedVia: finalSql ? 'nl2sql' : 'clarification',
-      sql: finalSql || undefined,
+      resolvedVia: finalSql?.trim() ? 'nl2sql' : 'clarification',
+      sql: finalSql?.trim() || undefined,
       explanation: finalExplanation || '无法生成查询，请重新描述您的需求。',
       confidence: finalConfidence,
       tablesUsed: finalTables.length > 0 ? finalTables : undefined,
     };
+  }
+
+  /** Execute a skill with error handling — never throws */
+  private async executeSkillSafe(
+    skillName: string,
+    input: Record<string, unknown>,
+    context: { projectId: string; datasourceId: string; dialect: string },
+  ): Promise<{ success: boolean; data: unknown }> {
+    try {
+      return await this.skillExecutor.execute(skillName, input, context);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        JSON.stringify({ level: 'error', msg: `Skill ${skillName} failed`, error: msg }) + '\n',
+      );
+      return {
+        success: false,
+        data: { error: `${skillName} 执行失败: ${msg}` },
+      };
+    }
   }
 
   private parseGenerationResult(text: string): {
@@ -293,19 +398,20 @@ export class AgentOrchestrator {
     confidence: number;
     tablesUsed: string[];
   } {
-    try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        return {
-          sql: parsed.sql ?? '',
-          explanation: parsed.explanation ?? '',
-          confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
-          tablesUsed: Array.isArray(parsed.tablesUsed) ? parsed.tablesUsed : [],
-        };
-      }
-    } catch {
-      // fallback
+    const parsed = extractJson<{
+      sql?: string;
+      explanation?: string;
+      confidence?: number;
+      tablesUsed?: string[];
+    }>(text);
+
+    if (parsed && parsed.sql) {
+      return {
+        sql: parsed.sql,
+        explanation: parsed.explanation ?? '',
+        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+        tablesUsed: Array.isArray(parsed.tablesUsed) ? parsed.tablesUsed : [],
+      };
     }
 
     const sqlMatch = text.match(/```sql\n([\s\S]*?)\n```/);

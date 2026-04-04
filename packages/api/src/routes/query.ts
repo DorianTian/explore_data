@@ -1,8 +1,11 @@
 import Router from '@koa/router';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 import { PassThrough } from 'stream';
 import type { DbClient } from '@nl2sql/db';
 import { ConversationService } from '../services/conversation-service.js';
+
+const MAX_RETRY_ATTEMPTS = 2;
 
 const querySchema = z.object({
   projectId: z.string().uuid(),
@@ -58,8 +61,14 @@ export function createQueryRouter(db: DbClient): Router {
       return;
     }
 
+    const requestId = randomUUID();
+    const logger = ctx.app.context.logger?.child?.({ requestId }) ?? ctx.app.context.logger;
+    const startTime = Date.now();
+
     const { NL2SqlPipeline, SqlValidator } = await import('@nl2sql/engine');
     const pipeline = new NL2SqlPipeline(db, getPipelineConfig());
+
+    logger?.info?.({ query: parsed.data.query.slice(0, 100) }, 'Query started');
 
     const result = await pipeline.run({
       projectId: parsed.data.projectId,
@@ -74,20 +83,26 @@ export function createQueryRouter(db: DbClient): Router {
       let validation = validator.validate(result.sql);
       let finalResult = result;
 
-      // Error recovery: retry with error context (up to 2 times)
+      // Error recovery: retry with error context (up to MAX_RETRY_ATTEMPTS)
       if (!validation.valid) {
-        for (let attempt = 0; attempt < 2; attempt++) {
+        for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
           const errorContext = validation.errors
             .map((e: { code: string; message: string }) => `${e.code}: ${e.message}`)
             .join('; ');
 
+          logger?.info?.({ attempt, errorContext }, 'Retrying with error context');
+
           const retryResult = await pipeline.run({
             projectId: parsed.data.projectId,
             datasourceId: parsed.data.datasourceId,
-            userQuery: `${parsed.data.query}\n\n[上一次生成的 SQL 有问题: ${errorContext}，请修正]`,
+            userQuery: parsed.data.query,
             conversationHistory: [
               ...(parsed.data.conversationHistory ?? []),
               { role: 'assistant' as const, content: result.explanation, sql: result.sql },
+              {
+                role: 'user' as const,
+                content: `上一次生成的 SQL 有问题: ${errorContext}，请修正`,
+              },
             ],
             dialect: parsed.data.dialect,
           });
@@ -104,14 +119,20 @@ export function createQueryRouter(db: DbClient): Router {
         }
       }
 
+      const elapsed = Date.now() - startTime;
+      logger?.info?.(
+        { elapsed, confidence: finalResult.confidence, valid: validation.valid },
+        'Query completed',
+      );
+
       ctx.body = {
         success: true,
-        data: { ...finalResult, validation },
+        data: { ...finalResult, validation, requestId },
       };
       return;
     }
 
-    ctx.body = { success: true, data: result };
+    ctx.body = { success: true, data: { ...result, requestId } };
   });
 
   router.post('/stream', async (ctx) => {
@@ -124,6 +145,8 @@ export function createQueryRouter(db: DbClient): Router {
       };
       return;
     }
+
+    const requestId = randomUUID();
 
     ctx.set('Content-Type', 'text/event-stream');
     ctx.set('Cache-Control', 'no-cache');
@@ -174,26 +197,45 @@ export function createQueryRouter(db: DbClient): Router {
         const validator = new SqlValidator(parsed.data.dialect ?? 'postgresql');
         let validation = validator.validate(result.sql);
 
+        // Error recovery — same retry count as sync endpoint
         if (!validation.valid) {
           sendSSE(stream, 'status', { step: 'error_recovery', message: '检测到问题，正在修复...' });
 
-          const retryResult = await pipeline.run({
-            projectId: parsed.data.projectId,
-            datasourceId: parsed.data.datasourceId,
-            userQuery: `${parsed.data.query}\n\n[上一次 SQL 有问题: ${validation.errors.map((e: { message: string }) => e.message).join('; ')}]`,
-            conversationHistory: parsed.data.conversationHistory,
-            dialect: parsed.data.dialect,
-          });
+          for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+            const errorContext = validation.errors
+              .map((e: { message: string }) => e.message)
+              .join('; ');
 
-          if (retryResult.sql) {
-            validation = validator.validate(retryResult.sql);
-            if (validation.valid) finalResult = retryResult;
+            const retryResult = await pipeline.run({
+              projectId: parsed.data.projectId,
+              datasourceId: parsed.data.datasourceId,
+              userQuery: parsed.data.query,
+              conversationHistory: [
+                ...(parsed.data.conversationHistory ?? []),
+                { role: 'assistant' as const, content: result.explanation, sql: result.sql },
+                {
+                  role: 'user' as const,
+                  content: `上一次生成的 SQL 有问题: ${errorContext}，请修正`,
+                },
+              ],
+              dialect: parsed.data.dialect,
+            });
+
+            if (retryResult.sql) {
+              const revalidation = validator.validate(retryResult.sql);
+              if (revalidation.valid) {
+                finalResult = retryResult;
+                validation = revalidation;
+                break;
+              }
+              validation = revalidation;
+            }
           }
         }
 
-        sendSSE(stream, 'result', { ...finalResult, validation, conversationId });
+        sendSSE(stream, 'result', { ...finalResult, validation, conversationId, requestId });
       } else {
-        sendSSE(stream, 'result', { ...finalResult, conversationId });
+        sendSSE(stream, 'result', { ...finalResult, conversationId, requestId });
       }
 
       // Persist to DB
@@ -216,7 +258,7 @@ export function createQueryRouter(db: DbClient): Router {
       sendSSE(stream, 'done', {});
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      sendSSE(stream, 'error', { message });
+      sendSSE(stream, 'error', { code: 'PIPELINE_ERROR', message, requestId });
     } finally {
       stream.end();
     }
@@ -233,15 +275,12 @@ export function createQueryRouter(db: DbClient): Router {
       return;
     }
 
-    const record = await conversationService.recordQuery(
-      parsed.data.projectId,
-      {
-        naturalLanguage: parsed.data.naturalLanguage,
-        generatedSql: parsed.data.generatedSql,
-        correctedSql: parsed.data.correctedSql,
-        wasAccepted: parsed.data.wasAccepted,
-      },
-    );
+    const record = await conversationService.recordQuery(parsed.data.projectId, {
+      naturalLanguage: parsed.data.naturalLanguage,
+      generatedSql: parsed.data.generatedSql,
+      correctedSql: parsed.data.correctedSql,
+      wasAccepted: parsed.data.wasAccepted,
+    });
 
     ctx.body = { success: true, data: record };
   });

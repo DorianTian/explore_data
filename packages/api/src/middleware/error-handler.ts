@@ -21,9 +21,8 @@ export function errorHandler(logger: Logger): Koa.Middleware {
         success: false,
         error: {
           code: status === 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR',
-          message: status === 500
-            ? (isDev ? error.message : 'Internal server error')
-            : error.message,
+          message:
+            status === 500 ? (isDev ? error.message : 'Internal server error') : error.message,
         },
       };
     }

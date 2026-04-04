@@ -22,6 +22,7 @@ export interface ChatMessage {
 interface ChatState {
   messages: ChatMessage[];
   loading: boolean;
+  conversationId: string | null;
 }
 
 interface ChatActions {
@@ -30,6 +31,7 @@ interface ChatActions {
   setLoading: (loading: boolean) => void;
   clearMessages: () => void;
   setFeedback: (id: string, feedback: 'up' | 'down') => void;
+  setConversationId: (id: string | null) => void;
 }
 
 type ChatStore = ChatState & ChatActions;
@@ -37,15 +39,13 @@ type ChatStore = ChatState & ChatActions;
 export const useChatStore = create<ChatStore>((set) => ({
   messages: [],
   loading: false,
+  conversationId: null,
 
-  addMessage: (message) =>
-    set((state) => ({ messages: [...state.messages, message] })),
+  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
 
   updateMessage: (id, updates) =>
     set((state) => ({
-      messages: state.messages.map((m) =>
-        m.id === id ? { ...m, ...updates } : m,
-      ),
+      messages: state.messages.map((m) => (m.id === id ? { ...m, ...updates } : m)),
     })),
 
   setLoading: (loading) => set({ loading }),
@@ -54,8 +54,8 @@ export const useChatStore = create<ChatStore>((set) => ({
 
   setFeedback: (id, feedback) =>
     set((state) => ({
-      messages: state.messages.map((m) =>
-        m.id === id ? { ...m, feedback } : m,
-      ),
+      messages: state.messages.map((m) => (m.id === id ? { ...m, feedback } : m)),
     })),
+
+  setConversationId: (id) => set({ conversationId: id }),
 }));

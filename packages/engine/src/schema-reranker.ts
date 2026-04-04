@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { SchemaContext } from './types.js';
+import { extractText, extractJson, withRetry } from './llm-utils.js';
+import { MODEL, TIMEOUT } from './config.js';
 
 const RERANK_PROMPT = `你是一个数据库 Schema 匹配专家。给定用户的查询和候选的表/列列表，判断哪些表和列是回答这个查询真正需要的。
 
@@ -39,10 +41,7 @@ export class SchemaReranker {
    * Rerank schema tables — filter embedding recall results using LLM judgment.
    * Only called for large schemas where embedding recall may include false positives.
    */
-  async rerank(
-    userQuery: string,
-    schema: SchemaContext,
-  ): Promise<SchemaContext> {
+  async rerank(userQuery: string, schema: SchemaContext): Promise<SchemaContext> {
     // For small schemas (≤5 tables), skip reranking
     if (schema.tables.length <= 5) return schema;
 
@@ -59,41 +58,36 @@ export class SchemaReranker {
 
     const userPrompt = `用户查询: "${userQuery}"\n\n候选表:\n${tableDescriptions.map((d, i) => `${i + 1}. ${d}`).join('\n')}`;
 
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        system: RERANK_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-      },
-      { timeout: 15_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.classification,
+            max_tokens: 300,
+            system: RERANK_PROMPT,
+            messages: [{ role: 'user', content: userPrompt }],
+          },
+          { timeout: TIMEOUT.fast },
+        ),
+      { label: 'SchemaReranker' },
     );
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const text = extractText(response);
+    const result = extractJson<{ tables: string[] }>(text);
 
-    try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const result = JSON.parse(match[0]) as { tables: string[] };
-        const selectedTables = new Set(result.tables.map((t) => t.toLowerCase()));
+    if (result && result.tables.length > 0) {
+      const selectedTables = new Set(result.tables.map((t) => t.toLowerCase()));
 
-        if (selectedTables.size > 0) {
-          const filtered: SchemaContext = {
-            tables: schema.tables.filter((t) =>
-              selectedTables.has(t.name.toLowerCase()),
-            ),
-            relationships: schema.relationships.filter(
-              (r) =>
-                selectedTables.has(r.fromTable.toLowerCase()) &&
-                selectedTables.has(r.toTable.toLowerCase()),
-            ),
-          };
+      const filtered: SchemaContext = {
+        tables: schema.tables.filter((t) => selectedTables.has(t.name.toLowerCase())),
+        relationships: schema.relationships.filter(
+          (r) =>
+            selectedTables.has(r.fromTable.toLowerCase()) &&
+            selectedTables.has(r.toTable.toLowerCase()),
+        ),
+      };
 
-          return filtered.tables.length > 0 ? filtered : schema;
-        }
-      }
-    } catch {
-      // Rerank failed, return original
+      return filtered.tables.length > 0 ? filtered : schema;
     }
 
     return schema;

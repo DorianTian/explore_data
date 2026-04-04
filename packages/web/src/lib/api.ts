@@ -6,17 +6,14 @@ interface ApiResult<T> {
   error?: { code: string; message: string };
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<ApiResult<T>> {
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json', ...options.headers },
       ...options,
     });
 
-    if (!res.ok && res.status === 204) {
+    if (res.status === 204) {
       return { success: true };
     }
 

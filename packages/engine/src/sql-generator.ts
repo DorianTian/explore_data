@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { GenerationContext, GenerationResult } from './types.js';
+import { extractText, extractJson, withRetry } from './llm-utils.js';
+import { MODEL, TIMEOUT } from './config.js';
 
 const SYSTEM_PROMPT = `你是一个专业的 SQL 生成专家。根据数据库 schema 和用户的自然语言问题，生成准确的 SQL 查询。
 
@@ -46,14 +48,18 @@ export class SqlGenerator {
   async generate(context: GenerationContext): Promise<GenerationResult> {
     const userPrompt = this.buildPrompt(context);
 
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-      },
-      { timeout: 30_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.generation,
+            max_tokens: 2000,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: userPrompt }],
+          },
+          { timeout: TIMEOUT.generation },
+        ),
+      { label: 'SqlGenerator.generate' },
     );
 
     return this.parseResponse(response);
@@ -66,39 +72,35 @@ export class SqlGenerator {
   ): Promise<GenerationResult> {
     const userPrompt = this.buildPrompt(context, previousSql, modificationHint);
 
-    const response = await this.client.messages.create(
-      {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-      },
-      { timeout: 30_000 },
+    const response = await withRetry(
+      () =>
+        this.client.messages.create(
+          {
+            model: MODEL.generation,
+            max_tokens: 2000,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: userPrompt }],
+          },
+          { timeout: TIMEOUT.generation },
+        ),
+      { label: 'SqlGenerator.generateFollowUp' },
     );
 
     return this.parseResponse(response);
   }
 
-  private parseResponse(
-    response: Anthropic.Message,
-  ): GenerationResult {
-    const text =
-      response.content[0].type === 'text' ? response.content[0].text : '';
+  private parseResponse(response: Anthropic.Message): GenerationResult {
+    const text = extractText(response);
 
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          sql: parsed.sql ?? '',
-          explanation: parsed.explanation ?? '已生成 SQL 查询',
-          confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
-          tablesUsed: Array.isArray(parsed.tablesUsed) ? parsed.tablesUsed : [],
-          columnsUsed: Array.isArray(parsed.columnsUsed) ? parsed.columnsUsed : [],
-        };
-      }
-    } catch {
-      // JSON parse failed, try to extract SQL directly
+    const parsed = extractJson<Record<string, unknown>>(text);
+    if (parsed) {
+      return {
+        sql: (parsed.sql as string) ?? '',
+        explanation: (parsed.explanation as string) ?? '已生成 SQL 查询',
+        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+        tablesUsed: Array.isArray(parsed.tablesUsed) ? parsed.tablesUsed : [],
+        columnsUsed: Array.isArray(parsed.columnsUsed) ? parsed.columnsUsed : [],
+      };
     }
 
     // Fallback: try to extract SQL from markdown code block
@@ -131,7 +133,11 @@ export class SqlGenerator {
 
     // Schema section — formatted as DDL (LLM-friendly)
     parts.push(`## 数据库 Schema（${context.dialect}）\n`);
-    parts.push(this.formatSchema(context));
+    if (context.rawDdl) {
+      parts.push(context.rawDdl);
+    } else {
+      parts.push(this.formatSchema(context));
+    }
 
     // Glossary section
     if (context.glossary.length > 0) {
@@ -190,24 +196,23 @@ export class SqlGenerator {
         if (col.isPrimaryKey) def += ' PRIMARY KEY';
         if (col.comment) def += ` -- ${col.comment}`;
         if (col.sampleValues && col.sampleValues.length > 0) {
-          def += `, e.g. ${col.sampleValues.slice(0, 3).map((v) => `'${v}'`).join(', ')}`;
+          def += `, e.g. ${col.sampleValues
+            .slice(0, 3)
+            .map((v) => `'${v}'`)
+            .join(', ')}`;
         }
         return def;
       });
 
       let header = '';
       if (table.comment) header = `-- ${table.comment}\n`;
-      parts.push(
-        `${header}CREATE TABLE ${table.name} (\n${colDefs.join(',\n')}\n);`,
-      );
+      parts.push(`${header}CREATE TABLE ${table.name} (\n${colDefs.join(',\n')}\n);`);
     }
 
     if (context.schema.relationships.length > 0) {
       parts.push('\n-- 表间关系:');
       for (const rel of context.schema.relationships) {
-        parts.push(
-          `-- ${rel.fromTable}.${rel.fromColumn} → ${rel.toTable}.${rel.toColumn}`,
-        );
+        parts.push(`-- ${rel.fromTable}.${rel.fromColumn} → ${rel.toTable}.${rel.toColumn}`);
       }
     }
 

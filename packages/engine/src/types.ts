@@ -36,6 +36,8 @@ export interface ConversationTurn {
 export interface GenerationContext {
   userQuery: string;
   schema: SchemaContext;
+  /** Raw DDL string — used when schema comes from agent tool calls as pre-formatted DDL */
+  rawDdl?: string;
   glossary: Array<{ term: string; sqlExpression: string }>;
   knowledgeContext: string[];
   conversationHistory: ConversationTurn[];
