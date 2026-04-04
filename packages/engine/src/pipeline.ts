@@ -34,7 +34,7 @@ export class NL2SqlPipeline {
 
   constructor(
     private db: DbClient,
-    config: {
+    private config: {
       anthropicApiKey?: string;
       anthropicBaseUrl?: string;
       openaiApiKey?: string;
@@ -56,35 +56,38 @@ export class NL2SqlPipeline {
     const conversationHistory = input.conversationHistory ?? [];
     const dialect = input.dialect ?? 'postgresql';
 
-    // Step 1: Intent classification
-    const intent = await this.intentClassifier.classify(
-      input.userQuery,
-      conversationHistory,
+    // Step 1: Router — classify intent + complexity
+    const { QueryRouter } = await import('./skills/index.js');
+    const router = new QueryRouter(
+      this.config.anthropicApiKey,
+      this.config.anthropicBaseUrl ?? process.env.ANTHROPIC_BASE_URL,
     );
+    const classification = await router.classify(input.userQuery, conversationHistory);
 
-    if (intent.type === 'off_topic') {
-      return {
-        resolvedVia: 'clarification',
-        explanation: '这个问题似乎和数据查询无关，请描述您想查询的数据内容。',
-        confidence: intent.confidence,
-      };
-    }
-
-    if (intent.type === 'clarification') {
-      return {
-        resolvedVia: 'clarification',
-        explanation: '我可以帮您查询数据，请更具体地描述您需要什么信息。',
-        confidence: intent.confidence,
-        clarificationQuestion: '请问您想查询哪些数据？可以描述一下您关注的指标、时间范围或维度。',
-      };
+    if (classification.type === 'off_topic' || classification.type === 'clarification') {
+      const skillsMod = await import('./skills/index.js');
+      const orch = new skillsMod.AgentOrchestrator(this.db, this.config);
+      return orch.run(input.userQuery, classification, {
+        projectId: input.projectId,
+        datasourceId: input.datasourceId,
+        dialect,
+        conversationHistory,
+      });
     }
 
     // Step 2: Try metric resolution first (high accuracy path)
     const metricResult = await this.tryMetricResolution(input);
     if (metricResult) return metricResult;
 
-    // Step 3: Full NL2SQL pipeline (flexible path)
-    return this.runFullPipeline(input, conversationHistory, dialect, intent);
+    // Step 3: Agent orchestrator — routes to simple or agent path based on complexity
+    const skills = await import('./skills/index.js');
+    const orchestrator = new skills.AgentOrchestrator(this.db, this.config);
+    return orchestrator.run(input.userQuery, classification, {
+      projectId: input.projectId,
+      datasourceId: input.datasourceId,
+      dialect,
+      conversationHistory,
+    });
   }
 
   private async tryMetricResolution(

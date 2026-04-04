@@ -7,6 +7,8 @@ export { SchemaReranker } from './schema-reranker.js';
 export { SqlVerifier } from './sql-verifier.js';
 export { ChartSelector } from './chart-selector.js';
 export { SqlValidator } from './sql-validator.js';
+export { QueryRouter, AgentOrchestrator } from './skills/index.js';
+export type { QueryComplexity, ClassificationResult } from './skills/index.js';
 export { validateSql } from './antlr4-validator.js';
 export type { Antlr4ValidationResult } from './antlr4-validator.js';
 export { QueryExecutor } from './query-executor.js';
