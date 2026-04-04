@@ -62,6 +62,8 @@ export function useSSEStream() {
             setPipelineStatus(assistantMessageId, {
               currentStep: data.step as string,
               message: data.message as string,
+              thinking: data.thinking as string | undefined,
+              data: data.data,
               steps: [],
             });
             break;
@@ -79,7 +81,7 @@ export function useSSEStream() {
               isStreaming: false,
               pipelineStatus: undefined,
             });
-            openArtifact(assistantMessageId, 'sql');
+            openArtifact(assistantMessageId, 'result');
             break;
 
           case 'execution_result':

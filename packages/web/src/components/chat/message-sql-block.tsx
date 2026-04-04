@@ -59,7 +59,7 @@ export function MessageSqlBlock({
 
   return (
     <div
-      onClick={() => openArtifact(messageId, 'sql')}
+      onClick={() => openArtifact(messageId, 'result')}
       className="mt-3 rounded-xl border border-border bg-surface hover:bg-surface-hover transition-colors cursor-pointer group overflow-hidden"
     >
       {/* SQL code area */}

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type PanelTab = 'detail' | 'schema' | 'history';
-export type ArtifactTab = 'schema' | 'sql' | 'result' | 'chart';
+export type ArtifactTab = 'result' | 'schema';
 
 interface PanelState {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export const usePanelStore = create<PanelState & PanelActions>((set) => ({
   isOpen: true,
   activeTab: 'detail',
   selectedMessageId: null,
-  artifactTab: 'schema',
+  artifactTab: 'result',
 
   togglePanel: () => set((s) => ({ isOpen: !s.isOpen })),
   openPanel: (tab) => set((s) => ({ isOpen: true, activeTab: tab ?? s.activeTab })),
@@ -36,7 +36,7 @@ export const usePanelStore = create<PanelState & PanelActions>((set) => ({
     set({ selectedMessageId: messageId, isOpen: true, activeTab: 'detail' }),
   clearSelection: () => set({ selectedMessageId: null }),
   openArtifact: (messageId, tab) =>
-    set({ selectedMessageId: messageId, isOpen: true, artifactTab: tab ?? 'sql' }),
+    set({ selectedMessageId: messageId, isOpen: true, artifactTab: tab ?? 'result' }),
   closeArtifact: () => set({ artifactTab: 'schema', selectedMessageId: null }),
   setArtifactTab: (tab) => set({ artifactTab: tab }),
 }));

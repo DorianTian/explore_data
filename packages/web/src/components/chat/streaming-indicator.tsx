@@ -1,6 +1,7 @@
 'use client';
 
-import { useChatStore } from '@/stores/chat-store';
+import { useState, useCallback, useEffect } from 'react';
+import { useChatStore, type PipelineStepEntry } from '@/stores/chat-store';
 import { Icon } from '@/components/shared/icon';
 
 const STEP_LABELS: Record<string, string> = {
@@ -31,8 +32,8 @@ interface StreamingIndicatorProps {
 }
 
 /**
- * Cumulative pipeline log — shows all steps like ChatGPT's thinking process.
- * Each completed step shows with a checkmark, the current step pulses.
+ * Cumulative pipeline log with collapsible thinking content per step.
+ * Current step is expanded by default, completed steps are collapsed.
  */
 export function StreamingIndicator({ messageId }: StreamingIndicatorProps) {
   const message = useChatStore((s) => s.messages.find((m) => m.id === messageId));
@@ -45,39 +46,97 @@ export function StreamingIndicator({ messageId }: StreamingIndicatorProps) {
   if (steps.length === 0) {
     return (
       <div className="flex items-center gap-2 py-2">
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-40" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-        </span>
+        <PulsingDot />
         <span className="text-sm text-muted">正在处理...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-1 py-2">
-      {steps.map((entry, i) => {
-        const isLast = i === steps.length - 1;
-        const label = entry.message || STEP_LABELS[entry.step] || entry.step;
-
-        return (
-          <div key={`${entry.step}-${i}`} className="flex items-center gap-2">
-            {isLast ? (
-              /* Current step — pulsing dot */
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-40" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
-            ) : (
-              /* Completed step — checkmark */
-              <Icon name="check" size={10} className="text-emerald-500 shrink-0" />
-            )}
-            <span className={`text-sm ${isLast ? 'text-foreground' : 'text-muted'}`}>
-              {label}
-            </span>
-          </div>
-        );
-      })}
+    <div className="space-y-0.5 py-2">
+      {steps.map((entry, i) => (
+        <StepRow
+          key={`${entry.step}-${i}`}
+          entry={entry}
+          isCurrent={i === steps.length - 1}
+          defaultExpanded={i === steps.length - 1}
+        />
+      ))}
     </div>
+  );
+}
+
+/** Single step row — collapsible if it has thinking content */
+function StepRow({
+  entry,
+  isCurrent,
+  defaultExpanded,
+}: {
+  entry: PipelineStepEntry;
+  isCurrent: boolean;
+  defaultExpanded: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const hasThinking = Boolean(entry.thinking);
+
+  /* Auto-expand when this becomes the current step */
+  useEffect(() => {
+    if (isCurrent) setExpanded(true);
+  }, [isCurrent]);
+
+  const toggle = useCallback(() => {
+    if (hasThinking) setExpanded((prev) => !prev);
+  }, [hasThinking]);
+
+  const label = entry.message || STEP_LABELS[entry.step] || entry.step;
+
+  return (
+    <div>
+      {/* Step header */}
+      <button
+        type="button"
+        onClick={toggle}
+        className={`flex items-center gap-2 w-full py-1 text-left transition-colors ${
+          hasThinking ? 'cursor-pointer hover:bg-surface-hover rounded-md px-1' : 'cursor-default px-1'
+        }`}
+      >
+        {isCurrent ? (
+          <PulsingDot />
+        ) : (
+          <Icon name="check" size={10} className="text-emerald-500 shrink-0" />
+        )}
+        <span className={`text-sm ${isCurrent ? 'text-foreground' : 'text-muted'}`}>
+          {label}
+        </span>
+        {hasThinking && (
+          <Icon
+            name="chevronRight"
+            size={10}
+            className={`text-muted/60 ml-auto shrink-0 transition-transform duration-200 ${
+              expanded ? 'rotate-90' : ''
+            }`}
+          />
+        )}
+      </button>
+
+      {/* Thinking content block */}
+      {expanded && hasThinking && (
+        <div className="ml-5 mt-1 mb-1.5 px-3 py-2 rounded-md bg-surface/80 border border-border/50">
+          <pre className="text-xs font-mono text-muted leading-relaxed whitespace-pre-wrap break-words">
+            {entry.thinking}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Animated pulsing dot for current step */
+function PulsingDot() {
+  return (
+    <span className="relative flex h-2 w-2 shrink-0">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-40" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+    </span>
   );
 }

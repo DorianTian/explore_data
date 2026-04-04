@@ -6,11 +6,19 @@ export type PipelineStep = string;
 export interface PipelineStepEntry {
   step: string;
   message: string;
+  /** Reasoning content from the pipeline step */
+  thinking?: string;
+  /** Structured data payload from the pipeline step */
+  data?: unknown;
 }
 
 export interface PipelineStatus {
   currentStep: string;
   message: string;
+  /** Reasoning content from the current step */
+  thinking?: string;
+  /** Structured data payload from the current step */
+  data?: unknown;
   /** Cumulative log of all steps — displayed as a list like ChatGPT thinking */
   steps: PipelineStepEntry[];
 }
@@ -111,14 +119,26 @@ export const useChatStore = create<ChatStore>((set) => ({
       messages: s.messages.map((m) => {
         if (m.id !== id) return m;
         const prevSteps = m.pipelineStatus?.steps ?? [];
+        const incoming: PipelineStepEntry = {
+          step: pipelineStatus.currentStep,
+          message: pipelineStatus.message,
+          thinking: pipelineStatus.thinking,
+          data: pipelineStatus.data,
+        };
+        const existingIdx = prevSteps.findIndex(
+          (entry) => entry.step === incoming.step,
+        );
+        const nextSteps =
+          existingIdx >= 0
+            ? prevSteps.map((entry, i) =>
+                i === existingIdx ? { ...entry, ...incoming } : entry,
+              )
+            : [...prevSteps, incoming];
         return {
           ...m,
           pipelineStatus: {
             ...pipelineStatus,
-            steps: [
-              ...prevSteps,
-              { step: pipelineStatus.currentStep, message: pipelineStatus.message },
-            ],
+            steps: nextSteps,
           },
         };
       }),

@@ -14,6 +14,12 @@ export interface SchemaTable {
   name: string;
   comment: string | null;
   columns: SchemaColumn[];
+  /** Warehouse layer inferred from table name prefix (DWD/DWS/DIM/ADS/ODS) */
+  layer?: string;
+  /** Business domain tag */
+  domain?: string;
+  /** Whether columns have been loaded (for lazy loading) */
+  columnsLoaded?: boolean;
 }
 
 export interface SchemaRelationship {
@@ -42,6 +48,8 @@ interface SchemaActions {
     columnId: string,
     updates: Partial<SchemaColumn>,
   ) => void;
+  /** Load columns for a specific table (lazy loading) */
+  loadColumns: (tableId: string, columns: SchemaColumn[]) => void;
   clearSchema: () => void;
 }
 
@@ -64,6 +72,15 @@ export const useSchemaStore = create<SchemaStore>((set) => ({
                 col.id === columnId ? { ...col, ...updates } : col,
               ),
             }
+          : table,
+      ),
+    })),
+
+  loadColumns: (tableId, columns) =>
+    set((state) => ({
+      tables: state.tables.map((table) =>
+        table.id === tableId
+          ? { ...table, columns, columnsLoaded: true }
           : table,
       ),
     })),
