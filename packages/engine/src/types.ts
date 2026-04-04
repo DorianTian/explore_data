@@ -43,6 +43,8 @@ export interface GenerationContext {
   conversationHistory: ConversationTurn[];
   fewShotExamples: Array<{ question: string; sql: string }>;
   dialect: string;
+  /** PostgreSQL schema prefix for fully-qualified table names (e.g. 'dw_hive') */
+  schemaPrefix?: string;
 }
 
 export interface GenerationResult {

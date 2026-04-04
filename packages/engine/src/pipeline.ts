@@ -4,7 +4,6 @@ import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
 import { QueryDecomposer } from './query-decomposer.js';
 import { SchemaReranker } from './schema-reranker.js';
-import { SqlVerifier } from './sql-verifier.js';
 import { EmbeddingService } from './embedding-service.js';
 import { QueryRouter } from './skills/router.js';
 import { AgentOrchestrator } from './skills/agent-orchestrator.js';
@@ -37,7 +36,6 @@ export class NL2SqlPipeline {
   private schemaLinker: SchemaLinker;
   private schemaReranker: SchemaReranker;
   private sqlGenerator: SqlGenerator;
-  private sqlVerifier: SqlVerifier;
   private embeddingService: EmbeddingService | null;
 
   constructor(
@@ -54,7 +52,6 @@ export class NL2SqlPipeline {
     this.schemaLinker = new SchemaLinker(db, openaiKey, openaiBase);
     this.schemaReranker = new SchemaReranker(config.anthropicApiKey, anthropicBase);
     this.sqlGenerator = new SqlGenerator(config.anthropicApiKey, anthropicBase);
-    this.sqlVerifier = new SqlVerifier(config.anthropicApiKey, anthropicBase);
     this.embeddingService = openaiKey ? new EmbeddingService(openaiKey, openaiBase) : null;
   }
 
@@ -336,6 +333,18 @@ export class NL2SqlPipeline {
       queryForGeneration = `${input.userQuery}\n\n[查询拆解]\n${steps}\n合并策略: ${decomposition.mergeStrategy}\n请按此拆解逻辑生成完整 SQL。`;
     }
 
+    // Resolve schema prefix from datasource connection config
+    let schemaPrefix: string | undefined;
+    try {
+      const [ds] = await this.db.select().from(datasources).where(eq(datasources.id, input.datasourceId));
+      const connConfig = ds?.connectionConfig as { schema?: string } | null;
+      if (connConfig?.schema) {
+        schemaPrefix = connConfig.schema;
+      }
+    } catch {
+      // Best-effort schema prefix resolution
+    }
+
     const context = {
       userQuery: queryForGeneration,
       schema,
@@ -344,6 +353,7 @@ export class NL2SqlPipeline {
       conversationHistory,
       fewShotExamples,
       dialect,
+      schemaPrefix,
     };
 
     // Node 7: SQL Generation (with optional token streaming)

@@ -146,6 +146,13 @@ export class SqlGenerator {
   ): string {
     const parts: string[] = [];
 
+    // Schema prefix instruction
+    if (context.schemaPrefix) {
+      parts.push(`## 重要：表名前缀\n`);
+      parts.push(`所有表名必须使用全限定名，前缀为 "${context.schemaPrefix}"。`);
+      parts.push(`例如: SELECT * FROM "${context.schemaPrefix}".table_name\n`);
+    }
+
     // Schema section — formatted as DDL (LLM-friendly)
     parts.push(`## 数据库 Schema（${context.dialect}）\n`);
     if (context.rawDdl) {

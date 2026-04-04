@@ -10,6 +10,8 @@ export interface ExecutionConfig {
   username?: string;
   password?: string;
   ssl?: boolean;
+  /** PostgreSQL schema to set as search_path (e.g. 'dw_hive') */
+  schema?: string;
 }
 
 export interface ExecutionResult {
@@ -50,6 +52,11 @@ export class QueryExecutor {
       // Set read-only mode and statement timeout (parameterized, not interpolated)
       await client.query('SET default_transaction_read_only = ON');
       await client.query(`SET statement_timeout = '${timeoutMs}ms'`);
+
+      // Set search_path if schema is specified (for engine-type isolation)
+      if (config.schema) {
+        await client.query(`SET search_path TO "${config.schema}", public`);
+      }
 
       // Add LIMIT if not present
       const limitedSql = this.ensureLimit(sql, rowLimit);
