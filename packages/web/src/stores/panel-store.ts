@@ -7,7 +7,6 @@ interface PanelState {
   isOpen: boolean;
   activeTab: PanelTab;
   selectedMessageId: string | null;
-  artifactOpen: boolean;
   artifactTab: ArtifactTab;
 }
 
@@ -27,7 +26,6 @@ export const usePanelStore = create<PanelState & PanelActions>((set) => ({
   isOpen: true,
   activeTab: 'detail',
   selectedMessageId: null,
-  artifactOpen: false,
   artifactTab: 'schema',
 
   togglePanel: () => set((s) => ({ isOpen: !s.isOpen })),
@@ -38,7 +36,7 @@ export const usePanelStore = create<PanelState & PanelActions>((set) => ({
     set({ selectedMessageId: messageId, isOpen: true, activeTab: 'detail' }),
   clearSelection: () => set({ selectedMessageId: null }),
   openArtifact: (messageId, tab) =>
-    set({ selectedMessageId: messageId, artifactOpen: true, artifactTab: tab ?? 'sql' }),
-  closeArtifact: () => set({ artifactOpen: false }),
+    set({ selectedMessageId: messageId, isOpen: true, artifactTab: tab ?? 'sql' }),
+  closeArtifact: () => set({ artifactTab: 'schema', selectedMessageId: null }),
   setArtifactTab: (tab) => set({ artifactTab: tab }),
 }));

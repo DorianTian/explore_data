@@ -53,6 +53,13 @@ export async function apiPatch<T>(path: string, body: unknown) {
   });
 }
 
+export async function apiPut<T>(path: string, body: unknown) {
+  return apiFetch<T>(path, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
 export async function apiDelete(path: string): Promise<ApiResult<void>> {
   return apiFetch<void>(path, { method: 'DELETE' });
 }

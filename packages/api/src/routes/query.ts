@@ -1,7 +1,8 @@
 import Router from '@koa/router';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { PassThrough } from 'stream';
+
+import Anthropic from '@anthropic-ai/sdk';
 import type { DbClient } from '@nl2sql/db';
 import { ConversationService } from '../services/conversation-service.js';
 
@@ -35,8 +36,10 @@ const feedbackSchema = z.object({
   isGolden: z.boolean().optional(),
 });
 
-function sendSSE(stream: PassThrough, event: string, data: unknown) {
-  stream.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+import type { ServerResponse } from 'http';
+
+function sendSSE(res: ServerResponse, event: string, data: unknown) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
 function getPipelineConfig() {
@@ -149,15 +152,20 @@ export function createQueryRouter(db: DbClient): Router {
     }
 
     const requestId = randomUUID();
+    const res = ctx.res;
 
-    ctx.set('Content-Type', 'text/event-stream');
-    ctx.set('Cache-Control', 'no-cache');
-    ctx.set('Connection', 'keep-alive');
-    ctx.set('X-Accel-Buffering', 'no');
-
-    const stream = new PassThrough();
-    ctx.body = stream;
-    ctx.status = 200;
+    // Bypass Koa's response handling — write SSE directly to the raw response
+    // so events flush immediately instead of being buffered until handler completes
+    ctx.respond = false;
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': ctx.get('Origin') || '*',
+      'Access-Control-Allow-Credentials': 'true',
+    });
+    res.flushHeaders();
 
     try {
       let conversationId = parsed.data.conversationId;
@@ -167,7 +175,7 @@ export function createQueryRouter(db: DbClient): Router {
           parsed.data.query.slice(0, 50),
         );
         conversationId = conv.id;
-        sendSSE(stream, 'conversation', { id: conversationId });
+        sendSSE(res, 'conversation', { id: conversationId });
       }
 
       await conversationService.addMessage({
@@ -185,21 +193,21 @@ export function createQueryRouter(db: DbClient): Router {
         userQuery: parsed.data.query,
         conversationHistory: parsed.data.conversationHistory,
         dialect: parsed.data.dialect,
-        onProgress: (step, message) => sendSSE(stream, 'status', { step, message }),
-        onToken: (token) => sendSSE(stream, 'token', { text: token }),
+        onProgress: (step, message) => sendSSE(res, 'status', { step, message }),
+        onToken: (token) => sendSSE(res, 'token', { text: token }),
       });
 
       let finalResult = result;
 
       if (result.sql) {
-        sendSSE(stream, 'status', { step: 'sql_validation', message: '正在校验 SQL 安全性...' });
+        sendSSE(res, 'status', { step: 'sql_validation', message: '正在校验 SQL 安全性...' });
 
         const validator = new SqlValidator(parsed.data.dialect ?? 'postgresql');
         let validation = validator.validate(result.sql);
 
         // Error recovery — same retry count as sync endpoint
         if (!validation.valid) {
-          sendSSE(stream, 'status', { step: 'error_recovery', message: '检测到问题，正在修复...' });
+          sendSSE(res, 'status', { step: 'error_recovery', message: '检测到问题，正在修复...' });
 
           for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
             const errorContext = validation.errors
@@ -233,9 +241,9 @@ export function createQueryRouter(db: DbClient): Router {
           }
         }
 
-        sendSSE(stream, 'result', { ...finalResult, validation, conversationId, requestId });
+        sendSSE(res, 'result', { ...finalResult, validation, conversationId, requestId });
       } else {
-        sendSSE(stream, 'result', { ...finalResult, conversationId, requestId });
+        sendSSE(res, 'result', { ...finalResult, conversationId, requestId });
       }
 
       // Execute SQL and recommend chart (best-effort, non-blocking)
@@ -249,7 +257,7 @@ export function createQueryRouter(db: DbClient): Router {
           const ds = await dsService.getById(parsed.data.datasourceId);
 
           if (ds?.connectionConfig) {
-            sendSSE(stream, 'status', { step: 'executing', message: '正在执行查询...' });
+            sendSSE(res, 'status', { step: 'executing', message: '正在执行查询...' });
 
             const { QueryExecutor, ChartRecommender } = await import('@nl2sql/engine');
             const executor = new QueryExecutor();
@@ -265,7 +273,7 @@ export function createQueryRouter(db: DbClient): Router {
               truncated: execResult.truncated,
               executionTimeMs: execResult.executionTimeMs,
             };
-            sendSSE(stream, 'execution_result', executionResult);
+            sendSSE(res, 'execution_result', executionResult);
 
             const recommender = new ChartRecommender();
             const chart = recommender.recommend(execResult.rows, execResult.columns);
@@ -274,23 +282,42 @@ export function createQueryRouter(db: DbClient): Router {
                 chartType: chart.chartType,
                 config: chart.config,
               };
-              sendSSE(stream, 'chart', chartRecommendation);
+              sendSSE(res, 'chart', chartRecommendation);
             }
           }
         } catch (execErr: unknown) {
           const execMsg = execErr instanceof Error ? execErr.message : String(execErr);
-          sendSSE(stream, 'status', { step: 'execution_error', message: `执行失败: ${execMsg}` });
+          sendSSE(res, 'status', { step: 'execution_error', message: `执行失败: ${execMsg}` });
           process.stderr.write(
             JSON.stringify({ level: 'warn', msg: 'SQL execution failed', error: execMsg }) + '\n',
           );
         }
       }
 
-      // Persist to DB
+      // Data insight — LLM analyzes execution results and provides interpretation
+      let insightText = '';
+      if (executionResult && finalResult.sql) {
+        try {
+          sendSSE(res, 'status', { step: 'data_insight', message: '正在分析数据...' });
+          insightText = await streamDataInsight(
+            res,
+            parsed.data.query,
+            finalResult.sql,
+            executionResult as {
+              rows: Record<string, unknown>[];
+              columns: Array<{ name: string; dataType: string }>;
+            },
+          );
+        } catch {
+          /* Insight generation is best-effort */
+        }
+      }
+
+      // Persist to DB (use insight as content if available, otherwise SQL explanation)
       await conversationService.addMessage({
         conversationId,
         role: 'assistant',
-        content: finalResult.explanation,
+        content: insightText || finalResult.explanation,
         generatedSql: finalResult.sql,
         confidence: finalResult.confidence,
         executionResult: executionResult as Record<string, unknown> | undefined,
@@ -305,12 +332,12 @@ export function createQueryRouter(db: DbClient): Router {
         });
       }
 
-      sendSSE(stream, 'done', {});
+      sendSSE(res, 'done', {});
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      sendSSE(stream, 'error', { code: 'PIPELINE_ERROR', message, requestId });
+      sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId });
     } finally {
-      stream.end();
+      res.end();
     }
   });
 
@@ -353,4 +380,72 @@ export function createQueryRouter(db: DbClient): Router {
   });
 
   return router;
+}
+
+const INSIGHT_SYSTEM_PROMPT = `你是一位数据分析专家。用户提出了一个数据问题，系统已经执行 SQL 并返回了结果。
+
+你的任务：
+1. 用通俗语言解读数据结果，让非技术人员也能理解
+2. 指出数据中的关键发现和趋势
+3. 如果数据中有异常值或有趣的 pattern，主动指出
+4. 给出 1-2 条基于数据的建议或下一步分析方向
+
+要求：简洁、直接、有洞察力。不要重复 SQL 逻辑，专注于数据本身。使用中文。`;
+
+/**
+ * Stream data insight from LLM — analyzes execution results and provides interpretation.
+ * Returns the full insight text for persistence.
+ */
+async function streamDataInsight(
+  stream: ServerResponse,
+  userQuery: string,
+  sql: string,
+  executionResult: {
+    rows: Record<string, unknown>[];
+    columns: Array<{ name: string; dataType: string }>;
+  },
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return '';
+
+  const client = new Anthropic({
+    apiKey,
+    baseURL: process.env.ANTHROPIC_BASE_URL ?? undefined,
+  });
+
+  // Limit data sent to LLM to avoid token overflow
+  const sampleRows = executionResult.rows.slice(0, 50);
+  const columnNames = executionResult.columns.map((c) => `${c.name}(${c.dataType})`).join(', ');
+
+  const dataPreview = JSON.stringify(sampleRows, null, 0).slice(0, 3000);
+
+  const userContent = `用户问题：${userQuery}
+
+执行的 SQL：
+${sql}
+
+返回列：${columnNames}
+总行数：${executionResult.rows.length}
+
+数据（前 ${sampleRows.length} 行）：
+${dataPreview}`;
+
+  const llmStream = client.messages.stream(
+    {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 800,
+      system: INSIGHT_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userContent }],
+    },
+    { timeout: 30000 },
+  );
+
+  let fullText = '';
+  llmStream.on('text', (delta) => {
+    fullText += delta;
+    sendSSE(res, 'insight_token', { text: delta });
+  });
+
+  await llmStream.finalMessage();
+  return fullText;
 }

@@ -5,7 +5,9 @@ export interface ExecutionConfig {
   host: string;
   port: number;
   database: string;
-  username: string;
+  /** Accepts both 'user' and 'username' for compatibility */
+  user?: string;
+  username?: string;
   password?: string;
   ssl?: boolean;
 }
@@ -47,7 +49,7 @@ export class QueryExecutor {
     try {
       // Set read-only mode and statement timeout (parameterized, not interpolated)
       await client.query('SET default_transaction_read_only = ON');
-      await client.query('SET statement_timeout = $1', [`${timeoutMs}ms`]);
+      await client.query(`SET statement_timeout = '${timeoutMs}ms'`);
 
       // Add LIMIT if not present
       const limitedSql = this.ensureLimit(sql, rowLimit);
@@ -83,14 +85,15 @@ export class QueryExecutor {
   }
 
   private getOrCreatePool(config: ExecutionConfig): pg.Pool {
-    const key = `${config.host}:${config.port}/${config.database}/${config.username}`;
+    const dbUser = config.user ?? config.username ?? '';
+    const key = `${config.host}:${config.port}/${config.database}/${dbUser}`;
     let pool = QueryExecutor.poolCache.get(key);
     if (!pool) {
       pool = new pg.Pool({
         host: config.host,
         port: config.port,
         database: config.database,
-        user: config.username,
+        user: dbUser,
         password: config.password,
         ssl: config.ssl ? { rejectUnauthorized: process.env.NODE_ENV === 'production' } : undefined,
         max: 3,

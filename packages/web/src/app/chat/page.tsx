@@ -6,7 +6,6 @@ import { AppShell } from '@/components/layout/app-shell';
 import { ChatMessage } from '@/components/chat/chat-message';
 import { ChatInput } from '@/components/chat-input';
 import { ArtifactPanel } from '@/components/panel/artifact-panel';
-import { SchemaBrowser } from '@/components/panel/schema-browser';
 import { ToastProvider } from '@/components/toast';
 import { useChatStore } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -27,9 +26,7 @@ const EXAMPLE_QUERIES = [
 function ChatPageInner() {
   const { messages, loading, clearMessages } = useChatStore();
   const { currentProjectId, currentDatasourceId } = useProjectStore();
-  const artifactOpen = usePanelStore((s) => s.artifactOpen);
   const panelIsOpen = usePanelStore((s) => s.isOpen);
-  const closePanel = usePanelStore((s) => s.closePanel);
   const { sendQuery } = useSSEStream();
   useKeyboardShortcuts();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,9 +80,7 @@ function ChatPageInner() {
   const hasContext = currentProjectId && currentDatasourceId;
   const isEmpty = messages.length === 0;
 
-  /* Right panel priority: artifact > schema browser */
-  const showSchema = panelIsOpen && !artifactOpen;
-  const showRightPanel = artifactOpen || showSchema;
+  /* Right panel — unified tabs (schema / sql / result / chart) */
 
   /* Resizable right panel width */
   const [panelWidth, setPanelWidth] = useState(480);
@@ -184,44 +179,20 @@ function ChatPageInner() {
             )}
           </div>
 
-          {/* Right panel — artifact (SQL/Result/Chart) or schema browser */}
-          {showRightPanel && (
+          {/* Right panel — unified tabs: 表结构 / SQL / 结果 / 图表 */}
+          {panelIsOpen && (
             <div
               className="relative shrink-0 border-l border-border bg-background-secondary animate-slide-in-right"
               style={{ width: panelWidth }}
             >
               {/* Drag handle */}
               <div className="resize-handle !left-[-3px] !right-auto" onMouseDown={startPanelResize} />
-              {artifactOpen ? (
-                <ArtifactPanel />
-              ) : (
-                <SchemaPanel onClose={closePanel} />
-              )}
+              <ArtifactPanel />
             </div>
           )}
         </div>
       </ToastProvider>
     </AppShell>
-  );
-}
-
-/** Schema browser wrapper with header and close button */
-function SchemaPanel({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <h3 className="text-sm font-medium text-foreground">Schema</h3>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
-        >
-          <Icon name="x" size={16} />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto pt-3">
-        <SchemaBrowser />
-      </div>
-    </div>
   );
 }
 

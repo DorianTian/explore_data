@@ -107,7 +107,6 @@ export class SqlGenerator {
   }
 
   private parseText(text: string): GenerationResult {
-
     const parsed = extractJson<Record<string, unknown>>(text);
     if (parsed) {
       return {

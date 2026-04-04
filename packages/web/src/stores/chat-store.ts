@@ -1,17 +1,18 @@
 import { create } from 'zustand';
 
-export type PipelineStep =
-  | 'intent_classification'
-  | 'schema_linking'
-  | 'sql_generation'
-  | 'sql_validation'
-  | 'error_recovery'
-  | 'executing';
+/** Pipeline step identifier — extensible, backend may send any step name */
+export type PipelineStep = string;
+
+export interface PipelineStepEntry {
+  step: string;
+  message: string;
+}
 
 export interface PipelineStatus {
-  currentStep: PipelineStep;
+  currentStep: string;
   message: string;
-  completedSteps: PipelineStep[];
+  /** Cumulative log of all steps — displayed as a list like ChatGPT thinking */
+  steps: PipelineStepEntry[];
 }
 
 export interface ChatMessage {
@@ -34,6 +35,8 @@ export interface ChatMessage {
     config: unknown;
   };
   tablesUsed?: string[];
+  /** LLM-generated data insight based on execution results */
+  insight?: string;
   pipelineStatus?: PipelineStatus;
 }
 
@@ -54,6 +57,7 @@ interface ChatActions {
   setGolden: (id: string, isGolden: boolean) => void;
   selectMessage: (id: string | null) => void;
   appendContent: (id: string, chunk: string) => void;
+  appendInsight: (id: string, chunk: string) => void;
   setPipelineStatus: (id: string, status: PipelineStatus) => void;
 }
 
@@ -95,8 +99,28 @@ export const useChatStore = create<ChatStore>((set) => ({
       messages: s.messages.map((m) => (m.id === id ? { ...m, content: m.content + chunk } : m)),
     })),
 
+  appendInsight: (id, chunk) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id === id ? { ...m, insight: (m.insight ?? '') + chunk } : m,
+      ),
+    })),
+
   setPipelineStatus: (id, pipelineStatus) =>
     set((s) => ({
-      messages: s.messages.map((m) => (m.id === id ? { ...m, pipelineStatus } : m)),
+      messages: s.messages.map((m) => {
+        if (m.id !== id) return m;
+        const prevSteps = m.pipelineStatus?.steps ?? [];
+        return {
+          ...m,
+          pipelineStatus: {
+            ...pipelineStatus,
+            steps: [
+              ...prevSteps,
+              { step: pipelineStatus.currentStep, message: pipelineStatus.message },
+            ],
+          },
+        };
+      }),
     })),
 }));

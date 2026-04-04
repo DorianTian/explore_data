@@ -7,7 +7,7 @@ import { SqlVerifier } from '../sql-verifier.js';
 import { EmbeddingService } from '../embedding-service.js';
 import { RAG } from '../config.js';
 import type { SkillResult } from './types.js';
-import type { GenerationContext } from '../types.js';
+import type { GenerationContext, TokenCallback } from '../types.js';
 
 /**
  * Skill Executor — executes individual skills called by the agent orchestrator.
@@ -38,6 +38,7 @@ export class SkillExecutor {
     skillName: string,
     input: Record<string, unknown>,
     context: { projectId: string; datasourceId: string; dialect: string },
+    onToken?: TokenCallback,
   ): Promise<SkillResult> {
     switch (skillName) {
       case 'schema_search':
@@ -53,6 +54,7 @@ export class SkillExecutor {
           input.additionalContext as string | undefined,
           context.dialect,
           context.datasourceId,
+          onToken,
         );
       case 'sql_review':
         return this.sqlReview(
@@ -189,6 +191,7 @@ export class SkillExecutor {
     additionalContext: string | undefined,
     dialect: string,
     datasourceId: string,
+    onToken?: TokenCallback,
   ): Promise<SkillResult> {
     const query = additionalContext ? `${userQuery}\n\n补充信息:\n${additionalContext}` : userQuery;
 
@@ -205,7 +208,7 @@ export class SkillExecutor {
         fewShotExamples: [],
         dialect,
       };
-      const result = await this.sqlGenerator.generate(context);
+      const result = await this.sqlGenerator.generate(context, onToken);
       return { success: true, data: result };
     }
 
@@ -219,7 +222,7 @@ export class SkillExecutor {
       fewShotExamples: [],
       dialect,
     };
-    const result = await this.sqlGenerator.generate(context);
+    const result = await this.sqlGenerator.generate(context, onToken);
     return { success: true, data: result };
   }
 

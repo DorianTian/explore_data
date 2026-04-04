@@ -4,6 +4,12 @@
  *
  * Usage: tsx packages/api/src/seed/index.ts
  */
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+config({ path: resolve(process.cwd(), '../../.env') });
+config({ path: resolve(process.cwd(), '.env') });
+
 import pino from 'pino';
 import { createDbClient } from '@nl2sql/db';
 import { ProjectService } from '../services/project-service.js';

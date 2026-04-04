@@ -52,7 +52,6 @@ export function useSSEStream() {
 
       const handleEvent = (event: SSEEvent) => {
         const data = event.data as Record<string, unknown>;
-        console.log('[SSE event]', event.event, data); // DEBUG
 
         switch (event.event) {
           case 'conversation':

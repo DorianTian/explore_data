@@ -6,8 +6,20 @@ export interface SSEEvent {
 export type SSEHandler = (event: SSEEvent) => void;
 
 /**
+ * Yield control back to the browser so React can flush state updates.
+ * This prevents React 18 automatic batching from collapsing all SSE
+ * events into a single render (which would skip intermediate states).
+ */
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
  * Connect to an SSE endpoint using fetch + ReadableStream.
  * Returns an abort function.
+ *
+ * Events are dispatched with a microtask yield between each one
+ * so React renders intermediate pipeline status updates.
  */
 export function connectSSE(
   url: string,
@@ -22,9 +34,13 @@ export function connectSSE(
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
+        cache: 'no-store',
       });
 
       if (!response.ok) {
@@ -44,13 +60,16 @@ export function connectSSE(
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          buffer += decoder.decode(); // flush remaining multi-byte bytes
+          buffer += decoder.decode();
           break;
         }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
+
+        // Collect events from this chunk, then dispatch with yields
+        const events: SSEEvent[] = [];
 
         for (const line of lines) {
           if (line.startsWith('event: ')) {
@@ -62,18 +81,27 @@ export function connectSSE(
               const eventName = currentEvent || 'message';
               try {
                 const parsed = JSON.parse(currentData);
-                onEvent({ event: eventName, data: parsed });
+                events.push({ event: eventName, data: parsed });
               } catch {
-                onEvent({ event: eventName, data: currentData });
+                events.push({ event: eventName, data: currentData });
               }
             }
             currentEvent = '';
             currentData = '';
           }
         }
+
+        // Dispatch each event with a yield so React can render between them
+        for (const evt of events) {
+          onEvent(evt);
+          // Yield after status events to let React render the pipeline step
+          if (evt.event === 'status') {
+            await yieldToBrowser();
+          }
+        }
       }
 
-      /* Dispatch any buffered event not terminated by a trailing blank line */
+      // Dispatch any buffered event not terminated by a trailing blank line
       if (currentData) {
         const eventName = currentEvent || 'message';
         try {

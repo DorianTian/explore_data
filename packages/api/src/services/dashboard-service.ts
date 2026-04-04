@@ -98,7 +98,9 @@ export class DashboardService {
   async removeWidget(dashboardId: string, placementId: string): Promise<boolean> {
     const [row] = await this.db
       .delete(dashboardWidgets)
-      .where(and(eq(dashboardWidgets.id, placementId), eq(dashboardWidgets.dashboardId, dashboardId)))
+      .where(
+        and(eq(dashboardWidgets.id, placementId), eq(dashboardWidgets.dashboardId, dashboardId)),
+      )
       .returning();
     return row !== undefined;
   }
@@ -115,7 +117,9 @@ export class DashboardService {
             width: item.width,
             height: item.height,
           })
-          .where(and(eq(dashboardWidgets.id, item.id), eq(dashboardWidgets.dashboardId, dashboardId)))
+          .where(
+            and(eq(dashboardWidgets.id, item.id), eq(dashboardWidgets.dashboardId, dashboardId)),
+          )
           .returning();
         results.push(updated);
       }

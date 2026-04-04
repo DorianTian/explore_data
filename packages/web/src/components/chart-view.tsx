@@ -28,10 +28,18 @@ interface ChartConfig {
   }>;
 }
 
+interface DataSnapshot {
+  rows: Record<string, unknown>[];
+  columns: Array<{ name: string; dataType: string }>;
+  truncated?: boolean;
+}
+
 interface ChartViewProps {
   chartType: ChartType;
   config: ChartConfig;
   height?: number;
+  /** For table-type widgets, the data to render */
+  dataSnapshot?: DataSnapshot | null;
 }
 
 const CHART_TYPE_LABELS: Record<ChartType, string> = {
@@ -46,13 +54,13 @@ const CHART_TYPE_LABELS: Record<ChartType, string> = {
   table: '表格',
 };
 
-export function ChartView({ chartType, config, height = 350 }: ChartViewProps) {
+export function ChartView({ chartType, config, height = 350, dataSnapshot }: ChartViewProps) {
   if (chartType === 'kpi') {
     return <KpiCard config={config} />;
   }
 
   if (chartType === 'table') {
-    return null; // Table view handled by SqlResultTable component
+    return <MiniTable dataSnapshot={dataSnapshot} />;
   }
 
   return (
@@ -259,6 +267,58 @@ const COLORS = [
   '#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed',
   '#0891b2', '#be185d', '#4f46e5', '#16a34a', '#ea580c',
 ];
+
+function MiniTable({ dataSnapshot }: { dataSnapshot?: DataSnapshot | null }) {
+  if (!dataSnapshot || !dataSnapshot.rows.length) {
+    return (
+      <div className="flex items-center justify-center h-32 text-muted text-xs">
+        暂无数据
+      </div>
+    );
+  }
+
+  const { rows, columns } = dataSnapshot;
+  const displayRows = rows.slice(0, 20);
+
+  return (
+    <div className="overflow-auto max-h-[320px] rounded-lg border border-border">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-surface sticky top-0">
+            {columns.map((col) => (
+              <th
+                key={col.name}
+                className="px-3 py-2 text-left font-medium text-muted border-b border-border whitespace-nowrap"
+              >
+                {col.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {displayRows.map((row, i) => (
+            <tr key={i} className="border-b border-border last:border-0">
+              {columns.map((col) => (
+                <td key={col.name} className="px-3 py-1.5 text-foreground whitespace-nowrap">
+                  {row[col.name] == null ? (
+                    <span className="text-muted italic">NULL</span>
+                  ) : (
+                    String(row[col.name])
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length > 20 && (
+        <p className="text-[11px] text-muted text-center py-1.5">
+          显示前 20 行 / 共 {rows.length} 行
+        </p>
+      )}
+    </div>
+  );
+}
 
 function formatNumber(val: unknown): string {
   if (val === null || val === undefined) return '—';

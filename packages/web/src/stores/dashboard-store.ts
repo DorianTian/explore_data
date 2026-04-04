@@ -78,6 +78,8 @@ interface DashboardActions {
   createDashboard: (params: CreateDashboardParams) => Promise<Dashboard | null>;
   deleteDashboard: (id: string) => Promise<boolean>;
   deleteWidget: (id: string) => Promise<boolean>;
+  addWidgetToDashboard: (dashboardId: string, widgetId: string) => Promise<boolean>;
+  removeWidgetFromDashboard: (dashboardId: string, placementId: string) => Promise<boolean>;
   toggleFavorite: (
     projectId: string,
     targetType: 'widget' | 'dashboard',
@@ -209,6 +211,35 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           ? {
               ...s.currentDashboard,
               widgets: s.currentDashboard.widgets.filter((p) => p.widget.id !== id),
+            }
+          : null,
+      }));
+      return true;
+    }
+    return false;
+  },
+
+  addWidgetToDashboard: async (dashboardId, widgetId) => {
+    const res = await apiPost<WidgetPlacement['placement']>(
+      `/api/dashboards/${dashboardId}/widgets`,
+      { widgetId },
+    );
+    if (res.success) {
+      // Re-fetch to get the full placement + widget data
+      await get().fetchDashboard(dashboardId);
+      return true;
+    }
+    return false;
+  },
+
+  removeWidgetFromDashboard: async (dashboardId, placementId) => {
+    const res = await apiDelete(`/api/dashboards/${dashboardId}/widgets/${placementId}`);
+    if (res.success) {
+      set((s) => ({
+        currentDashboard: s.currentDashboard
+          ? {
+              ...s.currentDashboard,
+              widgets: s.currentDashboard.widgets.filter((p) => p.placement.id !== placementId),
             }
           : null,
       }));

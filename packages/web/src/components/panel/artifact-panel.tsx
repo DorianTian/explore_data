@@ -257,11 +257,13 @@ function SqlTabContent({
         </p>
       )}
 
-      {/* Explanation */}
-      {message.content && (
+      {/* Data Insight — LLM analysis of execution results (not SQL explanation) */}
+      {message.insight && (
         <div className="pt-3 border-t border-border">
-          <h4 className="text-xs font-medium text-muted mb-2">解释</h4>
-          <p className="text-sm text-foreground leading-relaxed">{message.content}</p>
+          <h4 className="text-xs font-medium text-muted mb-2">数据分析</h4>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+            {message.insight}
+          </p>
         </div>
       )}
 

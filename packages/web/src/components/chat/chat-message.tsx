@@ -36,78 +36,80 @@ function UserBubble({ content }: { content: string }) {
 function AssistantMessage({ message }: { message: ChatMessageType }) {
   return (
     <div className="mb-6">
-      {/* Streaming status */}
-      {message.isStreaming && !message.content && (
-        <StreamingIndicator
-          status={message.pipelineStatus}
-          isStreaming={message.isStreaming}
-        />
+      {/* Streaming status — subscribes directly to store for real-time updates */}
+      {message.isStreaming && (
+        <StreamingIndicator messageId={message.id} />
       )}
 
-      {/* Markdown content */}
+      {/* Markdown content — brief when SQL exists, full otherwise */}
       {message.content && (
         <div className="text-sm text-foreground leading-relaxed">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => (
-                <p className="mb-3 last:mb-0">{children}</p>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-semibold">{children}</strong>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc pl-4 space-y-1 mb-3">{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="list-decimal pl-4 space-y-1 mb-3">
-                  {children}
-                </ol>
-              ),
-              code: ({ className, children, ...props }) => {
-                const isInline = !className;
-                if (isInline) {
-                  return (
-                    <code
-                      className="bg-surface px-1.5 py-0.5 rounded text-[13px] font-mono border border-border"
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  );
-                }
-                return (
-                  <pre className="bg-surface border border-border p-3 rounded-lg overflow-x-auto my-3">
-                    <code
-                      className="text-[13px] font-mono text-foreground"
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  </pre>
-                );
-              },
-              table: ({ children }) => (
-                <div className="overflow-x-auto my-3">
-                  <table className="w-full text-sm border-collapse">
+          {message.sql ? (
+            /* When SQL exists, show brief explanation only — detail in artifact panel */
+            <p className="mb-1">{message.content.split('\n')[0]}</p>
+          ) : (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => (
+                  <p className="mb-3 last:mb-0">{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold">{children}</strong>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-4 space-y-1 mb-3">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-4 space-y-1 mb-3">
                     {children}
-                  </table>
-                </div>
-              ),
-              th: ({ children }) => (
-                <th className="border border-border px-3 py-1.5 bg-surface text-left font-medium">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="border border-border px-3 py-1.5">
-                  {children}
-                </td>
-              ),
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
+                  </ol>
+                ),
+                code: ({ className, children, ...props }) => {
+                  const isInline = !className;
+                  if (isInline) {
+                    return (
+                      <code
+                        className="bg-surface px-1.5 py-0.5 rounded text-[13px] font-mono border border-border"
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  }
+                  return (
+                    <pre className="bg-surface border border-border p-3 rounded-lg overflow-x-auto my-3">
+                      <code
+                        className="text-[13px] font-mono text-foreground"
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    </pre>
+                  );
+                },
+                table: ({ children }) => (
+                  <div className="overflow-x-auto my-3">
+                    <table className="w-full text-sm border-collapse">
+                      {children}
+                    </table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th className="border border-border px-3 py-1.5 bg-surface text-left font-medium">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="border border-border px-3 py-1.5">
+                    {children}
+                  </td>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          )}
 
           {/* Streaming cursor */}
           {message.isStreaming && message.content && (

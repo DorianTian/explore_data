@@ -3,7 +3,12 @@ import { SKILL_DEFINITIONS } from './skill-definitions.js';
 import { SkillExecutor } from './skill-executor.js';
 import type { ClassificationResult } from './types.js';
 import type { DbClient } from '@nl2sql/db';
-import type { PipelineResult, ConversationTurn, ProgressCallback } from '../types.js';
+import type {
+  PipelineResult,
+  ConversationTurn,
+  ProgressCallback,
+  TokenCallback,
+} from '../types.js';
 import { extractText, extractJson, withRetry } from '../llm-utils.js';
 import { MODEL, TIMEOUT, PIPELINE } from '../config.js';
 
@@ -75,9 +80,11 @@ export class AgentOrchestrator {
       dialect: string;
       conversationHistory: ConversationTurn[];
       onProgress?: ProgressCallback;
+      onToken?: TokenCallback;
     },
   ): Promise<PipelineResult> {
     const progress = context.onProgress ?? (() => {});
+    const onToken = context.onToken;
 
     if (classification.type === 'off_topic') {
       return {
@@ -98,10 +105,10 @@ export class AgentOrchestrator {
 
     // Route based on complexity
     if (classification.complexity === 'simple') {
-      return this.simplePath(userQuery, context, progress);
+      return this.simplePath(userQuery, context, progress, onToken);
     }
 
-    return this.agentPath(userQuery, context, progress);
+    return this.agentPath(userQuery, context, progress, onToken);
   }
 
   /**
@@ -116,6 +123,7 @@ export class AgentOrchestrator {
       dialect: string;
     },
     progress: ProgressCallback,
+    onToken?: TokenCallback,
   ): Promise<PipelineResult> {
     // Parallel: schema search + metric lookup
     progress('schema_search', '正在搜索数据库结构...');
@@ -137,28 +145,33 @@ export class AgentOrchestrator {
       };
     }
 
-    // Direct generation with Claude Sonnet
+    // Direct generation with Claude Sonnet (streaming when callback provided)
     progress('sql_generation', '正在生成 SQL...');
-    const response = await withRetry(
-      () =>
-        this.client.messages.create(
-          {
-            model: MODEL.generation,
-            max_tokens: 1500,
-            system: SIMPLE_SYSTEM_PROMPT,
-            messages: [
-              {
-                role: 'user',
-                content: `Schema:\n${schemaDdl}\n${metricData.found ? `\n指标定义: ${JSON.stringify(metricData.metrics)}` : ''}\n\n问题: ${userQuery}`,
-              },
-            ],
-          },
-          { timeout: TIMEOUT.generation },
-        ),
-      { label: 'AgentOrchestrator.simplePath' },
-    );
+    const params = {
+      model: MODEL.generation,
+      max_tokens: 1500,
+      system: SIMPLE_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user' as const,
+          content: `Schema:\n${schemaDdl}\n${metricData.found ? `\n指标定义: ${JSON.stringify(metricData.metrics)}` : ''}\n\n问题: ${userQuery}`,
+        },
+      ],
+    };
 
-    const text = extractText(response);
+    let text: string;
+    if (onToken) {
+      const stream = this.client.messages.stream(params, { timeout: TIMEOUT.generation });
+      stream.on('text', (delta) => onToken(delta));
+      const finalMessage = await stream.finalMessage();
+      text = extractText(finalMessage);
+    } else {
+      const response = await withRetry(
+        () => this.client.messages.create(params, { timeout: TIMEOUT.generation }),
+        { label: 'AgentOrchestrator.simplePath' },
+      );
+      text = extractText(response);
+    }
     const result = this.parseGenerationResult(text);
 
     // Validate and check result
@@ -201,6 +214,7 @@ export class AgentOrchestrator {
       conversationHistory: ConversationTurn[];
     },
     progress: ProgressCallback,
+    onToken?: TokenCallback,
   ): Promise<PipelineResult> {
     const tools = SKILL_DEFINITIONS.map((s) => ({
       name: s.name,
@@ -311,10 +325,12 @@ export class AgentOrchestrator {
           progress(block.name, skillMessages[block.name] ?? `正在执行 ${block.name}...`);
 
           // Execute skill with error handling — never throws
+          // Pass onToken for sql_generate to enable streaming
           const skillResult = await this.executeSkillSafe(
             block.name,
             block.input as Record<string, unknown>,
             context,
+            block.name === 'sql_generate' ? onToken : undefined,
           );
 
           // Track SQL generation results
@@ -414,9 +430,10 @@ export class AgentOrchestrator {
     skillName: string,
     input: Record<string, unknown>,
     context: { projectId: string; datasourceId: string; dialect: string },
+    onToken?: TokenCallback,
   ): Promise<{ success: boolean; data: unknown }> {
     try {
-      return await this.skillExecutor.execute(skillName, input, context);
+      return await this.skillExecutor.execute(skillName, input, context, onToken);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(

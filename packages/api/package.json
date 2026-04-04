@@ -14,11 +14,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^13.1.0",
     "@nl2sql/db": "workspace:*",
     "@nl2sql/engine": "workspace:*",
     "@nl2sql/shared": "workspace:*",
+    "dotenv": "^17.4.0",
     "drizzle-orm": "^0.44.0",
     "is-generator-function": "^1.1.2",
     "koa": "^3.2.0",

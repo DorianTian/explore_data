@@ -1,3 +1,7 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+config({ path: resolve(process.cwd(), '../../.env') });
 import { createDbClient } from '@nl2sql/db';
 import { createApp } from './app.js';
 

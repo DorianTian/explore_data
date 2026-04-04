@@ -75,6 +75,7 @@ export class NL2SqlPipeline {
         dialect,
         conversationHistory,
         onProgress: progress,
+        onToken,
       });
     }
 
@@ -92,6 +93,7 @@ export class NL2SqlPipeline {
         dialect,
         conversationHistory,
         onProgress: progress,
+        onToken,
       });
     }
 

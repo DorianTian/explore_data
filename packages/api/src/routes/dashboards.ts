@@ -77,7 +77,10 @@ export function createDashboardRouter(db: DbClient): Router {
     const idResult = uuidSchema.safeParse(ctx.params.id);
     if (!idResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' },
+      };
       return;
     }
     const result = await service.getWithWidgets(idResult.data);
@@ -96,7 +99,10 @@ export function createDashboardRouter(db: DbClient): Router {
     const idResult = uuidSchema.safeParse(ctx.params.id);
     if (!idResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' },
+      };
       return;
     }
     const parsed = updateDashboardSchema.safeParse(ctx.request.body);
@@ -124,7 +130,10 @@ export function createDashboardRouter(db: DbClient): Router {
     const idResult = uuidSchema.safeParse(ctx.params.id);
     if (!idResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' },
+      };
       return;
     }
     const deleted = await service.remove(idResult.data);
@@ -143,7 +152,10 @@ export function createDashboardRouter(db: DbClient): Router {
     const idResult = uuidSchema.safeParse(ctx.params.id);
     if (!idResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' },
+      };
       return;
     }
     const parsed = addWidgetSchema.safeParse(ctx.request.body);
@@ -164,13 +176,19 @@ export function createDashboardRouter(db: DbClient): Router {
     const dashboardIdResult = uuidSchema.safeParse(ctx.params.dashboardId);
     if (!dashboardIdResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'dashboardId must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'dashboardId must be a valid UUID' },
+      };
       return;
     }
     const placementResult = uuidSchema.safeParse(ctx.params.placementId);
     if (!placementResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'placementId must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'placementId must be a valid UUID' },
+      };
       return;
     }
     const deleted = await service.removeWidget(dashboardIdResult.data, placementResult.data);
@@ -189,7 +207,10 @@ export function createDashboardRouter(db: DbClient): Router {
     const idResult = uuidSchema.safeParse(ctx.params.id);
     if (!idResult.success) {
       ctx.status = 400;
-      ctx.body = { success: false, error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' } };
+      ctx.body = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'id must be a valid UUID' },
+      };
       return;
     }
     const parsed = updateLayoutSchema.safeParse(ctx.request.body);
