@@ -16,15 +16,15 @@ export function MessageChartPreview({
   chartType,
   config,
 }: MessageChartPreviewProps) {
-  const { selectMessage } = usePanelStore();
+  const { openArtifact } = usePanelStore();
 
   if (chartType === 'kpi') {
     const series = (config.series as Array<{ data: unknown[] }>)?.[0];
     const value = series?.data?.[0];
     return (
       <div
-        onClick={() => selectMessage(messageId)}
-        className="mt-2 p-4 rounded-[var(--radius-lg)] border border-border bg-surface cursor-pointer hover:bg-surface-hover transition-colors"
+        onClick={() => openArtifact(messageId, 'chart')}
+        className="mt-3 p-4 rounded-xl border border-border bg-surface cursor-pointer hover:bg-surface-hover transition-colors"
       >
         <p className="text-xs text-muted mb-1">
           {(config.title as Record<string, string>)?.text ?? 'KPI'}
@@ -36,8 +36,8 @@ export function MessageChartPreview({
 
   return (
     <div
-      onClick={() => selectMessage(messageId)}
-      className="mt-2 rounded-[var(--radius-lg)] border border-border overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => openArtifact(messageId, 'chart')}
+      className="mt-3 rounded-xl border border-border overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
     >
       <ReactECharts
         option={config}

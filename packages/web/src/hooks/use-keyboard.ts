@@ -16,16 +16,16 @@ export function useKeyboardShortcuts() {
         togglePanel();
       }
 
-      /* Cmd/Ctrl + 1/2/3: Switch panel tabs */
-      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+      /* Cmd/Ctrl + Shift + 1/2/3: Switch panel tabs (avoid browser tab conflicts) */
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '1') {
         e.preventDefault();
         openPanel('detail');
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '2') {
         e.preventDefault();
         openPanel('schema');
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '3') {
         e.preventDefault();
         openPanel('history');
       }

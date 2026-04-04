@@ -53,12 +53,17 @@ export interface GenerationResult {
   columnsUsed: string[];
 }
 
+/** Progress callback for streaming pipeline status to the client */
+export type ProgressCallback = (step: string, message: string) => void;
+
 export interface PipelineInput {
   projectId: string;
   datasourceId: string;
   userQuery: string;
   conversationHistory?: ConversationTurn[];
   dialect?: string;
+  /** Optional callback invoked at each pipeline stage for progress reporting */
+  onProgress?: ProgressCallback;
 }
 
 export interface PipelineResult {

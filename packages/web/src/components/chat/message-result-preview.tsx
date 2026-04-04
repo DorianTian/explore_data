@@ -18,12 +18,12 @@ export function MessageResultPreview({
   truncated,
   executionTimeMs,
 }: MessageResultPreviewProps) {
-  const { selectMessage } = usePanelStore();
+  const { openArtifact } = usePanelStore();
   const previewRows = rows.slice(0, 5);
   const previewCols = columns.slice(0, 6);
 
   return (
-    <div className="mt-2">
+    <div className="mt-3">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs text-muted flex items-center gap-1">
           <Icon name="table" size={12} />
@@ -31,13 +31,13 @@ export function MessageResultPreview({
           {executionTimeMs !== undefined && ` · ${executionTimeMs}ms`}
         </span>
         <button
-          onClick={() => selectMessage(messageId)}
+          onClick={() => openArtifact(messageId, 'result')}
           className="text-xs text-primary hover:underline cursor-pointer"
         >
           查看全部
         </button>
       </div>
-      <div className="rounded-[var(--radius-md)] border border-border overflow-hidden">
+      <div className="rounded-lg border border-border overflow-hidden">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-surface">
@@ -65,7 +65,7 @@ export function MessageResultPreview({
                     className="px-2 py-1 text-foreground truncate max-w-[120px] font-mono"
                   >
                     {row[col.name] == null ? (
-                      <span className="text-muted">—</span>
+                      <span className="text-muted">--</span>
                     ) : (
                       String(row[col.name])
                     )}

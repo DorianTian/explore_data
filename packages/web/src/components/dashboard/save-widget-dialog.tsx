@@ -92,7 +92,7 @@ export function SaveWidgetDialog({ open, onClose, message }: SaveWidgetDialogPro
         </Button>
         <Button
           onClick={handleSave}
-          disabled={saving || !title.trim() || !currentProjectId || !currentDatasourceId}
+          disabled={saving || !title.trim() || !currentProjectId || !currentDatasourceId || !message.sql}
         >
           {saving ? '保存中...' : '保存'}
         </Button>

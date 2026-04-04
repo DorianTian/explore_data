@@ -60,8 +60,10 @@ export class NL2SqlPipeline {
   async run(input: PipelineInput): Promise<PipelineResult> {
     const conversationHistory = input.conversationHistory ?? [];
     const dialect = input.dialect ?? 'postgresql';
+    const progress = input.onProgress ?? (() => {});
 
     // Step 1: Router — classify intent + complexity
+    progress('intent_classification', '正在分析查询意图...');
     const classification = await this.router.classify(input.userQuery, conversationHistory);
 
     // Off-topic / clarification → agent handles conversationally
@@ -71,10 +73,12 @@ export class NL2SqlPipeline {
         datasourceId: input.datasourceId,
         dialect,
         conversationHistory,
+        onProgress: progress,
       });
     }
 
     // Step 2: Try metric resolution first (high accuracy path)
+    progress('metric_resolution', '正在匹配业务指标...');
     const metricResult = await this.tryMetricResolution(input);
     if (metricResult) return metricResult;
 
@@ -86,14 +90,21 @@ export class NL2SqlPipeline {
         datasourceId: input.datasourceId,
         dialect,
         conversationHistory,
+        onProgress: progress,
       });
     }
 
     // Simple/moderate queries → full deterministic pipeline
-    return this.runFullPipeline(input, conversationHistory, dialect, {
-      type: classification.type,
-      modificationHint: classification.modificationHint,
-    });
+    return this.runFullPipeline(
+      input,
+      conversationHistory,
+      dialect,
+      {
+        type: classification.type,
+        modificationHint: classification.modificationHint,
+      },
+      progress,
+    );
   }
 
   private async tryMetricResolution(input: PipelineInput): Promise<PipelineResult | null> {

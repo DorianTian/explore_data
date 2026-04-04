@@ -16,30 +16,29 @@ interface StreamingIndicatorProps {
   isStreaming: boolean;
 }
 
+/**
+ * Minimal streaming indicator: pulsing dot with optional pipeline step text.
+ */
 export function StreamingIndicator({
   status,
   isStreaming,
 }: StreamingIndicatorProps) {
   if (!isStreaming) return null;
 
-  if (status) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted animate-pulse-subtle">
-        <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <span>{status.message || STEP_LABELS[status.currentStep]}</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-1.5">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce"
-          style={{ animationDelay: `${i * 150}ms` }}
-        />
-      ))}
+    <div className="flex items-center gap-2 py-2">
+      {/* Pulsing dot */}
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-40" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+      </span>
+
+      {/* Step label */}
+      {status && (
+        <span className="text-sm text-muted">
+          {status.message || STEP_LABELS[status.currentStep]}
+        </span>
+      )}
     </div>
   );
 }

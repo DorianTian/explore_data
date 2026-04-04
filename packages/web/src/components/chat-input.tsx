@@ -37,40 +37,38 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   );
 
   return (
-    <div className="border-t border-border bg-background px-4 py-3">
-      <div className="max-w-3xl mx-auto">
-        <div className="relative flex items-end gap-2 rounded-2xl border border-border bg-surface px-4 py-3 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="输入你的数据问题..."
-            disabled={disabled}
-            rows={1}
-            className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none disabled:opacity-50 leading-relaxed max-h-[200px]"
-          />
-          <button
-            onClick={handleSend}
-            disabled={disabled || !value.trim()}
-            className={`
-              shrink-0 flex items-center justify-center
-              w-8 h-8 rounded-lg transition-all duration-150
-              ${
-                value.trim() && !disabled
-                  ? 'bg-primary text-white hover:bg-primary-hover shadow-sm'
-                  : 'bg-surface-hover text-muted cursor-not-allowed'
-              }
-            `}
-            title="发送"
-          >
-            <SendIcon className="w-4 h-4" />
-          </button>
-        </div>
-        <p className="text-[11px] text-muted mt-1.5 text-center">
-          Enter 发送，Shift + Enter 换行
-        </p>
+    <div className="relative">
+      <div className="relative flex items-end gap-2 rounded-2xl bg-surface shadow-sm border border-border px-4 py-3 focus-within:border-primary/40 focus-within:shadow-md transition-all">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="描述你想查询的数据..."
+          disabled={disabled}
+          rows={1}
+          className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted/60 focus:outline-none disabled:opacity-50 leading-relaxed max-h-[200px]"
+        />
+        <button
+          onClick={handleSend}
+          disabled={disabled || !value.trim()}
+          className={`
+            shrink-0 flex items-center justify-center
+            w-8 h-8 rounded-lg transition-all duration-150
+            ${
+              value.trim() && !disabled
+                ? 'bg-foreground text-background hover:opacity-80 shadow-sm'
+                : 'bg-border text-muted cursor-not-allowed'
+            }
+          `}
+          title="发送"
+        >
+          <SendIcon className="w-4 h-4" />
+        </button>
       </div>
+      <p className="text-[11px] text-muted/50 mt-2 text-center">
+        Enter 发送 · Shift + Enter 换行
+      </p>
     </div>
   );
 }

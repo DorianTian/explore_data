@@ -28,7 +28,9 @@ const CHART_TYPE_LABELS: Record<string, string> = {
 
 export function WidgetCard({ widget, onClick }: WidgetCardProps) {
   const toggleFavorite = useDashboardStore((s) => s.toggleFavorite);
-  const isFavorited = useDashboardStore((s) => s.isFavorited('widget', widget.id));
+  const isFavorited = useDashboardStore((s) =>
+    s.favorites.some((f) => f.targetType === 'widget' && f.targetId === widget.id),
+  );
   const deleteWidget = useDashboardStore((s) => s.deleteWidget);
 
   const handleFavorite = useCallback(

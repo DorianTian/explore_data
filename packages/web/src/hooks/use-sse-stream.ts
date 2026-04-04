@@ -18,7 +18,7 @@ export function useSSEStream() {
   const setPipelineStatus = useChatStore((s) => s.setPipelineStatus);
   const conversationId = useChatStore((s) => s.conversationId);
 
-  const selectMessage = usePanelStore((s) => s.selectMessage);
+  const openArtifact = usePanelStore((s) => s.openArtifact);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const currentDatasourceId = useProjectStore((s) => s.currentDatasourceId);
 
@@ -73,7 +73,7 @@ export function useSSEStream() {
               isStreaming: false,
               pipelineStatus: undefined,
             });
-            selectMessage(assistantMessageId);
+            openArtifact(assistantMessageId, 'sql');
             break;
 
           case 'execution_result':
@@ -134,7 +134,7 @@ export function useSSEStream() {
       setLoading,
       setConversationId,
       setPipelineStatus,
-      selectMessage,
+      openArtifact,
     ],
   );
 

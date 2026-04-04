@@ -77,7 +77,11 @@ interface DashboardActions {
   createDashboard: (params: CreateDashboardParams) => Promise<Dashboard | null>;
   deleteDashboard: (id: string) => Promise<boolean>;
   deleteWidget: (id: string) => Promise<boolean>;
-  toggleFavorite: (projectId: string, targetType: 'widget' | 'dashboard', targetId: string) => Promise<void>;
+  toggleFavorite: (
+    projectId: string,
+    targetType: 'widget' | 'dashboard',
+    targetId: string,
+  ) => Promise<void>;
   isFavorited: (targetType: 'widget' | 'dashboard', targetId: string) => boolean;
 }
 
@@ -214,8 +218,6 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
   isFavorited: (targetType, targetId) => {
     const { favorites } = get();
-    return favorites.some(
-      (f) => f.targetType === targetType && f.targetId === targetId,
-    );
+    return favorites.some((f) => f.targetType === targetType && f.targetId === targetId);
   },
 }));

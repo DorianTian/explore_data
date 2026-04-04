@@ -356,7 +356,8 @@ export class AgentOrchestrator {
           messages.push({ role: 'assistant', content: response.content });
           messages.push({
             role: 'user',
-            content: '你还没有生成 SQL。请使用 schema_search 获取表结构，然后调用 sql_generate 生成查询。',
+            content:
+              '你还没有生成 SQL。请使用 schema_search 获取表结构，然后调用 sql_generate 生成查询。',
           });
           continue;
         }
