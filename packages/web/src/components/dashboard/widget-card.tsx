@@ -38,7 +38,7 @@ export function WidgetCard({ widget, onClick }: WidgetCardProps) {
       e.stopPropagation();
       toggleFavorite(widget.projectId, 'widget', widget.id);
     },
-    [toggleFavorite, widget.id],
+    [toggleFavorite, widget.projectId, widget.id],
   );
 
   const handleDelete = useCallback(

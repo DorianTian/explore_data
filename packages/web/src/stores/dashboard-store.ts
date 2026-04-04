@@ -152,6 +152,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   createWidget: async ({ projectId, datasourceId, title, description, message }) => {
+    if (!message.sql) return null;
+
     const body = {
       projectId,
       datasourceId,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useChatStore } from '@/stores/chat-store';
 import { usePanelStore } from '@/stores/panel-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -24,14 +24,12 @@ export function ExecutionDetail() {
   );
 
   const [editedSql, setEditedSql] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
 
   /* Sync SQL when selection changes */
-  useMemo(() => {
+  useEffect(() => {
     if (message?.sql) {
       setEditedSql(message.sql);
-      setIsEditing(false);
     }
   }, [message?.id, message?.sql]);
 
@@ -67,7 +65,6 @@ export function ExecutionDetail() {
         feedback: 'accepted',
       });
     }
-    setIsEditing(false);
   }, [
     message,
     editedSql,
@@ -148,10 +145,7 @@ export function ExecutionDetail() {
           </div>
           <SqlEditor
             value={editedSql}
-            onChange={(v) => {
-              setEditedSql(v);
-              setIsEditing(true);
-            }}
+            onChange={setEditedSql}
             onSave={hasSqlChanged ? handleSaveCorrection : undefined}
           />
           {hasSqlChanged && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 import { usePanelStore, type ArtifactTab } from '@/stores/panel-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -37,7 +37,7 @@ export function ArtifactPanel() {
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     if (message?.sql) {
       setEditedSql(message.sql);
       setIsEditing(false);
