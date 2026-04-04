@@ -87,7 +87,7 @@ export async function runVerificationLoop(
   let currentSql = sql;
 
   for (let round = 1; round <= VERIFICATION.maxRounds; round++) {
-    onProgress('verification', `Verification round ${round}/${VERIFICATION.maxRounds}...`);
+    onProgress(`verification_${round}`, `验证第 ${round}/${VERIFICATION.maxRounds} 轮...`);
 
     // Stage 1: Static check (zero LLM cost)
     const staticIssues = runStaticCheck(validator, currentSql, schema);
@@ -113,7 +113,7 @@ export async function runVerificationLoop(
       .map((d) => `${d.name}: ${d.score}/${d.weight}${d.issues.length > 0 ? ` [${d.issues.join('; ')}]` : ''}`)
       .join('\n');
 
-    onProgress('verification', `Round ${round} score: ${score.total}/100`, {
+    onProgress(`verification_${round}`, `第 ${round} 轮评分: ${score.total}/100`, {
       thinking: `Static issues: ${staticIssues.length > 0 ? staticIssues.join('; ') : 'none'}\n\n${dimensionBreakdown}`,
       data: { round, score: score.total, passed: score.passed, dimensions: semantic.dimensions },
     });
@@ -124,7 +124,7 @@ export async function runVerificationLoop(
 
     // Apply suggested fix if available
     if (semantic.suggestedFix && round < VERIFICATION.maxRounds) {
-      onProgress('verification', `Applying fix from round ${round}...`);
+      onProgress(`verification_${round}`, `应用第 ${round} 轮修复...`);
       currentSql = semantic.suggestedFix;
     } else {
       // No fix available — stop looping

@@ -15,7 +15,7 @@ interface ChartConfig {
   title?: string;
   xField?: string;
   yField?: string | string[];
-  seriesField?: string;
+  categoryField?: string;
   colorField?: string;
   /** For metric_card */
   valueField?: string;
@@ -61,7 +61,7 @@ function buildEChartsOption(
     return { ...DARK_THEME, ...config.echartsOption };
   }
 
-  const { chartType, xField, yField, seriesField, title } = config;
+  const { chartType, xField, yField, categoryField, title } = config;
 
   const xValues = xField ? rows.map((r) => String(r[xField] ?? '')) : [];
   const yFields = Array.isArray(yField) ? yField : yField ? [yField] : [];
@@ -82,8 +82,8 @@ function buildEChartsOption(
     case 'area': {
       base.xAxis = { type: 'category', data: xValues, axisLabel: { color: '#a1a1aa' } };
       base.yAxis = { type: 'value', axisLabel: { color: '#a1a1aa' }, splitLine: { lineStyle: { color: '#27272a' } } };
-      base.series = buildLineSeries(yFields, rows, seriesField, chartType === 'area');
-      if (yFields.length > 1 || seriesField) {
+      base.series = buildLineSeries(yFields, rows, categoryField, chartType === 'area');
+      if (yFields.length > 1 || categoryField) {
         base.legend = { ...DARK_THEME.legend, bottom: 0 };
       }
       break;
@@ -92,8 +92,8 @@ function buildEChartsOption(
     case 'grouped_bar': {
       base.xAxis = { type: 'category', data: xValues, axisLabel: { color: '#a1a1aa' } };
       base.yAxis = { type: 'value', axisLabel: { color: '#a1a1aa' }, splitLine: { lineStyle: { color: '#27272a' } } };
-      base.series = buildBarSeries(yFields, rows, seriesField);
-      if (yFields.length > 1 || seriesField) {
+      base.series = buildBarSeries(yFields, rows, categoryField);
+      if (yFields.length > 1 || categoryField) {
         base.legend = { ...DARK_THEME.legend, bottom: 0 };
       }
       break;
@@ -101,7 +101,7 @@ function buildEChartsOption(
     case 'horizontal_bar': {
       base.yAxis = { type: 'category', data: xValues, axisLabel: { color: '#a1a1aa' } };
       base.xAxis = { type: 'value', axisLabel: { color: '#a1a1aa' }, splitLine: { lineStyle: { color: '#27272a' } } };
-      base.series = buildBarSeries(yFields, rows, seriesField);
+      base.series = buildBarSeries(yFields, rows, categoryField);
       break;
     }
     case 'pie': {
@@ -158,7 +158,7 @@ function buildEChartsOption(
       /* Fallback: try bar chart */
       base.xAxis = { type: 'category', data: xValues, axisLabel: { color: '#a1a1aa' } };
       base.yAxis = { type: 'value', axisLabel: { color: '#a1a1aa' }, splitLine: { lineStyle: { color: '#27272a' } } };
-      base.series = buildBarSeries(yFields, rows, seriesField);
+      base.series = buildBarSeries(yFields, rows, categoryField);
       break;
     }
   }
@@ -166,15 +166,15 @@ function buildEChartsOption(
   return base;
 }
 
-/** Build line/area series — supports grouped series via seriesField */
+/** Build line/area series — supports grouped series via categoryField */
 function buildLineSeries(
   yFields: string[],
   rows: Record<string, unknown>[],
-  seriesField: string | undefined,
+  categoryField: string | undefined,
   isArea: boolean,
 ): unknown[] {
-  if (seriesField && yFields.length === 1) {
-    return buildGroupedSeries(yFields[0], rows, seriesField, isArea ? 'line' : 'line', isArea);
+  if (categoryField && yFields.length === 1) {
+    return buildGroupedSeries(yFields[0], rows, categoryField, isArea ? 'line' : 'line', isArea);
   }
   return yFields.map((f) => ({
     type: 'line',
@@ -189,10 +189,10 @@ function buildLineSeries(
 function buildBarSeries(
   yFields: string[],
   rows: Record<string, unknown>[],
-  seriesField: string | undefined,
+  categoryField: string | undefined,
 ): unknown[] {
-  if (seriesField && yFields.length === 1) {
-    return buildGroupedSeries(yFields[0], rows, seriesField, 'bar', false);
+  if (categoryField && yFields.length === 1) {
+    return buildGroupedSeries(yFields[0], rows, categoryField, 'bar', false);
   }
   return yFields.map((f) => ({
     type: 'bar',
@@ -206,13 +206,13 @@ function buildBarSeries(
 function buildGroupedSeries(
   yField: string,
   rows: Record<string, unknown>[],
-  seriesField: string,
+  categoryField: string,
   chartType: string,
   isArea: boolean,
 ): unknown[] {
   const groups = new Map<string, number[]>();
   for (const row of rows) {
-    const key = String(row[seriesField] ?? '');
+    const key = String(row[categoryField] ?? '');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(Number(row[yField]) || 0);
   }
