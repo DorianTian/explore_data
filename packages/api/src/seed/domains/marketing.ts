@@ -2068,6 +2068,66 @@ export const marketingDomain: DomainDefinition = {
       ],
     ),
 
+    // ─── Automation aggregations ───
+    generateSummaryTable(
+      'dws', 'automation_workflow_stats', '自动化工作流效果汇总', 'dws',
+      [
+        { name: 'workflow_id', comment: '工作流ID' },
+        { name: 'workflow_name', comment: '工作流名称' },
+      ],
+      [
+        { name: 'total_triggered', type: 'bigint', comment: '触发次数' },
+        { name: 'completed', type: 'bigint', comment: '完成次数' },
+        { name: 'failed', type: 'bigint', comment: '失败次数' },
+        { name: 'completion_rate', type: 'decimal', comment: '完成率(%)' },
+        { name: 'avg_completion_time_hours', type: 'decimal', comment: '平均完成时长(小时)' },
+      ],
+    ),
+    generateSummaryTable(
+      'dws', 'spend_daily_by_objective', '投放目标维度每日花费汇总', 'dws',
+      [
+        { name: 'objective', comment: '活动目标' },
+        { name: 'channel_type', comment: '渠道类型' },
+      ],
+      [
+        { name: 'spend_amount', type: 'decimal', comment: '花费金额' },
+        { name: 'impressions', type: 'bigint', comment: '展示数' },
+        { name: 'conversions', type: 'bigint', comment: '转化数' },
+        { name: 'revenue', type: 'decimal', comment: '收入' },
+        { name: 'roas', type: 'decimal', comment: 'ROAS' },
+      ],
+    ),
+    generateSummaryTable(
+      'dws', 'device_targeting_stats', '设备定向投放效果汇总', 'dws',
+      [
+        { name: 'device_type', comment: '设备类型' },
+        { name: 'os', comment: '操作系统' },
+      ],
+      [
+        { name: 'impressions', type: 'bigint', comment: '展示数' },
+        { name: 'clicks', type: 'bigint', comment: '点击数' },
+        { name: 'conversions', type: 'bigint', comment: '转化数' },
+        { name: 'ctr', type: 'decimal', comment: '点击率(%)' },
+        { name: 'cvr', type: 'decimal', comment: '转化率(%)' },
+        { name: 'cpa', type: 'decimal', comment: 'CPA' },
+      ],
+    ),
+    generateSummaryTable(
+      'dws', 'hourly_performance_stats', '分时段投放效果汇总', 'dws',
+      [
+        { name: 'hour_of_day', comment: '小时(0-23)' },
+        { name: 'day_of_week', comment: '周几(1-7)' },
+      ],
+      [
+        { name: 'impressions', type: 'bigint', comment: '展示数' },
+        { name: 'clicks', type: 'bigint', comment: '点击数' },
+        { name: 'conversions', type: 'bigint', comment: '转化数' },
+        { name: 'spend_amount', type: 'decimal', comment: '花费金额' },
+        { name: 'ctr', type: 'decimal', comment: '点击率(%)' },
+        { name: 'cpa', type: 'decimal', comment: 'CPA' },
+      ],
+    ),
+
     /* ===================================================================
      *  ADS Layer (~35 tables) — 应用层
      * =================================================================== */
@@ -2547,6 +2607,114 @@ export const marketingDomain: DomainDefinition = {
         { name: 'top_channel', type: 'bigint', comment: '最佳渠道ID' },
         { name: 'wow_spend_change', type: 'decimal', comment: '花费周环比(%)' },
         { name: 'wow_revenue_change', type: 'decimal', comment: '收入周环比(%)' },
+      ],
+    ),
+
+    // ─── Automation analytics ───
+    generateSummaryTable(
+      'ads', 'automation_effectiveness_report', '自动化营销效果报告', 'ads',
+      [
+        { name: 'workflow_id', comment: '工作流ID' },
+        { name: 'workflow_name', comment: '工作流名称' },
+      ],
+      [
+        { name: 'total_triggered', type: 'bigint', comment: '触发次数' },
+        { name: 'completion_rate', type: 'decimal', comment: '完成率(%)' },
+        { name: 'conversions', type: 'bigint', comment: '转化数' },
+        { name: 'revenue', type: 'decimal', comment: '产生收入' },
+        { name: 'cost_per_conversion', type: 'decimal', comment: '单次转化成本' },
+      ],
+    ),
+
+    // ─── Competitive benchmarking ───
+    generateSummaryTable(
+      'ads', 'channel_benchmark_report', '渠道效果基准对比', 'ads',
+      [
+        { name: 'channel_name', comment: '渠道名称' },
+        { name: 'metric_name', comment: '指标名称' },
+      ],
+      [
+        { name: 'our_value', type: 'decimal', comment: '我方数值' },
+        { name: 'industry_avg', type: 'decimal', comment: '行业平均值' },
+        { name: 'industry_p75', type: 'decimal', comment: '行业75分位' },
+        { name: 'gap_to_avg', type: 'decimal', comment: '与均值差距(%)' },
+      ],
+    ),
+
+    // ─── Incrementality testing ───
+    generateSummaryTable(
+      'ads', 'incrementality_test_results', '增量测试结果', 'ads',
+      [
+        { name: 'test_id', comment: '测试ID' },
+        { name: 'channel_name', comment: '渠道名称' },
+      ],
+      [
+        { name: 'control_conversions', type: 'bigint', comment: '对照组转化数' },
+        { name: 'treatment_conversions', type: 'bigint', comment: '实验组转化数' },
+        { name: 'incremental_conversions', type: 'bigint', comment: '增量转化数' },
+        { name: 'incrementality_rate', type: 'decimal', comment: '增量率(%)' },
+        { name: 'true_roas', type: 'decimal', comment: '真实ROAS' },
+      ],
+    ),
+
+    // ─── Frequency capping ───
+    generateSummaryTable(
+      'ads', 'frequency_impact_analysis', '广告频次影响分析', 'ads',
+      [
+        { name: 'frequency_bucket', comment: '频次区间' },
+        { name: 'channel_name', comment: '渠道名称' },
+      ],
+      [
+        { name: 'user_count', type: 'bigint', comment: '用户数' },
+        { name: 'conversion_rate', type: 'decimal', comment: '转化率(%)' },
+        { name: 'avg_cpa', type: 'decimal', comment: '平均CPA' },
+        { name: 'fatigue_score', type: 'decimal', comment: '疲劳度评分' },
+      ],
+    ),
+
+    // ─── SMS analytics ───
+    generateSummaryTable(
+      'ads', 'sms_effectiveness_report', '短信营销效果报告', 'ads',
+      [{ name: 'sms_campaign_id', comment: '短信活动ID' }],
+      [
+        { name: 'total_sent', type: 'bigint', comment: '发送数' },
+        { name: 'delivery_rate', type: 'decimal', comment: '送达率(%)' },
+        { name: 'click_rate', type: 'decimal', comment: '点击率(%)' },
+        { name: 'conversion_rate', type: 'decimal', comment: '转化率(%)' },
+        { name: 'cost_per_send', type: 'decimal', comment: '单条成本' },
+        { name: 'revenue_per_send', type: 'decimal', comment: '单条收入' },
+      ],
+    ),
+
+    // ─── Keyword analytics ───
+    generateSummaryTable(
+      'ads', 'keyword_opportunity_report', '关键词机会分析', 'ads',
+      [
+        { name: 'keyword', comment: '关键词' },
+        { name: 'source', comment: '来源: seo/sem' },
+      ],
+      [
+        { name: 'search_volume', type: 'bigint', comment: '搜索量' },
+        { name: 'current_position', type: 'bigint', comment: '当前排名' },
+        { name: 'estimated_traffic', type: 'bigint', comment: '预估流量' },
+        { name: 'competition_level', type: 'decimal', comment: '竞争程度' },
+        { name: 'opportunity_score', type: 'decimal', comment: '机会评分' },
+      ],
+    ),
+
+    // ─── Creative insights ───
+    generateSummaryTable(
+      'ads', 'creative_fatigue_monitor', '素材疲劳度监控', 'ads',
+      [
+        { name: 'creative_id', comment: '素材ID' },
+        { name: 'creative_name', comment: '素材名称' },
+        { name: 'days_active', comment: '投放天数' },
+      ],
+      [
+        { name: 'initial_ctr', type: 'decimal', comment: '初始CTR(%)' },
+        { name: 'current_ctr', type: 'decimal', comment: '当前CTR(%)' },
+        { name: 'ctr_decay_rate', type: 'decimal', comment: 'CTR衰减率(%)' },
+        { name: 'recommended_action', type: 'bigint', comment: '建议动作(1=继续/2=优化/3=下线)' },
       ],
     ),
   ],

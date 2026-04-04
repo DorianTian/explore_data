@@ -2324,6 +2324,59 @@ export const userGrowthDomain: DomainDefinition = {
         { name: 'health_score_trend', type: 'decimal', comment: '健康评分趋势' },
       ],
     ),
+    generateSummaryTable(
+      'ads', 'geo_growth_report', '地域增长报表', 'ads',
+      [
+        { name: 'country', comment: '国家' },
+        { name: 'city', comment: '城市' },
+      ],
+      [
+        { name: 'total_users', type: 'bigint', comment: '总用户数' },
+        { name: 'new_registers', type: 'bigint', comment: '新注册数' },
+        { name: 'dau', type: 'bigint', comment: 'DAU' },
+        { name: 'retention_d7', type: 'decimal', comment: '7日留存率' },
+        { name: 'growth_rate', type: 'decimal', comment: '增长率' },
+      ],
+    ),
+    generateSummaryTable(
+      'ads', 'feature_impact_report', '功能影响力报表', 'ads',
+      [
+        { name: 'feature_name', comment: '功能名称' },
+      ],
+      [
+        { name: 'adoption_rate', type: 'decimal', comment: '采纳率' },
+        { name: 'retention_lift', type: 'decimal', comment: '留存提升' },
+        { name: 'engagement_lift', type: 'decimal', comment: '活跃度提升' },
+        { name: 'corr_with_retention', type: 'decimal', comment: '与留存相关性' },
+      ],
+    ),
+    generateSummaryTable(
+      'ads', 'device_performance_report', '设备性能报表', 'ads',
+      [
+        { name: 'device_model', comment: '设备型号' },
+        { name: 'os_version', comment: 'OS版本' },
+      ],
+      [
+        { name: 'user_count', type: 'bigint', comment: '用户数' },
+        { name: 'avg_session_duration_sec', type: 'decimal', comment: '平均会话时长' },
+        { name: 'crash_rate', type: 'decimal', comment: '崩溃率' },
+        { name: 'retention_d7', type: 'decimal', comment: '7日留存率' },
+        { name: 'uninstall_rate', type: 'decimal', comment: '卸载率' },
+      ],
+    ),
+    generateSummaryTable(
+      'ads', 'push_time_recommendation', '推送最佳时段推荐', 'ads',
+      [
+        { name: 'segment_name', comment: '分群名称' },
+        { name: 'best_hour', comment: '最佳发送小时' },
+        { name: 'best_day_of_week', comment: '最佳发送星期' },
+      ],
+      [
+        { name: 'predicted_open_rate', type: 'decimal', comment: '预测打开率' },
+        { name: 'historical_open_rate', type: 'decimal', comment: '历史打开率' },
+        { name: 'sample_size', type: 'bigint', comment: '样本量' },
+      ],
+    ),
   ],
 
   /* ----------------------------------------------------------------

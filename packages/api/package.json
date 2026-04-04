@@ -7,6 +7,9 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "seed": "tsx src/seed/index.ts",
+    "seed:validate": "tsx src/seed/validate.ts",
+    "seed:legacy": "tsx src/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

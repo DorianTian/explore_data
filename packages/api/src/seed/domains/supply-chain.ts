@@ -822,6 +822,208 @@ const odsTables: TableDef[] = [
       col.createdAt(),
     ],
   },
+
+  // ---------- Transfer / Allocation ----------
+  {
+    name: 'ods_transfer_order',
+    comment: '调拨单',
+    layer: 'ods',
+    columns: [
+      col.id('调拨单ID'),
+      col.varchar('transfer_no', 50, '调拨单号', { isNullable: false }),
+      col.fk('from_warehouse_id', 'ods_warehouse', '调出仓库ID'),
+      col.fk('to_warehouse_id', 'ods_warehouse', '调入仓库ID'),
+      col.varchar('transfer_reason', 100, '调拨原因'),
+      col.date('planned_date', '计划调拨日期'),
+      col.date('actual_date', '实际调拨日期'),
+      col.varchar('applicant', 50, '申请人'),
+      col.status('调拨状态', '待审批/已批准/调出中/已到达/已完成'),
+      col.createdAt(),
+      col.updatedAt(),
+    ],
+  },
+  {
+    name: 'ods_transfer_order_item',
+    comment: '调拨单明细',
+    layer: 'ods',
+    columns: [
+      col.id('明细ID'),
+      col.fk('transfer_id', 'ods_transfer_order', '调拨单ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.varchar('batch_no', 50, '批次号'),
+      col.int('transfer_quantity', '调拨数量'),
+      col.int('received_quantity', '收到数量'),
+      col.varchar('unit', 20, '单位'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Scrap / Write-off ----------
+  {
+    name: 'ods_scrap_order',
+    comment: '报废处理单',
+    layer: 'ods',
+    columns: [
+      col.id('报废单ID'),
+      col.varchar('scrap_no', 50, '报废单号', { isNullable: false }),
+      col.fk('warehouse_id', 'ods_warehouse', '所在仓库ID'),
+      col.varchar('scrap_type', 30, '报废类型: 过期报废/质量报废/损坏报废'),
+      col.varchar('applicant', 50, '申请人'),
+      col.varchar('approver', 50, '审批人'),
+      col.decimal('total_loss_amount', '18,2', '总损失金额'),
+      col.status('报废状态', '申请中/已批准/已处理/已拒绝'),
+      col.createdAt(),
+      col.updatedAt(),
+    ],
+  },
+  {
+    name: 'ods_scrap_order_item',
+    comment: '报废处理明细',
+    layer: 'ods',
+    columns: [
+      col.id('明细ID'),
+      col.fk('scrap_id', 'ods_scrap_order', '报废单ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.varchar('batch_no', 50, '批次号'),
+      col.int('quantity', '报废数量'),
+      col.decimal('unit_cost', '18,4', '单位成本'),
+      col.decimal('loss_amount', '18,2', '损失金额'),
+      col.text('scrap_reason', '报废原因'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Material Price History ----------
+  {
+    name: 'ods_material_price_history',
+    comment: '物料价格变动历史',
+    layer: 'ods',
+    columns: [
+      col.id('记录ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.decimal('old_price', '18,4', '原价格'),
+      col.decimal('new_price', '18,4', '新价格'),
+      col.decimal('change_rate', '8,4', '变化率'),
+      col.date('effective_date', '生效日期'),
+      col.varchar('change_reason', 100, '变动原因'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Logistics Insurance ----------
+  {
+    name: 'ods_shipment_insurance',
+    comment: '物流保险记录',
+    layer: 'ods',
+    columns: [
+      col.id('保险ID'),
+      col.fk('shipment_id', 'ods_shipment_order', '发货单ID'),
+      col.varchar('policy_no', 50, '保单号'),
+      col.decimal('insured_value', '18,2', '保额'),
+      col.decimal('premium', '12,2', '保费'),
+      col.varchar('insurer', 100, '保险公司'),
+      col.bool('has_claim', '是否有理赔'),
+      col.decimal('claim_amount', '18,2', '理赔金额'),
+      col.status('保险状态', '生效/已过期/理赔中/已理赔'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Supplier Bank Account ----------
+  {
+    name: 'ods_supplier_bank_account',
+    comment: '供应商银行账户',
+    layer: 'ods',
+    columns: [
+      col.id('账户ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.varchar('bank_name', 100, '银行名称'),
+      col.varchar('account_name', 100, '账户名称'),
+      col.varchar('account_number', 50, '银行账号', { isPii: true }),
+      col.varchar('swift_code', 20, 'SWIFT代码'),
+      col.varchar('currency', 10, '币种'),
+      col.bool('is_default', '是否默认账户'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Inbound Appointment ----------
+  {
+    name: 'ods_inbound_appointment',
+    comment: '入库预约',
+    layer: 'ods',
+    columns: [
+      col.id('预约ID'),
+      col.varchar('appointment_no', 50, '预约编号', { isNullable: false }),
+      col.fk('warehouse_id', 'ods_warehouse', '仓库ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.varchar('vehicle_plate', 20, '车牌号'),
+      col.varchar('driver_name', 50, '司机姓名'),
+      col.varchar('driver_phone', 30, '司机电话'),
+      col.timestamp('appointment_time', '预约时间'),
+      col.timestamp('actual_arrival_time', '实际到达时间'),
+      col.int('estimated_qty', '预估数量'),
+      col.varchar('dock_no', 20, '月台号'),
+      col.status('预约状态', '已预约/已到达/卸货中/已完成/已取消'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Material Substitution ----------
+  {
+    name: 'ods_material_substitution',
+    comment: '物料替代关系',
+    layer: 'ods',
+    columns: [
+      col.id('替代关系ID'),
+      col.fk('primary_material_id', 'ods_material', '主物料ID'),
+      col.fk('substitute_material_id', 'ods_material', '替代物料ID'),
+      col.varchar('substitution_type', 30, '替代类型: 完全替代/部分替代/紧急替代'),
+      col.decimal('conversion_ratio', '8,4', '换算比例'),
+      col.int('priority', '替代优先级'),
+      col.date('effective_date', '生效日期'),
+      col.date('expiry_date', '失效日期'),
+      col.bool('is_active', '是否有效'),
+      col.createdAt(),
+    ],
+  },
+
+  // ---------- Outbound Order ----------
+  {
+    name: 'ods_outbound_order',
+    comment: '出库单',
+    layer: 'ods',
+    columns: [
+      col.id('出库单ID'),
+      col.varchar('outbound_no', 50, '出库单号', { isNullable: false }),
+      col.fk('warehouse_id', 'ods_warehouse', '出库仓库ID'),
+      col.varchar('outbound_type', 30, '出库类型: 销售出库/生产领料/调拨出库'),
+      col.varchar('source_doc_no', 50, '来源单据号'),
+      col.date('planned_date', '计划出库日期'),
+      col.date('actual_date', '实际出库日期'),
+      col.varchar('picker', 50, '拣货人'),
+      col.status('出库状态', '待拣货/拣货中/待复核/已出库'),
+      col.createdAt(),
+      col.updatedAt(),
+    ],
+  },
+  {
+    name: 'ods_outbound_order_item',
+    comment: '出库单明细',
+    layer: 'ods',
+    columns: [
+      col.id('明细ID'),
+      col.fk('outbound_id', 'ods_outbound_order', '出库单ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.fk('location_id', 'ods_storage_location', '拣货库位ID'),
+      col.varchar('batch_no', 50, '批次号'),
+      col.int('planned_quantity', '计划数量'),
+      col.int('actual_quantity', '实际数量'),
+      col.varchar('unit', 20, '单位'),
+      col.createdAt(),
+    ],
+  },
 ];
 
 /* ================================================================
@@ -1353,6 +1555,292 @@ const dwdTables: TableDef[] = [
       col.decimal('extended_quantity', '12,4', '展开用量'),
       col.decimal('unit_cost', '18,4', '子件单价'),
       col.decimal('extended_cost', '18,2', '展开成本'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Transfer Facts ----------
+  {
+    name: 'dwd_fact_transfer',
+    comment: '调拨事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('调拨事实ID'),
+      col.varchar('transfer_no', 50, '调拨单号'),
+      col.fk('from_warehouse_id', 'ods_warehouse', '调出仓库ID'),
+      col.fk('to_warehouse_id', 'ods_warehouse', '调入仓库ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.int('transfer_quantity', '调拨数量'),
+      col.int('received_quantity', '收到数量'),
+      col.decimal('transfer_value', '18,2', '调拨金额'),
+      col.int('transit_days', '在途天数'),
+      col.date('transfer_date', '调拨日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Scrap Facts ----------
+  {
+    name: 'dwd_fact_scrap',
+    comment: '报废事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('报废事实ID'),
+      col.fk('warehouse_id', 'ods_warehouse', '仓库ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.varchar('scrap_type', 30, '报废类型'),
+      col.int('scrap_quantity', '报废数量'),
+      col.decimal('loss_amount', '18,2', '损失金额'),
+      col.varchar('reason_category', 50, '原因分类'),
+      col.date('scrap_date', '报废日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Production Plan Fact ----------
+  {
+    name: 'dwd_fact_production_plan',
+    comment: '生产计划事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('计划事实ID'),
+      col.varchar('plan_no', 50, '计划编号'),
+      col.varchar('plan_type', 30, '计划类型'),
+      col.fk('product_material_id', 'ods_material', '产品物料ID'),
+      col.fk('production_line_id', 'ods_production_line', '生产线ID'),
+      col.int('planned_quantity', '计划产量'),
+      col.int('actual_quantity', '实际产量'),
+      col.decimal('completion_rate', '5,4', '完成率'),
+      col.date('plan_start_date', '计划开始日期'),
+      col.date('plan_end_date', '计划结束日期'),
+      col.int('priority', '优先级'),
+      col.varchar('plan_status', 30, '计划状态'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Supplier Contract Fact ----------
+  {
+    name: 'dwd_fact_supplier_contract',
+    comment: '供应商合同事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('合同事实ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.varchar('contract_no', 50, '合同编号'),
+      col.varchar('contract_type', 30, '合同类型'),
+      col.decimal('contract_amount', '18,2', '合同金额'),
+      col.decimal('executed_amount', '18,2', '已执行金额'),
+      col.decimal('execution_rate', '5,4', '执行率'),
+      col.date('start_date', '开始日期'),
+      col.date('end_date', '结束日期'),
+      col.int('remaining_days', '剩余天数'),
+      col.varchar('contract_status', 30, '合同状态'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Material Price Change Fact ----------
+  {
+    name: 'dwd_fact_price_change',
+    comment: '物料价格变动事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('变动事实ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.decimal('old_price', '18,4', '原价格'),
+      col.decimal('new_price', '18,4', '新价格'),
+      col.decimal('change_amount', '18,4', '变动金额'),
+      col.decimal('change_rate', '8,4', '变动率'),
+      col.date('effective_date', '生效日期'),
+      col.varchar('change_reason', 100, '变动原因'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Supplier Certification Fact ----------
+  {
+    name: 'dwd_fact_supplier_certification',
+    comment: '供应商资质事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('资质事实ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.varchar('cert_type', 50, '认证类型'),
+      col.varchar('cert_number', 100, '证书编号'),
+      col.date('issue_date', '颁发日期'),
+      col.date('expiry_date', '到期日期'),
+      col.int('remaining_days', '剩余有效天数'),
+      col.bool('is_expired', '是否过期'),
+      col.varchar('cert_status', 30, '认证状态'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Insurance Fact ----------
+  {
+    name: 'dwd_fact_shipment_insurance',
+    comment: '物流保险事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('保险事实ID'),
+      col.fk('shipment_id', 'ods_shipment_order', '发货单ID'),
+      col.fk('carrier_id', 'ods_carrier', '承运商ID'),
+      col.decimal('insured_value', '18,2', '保额'),
+      col.decimal('premium', '12,2', '保费'),
+      col.decimal('premium_rate', '8,6', '费率'),
+      col.bool('has_claim', '是否理赔'),
+      col.decimal('claim_amount', '18,2', '理赔金额'),
+      col.date('policy_date', '保单日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Packaging Fact ----------
+  {
+    name: 'dwd_fact_packaging_usage',
+    comment: '包装使用事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('包装事实ID'),
+      col.varchar('packaging_type', 30, '包装类型'),
+      col.varchar('spec_code', 30, '规格编码'),
+      col.fk('material_id', 'ods_material', '包装材料ID'),
+      col.int('usage_quantity', '使用数量'),
+      col.decimal('unit_cost', '18,4', '单位成本'),
+      col.decimal('total_cost', '18,2', '总成本'),
+      col.bool('is_damaged', '是否损坏'),
+      col.bool('is_reused', '是否重复利用'),
+      col.date('usage_date', '使用日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Dimension: Production Line ----------
+  {
+    name: 'dwd_dim_production_line',
+    comment: '生产线维度表',
+    layer: 'dwd',
+    columns: [
+      col.id('生产线维度ID'),
+      col.varchar('line_code', 30, '生产线编码'),
+      col.varchar('line_name', 100, '生产线名称'),
+      col.varchar('line_type', 30, '生产线类型'),
+      col.varchar('workshop_name', 100, '车间名称'),
+      col.varchar('factory', 100, '所属工厂'),
+      col.int('capacity_per_hour', '每小时产能'),
+      col.varchar('line_status', 30, '生产线状态'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Dimension: Cost Center ----------
+  {
+    name: 'dwd_dim_cost_center',
+    comment: '成本中心维度表',
+    layer: 'dwd',
+    columns: [
+      col.id('成本中心维度ID'),
+      col.varchar('cost_center_code', 30, '成本中心编码'),
+      col.varchar('cost_center_name', 100, '成本中心名称'),
+      col.varchar('cost_type', 30, '成本类型'),
+      col.varchar('department', 100, '所属部门'),
+      col.decimal('budget_amount', '18,2', '预算金额'),
+      col.varchar('center_status', 30, '状态'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Outbound Facts ----------
+  {
+    name: 'dwd_fact_outbound',
+    comment: '出库事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('出库事实ID'),
+      col.varchar('outbound_no', 50, '出库单号'),
+      col.fk('warehouse_id', 'ods_warehouse', '仓库ID'),
+      col.fk('material_id', 'ods_material', '物料ID'),
+      col.varchar('outbound_type', 30, '出库类型'),
+      col.int('planned_quantity', '计划数量'),
+      col.int('actual_quantity', '实际数量'),
+      col.decimal('outbound_value', '18,2', '出库金额'),
+      col.int('pick_time_minutes', '拣货耗时(分钟)'),
+      col.int('error_count', '差错数'),
+      col.date('outbound_date', '出库日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Inbound Appointment Facts ----------
+  {
+    name: 'dwd_fact_inbound_appointment',
+    comment: '入库预约事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('预约事实ID'),
+      col.fk('warehouse_id', 'ods_warehouse', '仓库ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.timestamp('appointment_time', '预约时间'),
+      col.timestamp('actual_arrival_time', '实际到达时间'),
+      col.int('wait_time_minutes', '等待时间(分钟)'),
+      col.int('unload_time_minutes', '卸货时间(分钟)'),
+      col.bool('is_on_time', '是否准时到达'),
+      col.varchar('appointment_status', 30, '预约状态'),
+      col.date('appointment_date', '预约日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Material Substitution Fact ----------
+  {
+    name: 'dwd_fact_material_substitution',
+    comment: '物料替代使用事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('替代事实ID'),
+      col.fk('primary_material_id', 'ods_material', '主物料ID'),
+      col.fk('substitute_material_id', 'ods_material', '替代物料ID'),
+      col.varchar('substitution_type', 30, '替代类型'),
+      col.int('substitution_qty', '替代数量'),
+      col.decimal('cost_difference', '18,2', '成本差异'),
+      col.varchar('trigger_reason', 50, '触发原因: 缺货/质量问题/成本优化'),
+      col.date('substitution_date', '替代日期'),
+      col.ds(),
+      col.etlTime(),
+    ],
+  },
+
+  // ---------- Supplier Evaluation Fact ----------
+  {
+    name: 'dwd_fact_supplier_evaluation',
+    comment: '供应商评估事实表',
+    layer: 'dwd',
+    columns: [
+      col.id('评估事实ID'),
+      col.fk('supplier_id', 'ods_supplier', '供应商ID'),
+      col.varchar('eval_period', 20, '评估周期'),
+      col.decimal('quality_score', '5,2', '质量得分'),
+      col.decimal('delivery_score', '5,2', '交付得分'),
+      col.decimal('cost_score', '5,2', '成本得分'),
+      col.decimal('service_score', '5,2', '服务得分'),
+      col.decimal('total_score', '5,2', '综合得分'),
+      col.varchar('grade', 10, '评级'),
+      col.date('eval_date', '评估日期'),
       col.ds(),
       col.etlTime(),
     ],
@@ -1942,6 +2430,114 @@ const dwsTables: TableDef[] = [
       { name: 'reuse_count', type: 'bigint', comment: '重复利用次数' },
     ],
   ),
+
+  // ---------- Transfer Summaries ----------
+  generateSummaryTable(
+    'dws', 'transfer_summary_monthly', '月度调拨汇总表', 'dws',
+    [...scDimensions.warehouse.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'transfer_out_count', type: 'bigint', comment: '调出次数' },
+      { name: 'transfer_in_count', type: 'bigint', comment: '调入次数' },
+      { name: 'transfer_out_qty', type: 'bigint', comment: '调出总量' },
+      { name: 'transfer_in_qty', type: 'bigint', comment: '调入总量' },
+      { name: 'transfer_value', type: 'decimal', comment: '调拨总金额' },
+      { name: 'avg_transit_days', type: 'decimal', comment: '平均在途天数' },
+    ],
+  ),
+
+  // ---------- Scrap Summary ----------
+  generateSummaryTable(
+    'dws', 'scrap_loss_summary', '报废损失汇总表', 'dws',
+    [{ name: 'scrap_type', comment: '报废类型' }, { name: 'reason_category', comment: '原因分类' }, ...scDimensions.timePeriod],
+    [
+      { name: 'scrap_count', type: 'bigint', comment: '报废次数' },
+      { name: 'scrap_qty', type: 'bigint', comment: '报废数量' },
+      { name: 'loss_amount', type: 'decimal', comment: '损失金额' },
+      { name: 'proportion', type: 'decimal', comment: '占比' },
+    ],
+  ),
+
+  // ---------- Supplier Contract Summary ----------
+  generateSummaryTable(
+    'dws', 'supplier_contract_summary', '供应商合同汇总表', 'dws',
+    [...scDimensions.supplier.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'active_contracts', type: 'bigint', comment: '有效合同数' },
+      { name: 'total_contract_value', type: 'decimal', comment: '合同总金额' },
+      { name: 'executed_value', type: 'decimal', comment: '已执行金额' },
+      { name: 'avg_execution_rate', type: 'decimal', comment: '平均执行率' },
+      { name: 'expiring_30d_count', type: 'bigint', comment: '30天内到期合同数' },
+    ],
+  ),
+
+  // ---------- Safety Stock Compliance ----------
+  generateSummaryTable(
+    'dws', 'safety_stock_compliance', '安全库存达标率表', 'dws',
+    [...scDimensions.warehouse.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'total_sku', type: 'bigint', comment: '总SKU数' },
+      { name: 'above_safety_count', type: 'bigint', comment: '高于安全库存SKU数' },
+      { name: 'below_safety_count', type: 'bigint', comment: '低于安全库存SKU数' },
+      { name: 'stockout_count', type: 'bigint', comment: '缺货SKU数' },
+      { name: 'compliance_rate', type: 'decimal', comment: '安全库存达标率' },
+    ],
+  ),
+
+  // ---------- Insurance Summary ----------
+  generateSummaryTable(
+    'dws', 'shipment_insurance_summary', '物流保险汇总表', 'dws',
+    [...scDimensions.carrier.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'insured_shipments', type: 'bigint', comment: '投保发运数' },
+      { name: 'total_insured_value', type: 'decimal', comment: '总保额' },
+      { name: 'total_premium', type: 'decimal', comment: '总保费' },
+      { name: 'avg_premium_rate', type: 'decimal', comment: '平均费率' },
+      { name: 'claim_count', type: 'bigint', comment: '理赔次数' },
+      { name: 'claim_amount', type: 'decimal', comment: '理赔总额' },
+      { name: 'loss_ratio', type: 'decimal', comment: '赔付率' },
+    ],
+  ),
+
+  // ---------- Supplier Cert Expiry ----------
+  generateSummaryTable(
+    'dws', 'supplier_cert_status_summary', '供应商资质到期汇总表', 'dws',
+    [...scDimensions.supplier.slice(0, 2)],
+    [
+      { name: 'total_certs', type: 'bigint', comment: '总证书数' },
+      { name: 'valid_certs', type: 'bigint', comment: '有效证书数' },
+      { name: 'expiring_30d', type: 'bigint', comment: '30天内到期数' },
+      { name: 'expiring_90d', type: 'bigint', comment: '90天内到期数' },
+      { name: 'expired_certs', type: 'bigint', comment: '已过期数' },
+      { name: 'compliance_rate', type: 'decimal', comment: '资质合规率' },
+    ],
+  ),
+
+  // ---------- Price Volatility ----------
+  generateSummaryTable(
+    'dws', 'material_price_volatility', '物料价格波动汇总表', 'dws',
+    [...scDimensions.material.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'avg_price', type: 'decimal', comment: '平均价格' },
+      { name: 'min_price', type: 'decimal', comment: '最低价格' },
+      { name: 'max_price', type: 'decimal', comment: '最高价格' },
+      { name: 'price_range', type: 'decimal', comment: '价差' },
+      { name: 'volatility', type: 'decimal', comment: '价格波动率' },
+      { name: 'change_count', type: 'bigint', comment: '变价次数' },
+    ],
+  ),
+
+  // ---------- Receiving Efficiency ----------
+  generateSummaryTable(
+    'dws', 'receiving_efficiency_summary', '收货效率汇总表', 'dws',
+    [...scDimensions.warehouse.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'receiving_count', type: 'bigint', comment: '收货单数' },
+      { name: 'total_received_qty', type: 'bigint', comment: '总收货量' },
+      { name: 'rejected_qty', type: 'bigint', comment: '拒收量' },
+      { name: 'acceptance_rate', type: 'decimal', comment: '验收合格率' },
+      { name: 'avg_receiving_time_hours', type: 'decimal', comment: '平均收货耗时(小时)' },
+    ],
+  ),
 ];
 
 /* ================================================================
@@ -2389,6 +2985,163 @@ const adsTables: TableDef[] = [
       { name: 'cost_savings', type: 'decimal', comment: '成本节省' },
       { name: 'supplier_score_avg', type: 'decimal', comment: '供应商平均得分' },
       { name: 'cold_chain_compliance', type: 'decimal', comment: '冷链合规率' },
+    ],
+  ),
+
+  // ---------- Transfer Analytics ----------
+  generateSummaryTable(
+    'ads', 'inter_warehouse_flow_analysis', '仓间调拨流向分析', 'ads',
+    [{ name: 'from_warehouse', comment: '调出仓库' }, { name: 'to_warehouse', comment: '调入仓库' }, ...scDimensions.timePeriod],
+    [
+      { name: 'transfer_count', type: 'bigint', comment: '调拨次数' },
+      { name: 'transfer_qty', type: 'bigint', comment: '调拨总量' },
+      { name: 'transfer_value', type: 'decimal', comment: '调拨金额' },
+      { name: 'avg_transit_days', type: 'decimal', comment: '平均在途天数' },
+      { name: 'loss_qty', type: 'bigint', comment: '在途损耗量' },
+    ],
+  ),
+
+  // ---------- Scrap Analytics ----------
+  generateSummaryTable(
+    'ads', 'scrap_loss_trend', '报废损失趋势分析', 'ads',
+    [{ name: 'scrap_type', comment: '报废类型' }, ...scDimensions.timePeriod],
+    [
+      { name: 'scrap_qty', type: 'bigint', comment: '报废数量' },
+      { name: 'loss_amount', type: 'decimal', comment: '损失金额' },
+      { name: 'mom_change_rate', type: 'decimal', comment: '环比变化率' },
+      { name: 'yoy_change_rate', type: 'decimal', comment: '同比变化率' },
+      { name: 'prevention_savings', type: 'decimal', comment: '可预防节省额' },
+    ],
+  ),
+
+  // ---------- Material Risk Analysis ----------
+  generateSummaryTable(
+    'ads', 'material_supply_risk', '物料供应风险分析', 'ads',
+    [...scDimensions.material.slice(0, 2)],
+    [
+      { name: 'supplier_count', type: 'bigint', comment: '供应商数量' },
+      { name: 'single_source_flag', type: 'bigint', comment: '是否单一来源(1/0)' },
+      { name: 'avg_lead_time', type: 'decimal', comment: '平均提前期(天)' },
+      { name: 'lead_time_variability', type: 'decimal', comment: '提前期波动系数' },
+      { name: 'price_volatility', type: 'decimal', comment: '价格波动率' },
+      { name: 'supply_risk_score', type: 'decimal', comment: '供应风险评分' },
+      { name: 'risk_level', type: 'bigint', comment: '风险等级: 1低/2中/3高' },
+    ],
+  ),
+
+  // ---------- Contract Compliance ----------
+  generateSummaryTable(
+    'ads', 'contract_compliance_report', '合同合规报告', 'ads',
+    [...scDimensions.supplier.slice(0, 2), ...scDimensions.timePeriod],
+    [
+      { name: 'active_contracts', type: 'bigint', comment: '有效合同数' },
+      { name: 'total_value', type: 'decimal', comment: '合同总额' },
+      { name: 'executed_value', type: 'decimal', comment: '已执行金额' },
+      { name: 'compliance_rate', type: 'decimal', comment: '合同遵守率' },
+      { name: 'expiring_count', type: 'bigint', comment: '即将到期数' },
+      { name: 'overdue_count', type: 'bigint', comment: '逾期未完成数' },
+    ],
+  ),
+
+  // ---------- Inventory Forecast ----------
+  generateSummaryTable(
+    'ads', 'inventory_replenishment_plan', '补货计划推荐', 'ads',
+    [...scDimensions.material.slice(0, 2), ...scDimensions.warehouse.slice(0, 2)],
+    [
+      { name: 'current_stock', type: 'bigint', comment: '当前库存' },
+      { name: 'forecast_demand_30d', type: 'bigint', comment: '30天预测需求' },
+      { name: 'safety_stock', type: 'bigint', comment: '安全库存' },
+      { name: 'recommended_order_qty', type: 'bigint', comment: '建议订货量' },
+      { name: 'recommended_order_date', type: 'bigint', comment: '建议订货日期(yyyymmdd)' },
+      { name: 'preferred_supplier_count', type: 'bigint', comment: '可选供应商数' },
+      { name: 'estimated_cost', type: 'decimal', comment: '预估采购金额' },
+    ],
+  ),
+
+  // ---------- Supplier Diversity ----------
+  generateSummaryTable(
+    'ads', 'supplier_diversity_report', '供应商多样性报告', 'ads',
+    [...scDimensions.timePeriod],
+    [
+      { name: 'total_suppliers', type: 'bigint', comment: '供应商总数' },
+      { name: 'active_suppliers', type: 'bigint', comment: '活跃供应商数' },
+      { name: 'new_suppliers', type: 'bigint', comment: '新增供应商数' },
+      { name: 'exited_suppliers', type: 'bigint', comment: '退出供应商数' },
+      { name: 'domestic_count', type: 'bigint', comment: '国内供应商数' },
+      { name: 'overseas_count', type: 'bigint', comment: '海外供应商数' },
+      { name: 'strategic_count', type: 'bigint', comment: '战略供应商数' },
+      { name: 'avg_quality_score', type: 'decimal', comment: '平均质量得分' },
+    ],
+  ),
+
+  // ---------- Warehouse Comparison ----------
+  generateSummaryTable(
+    'ads', 'warehouse_comparison_report', '仓库对比分析报告', 'ads',
+    [...scDimensions.warehouse],
+    [
+      { name: 'utilization_rate', type: 'decimal', comment: '利用率' },
+      { name: 'throughput_per_day', type: 'bigint', comment: '日吞吐量' },
+      { name: 'cost_per_sqm', type: 'decimal', comment: '每平方米成本' },
+      { name: 'pick_accuracy', type: 'decimal', comment: '拣货准确率' },
+      { name: 'labor_count', type: 'bigint', comment: '人员数量' },
+      { name: 'productivity_per_person', type: 'decimal', comment: '人均效率' },
+      { name: 'performance_rank', type: 'bigint', comment: '绩效排名' },
+    ],
+  ),
+
+  // ---------- YoY Comparison ----------
+  generateSummaryTable(
+    'ads', 'supply_chain_yoy_comparison', '供应链同比分析', 'ads',
+    scDimensions.timePeriod,
+    [
+      { name: 'procurement_cost_yoy', type: 'decimal', comment: '采购成本同比' },
+      { name: 'inventory_turnover_yoy', type: 'decimal', comment: '周转率同比' },
+      { name: 'quality_rate_yoy', type: 'decimal', comment: '合格率同比' },
+      { name: 'logistics_cost_yoy', type: 'decimal', comment: '物流成本同比' },
+      { name: 'on_time_rate_yoy', type: 'decimal', comment: '准时率同比' },
+      { name: 'return_rate_yoy', type: 'decimal', comment: '退货率同比' },
+    ],
+  ),
+
+  // ---------- Procurement Cycle Analysis ----------
+  generateSummaryTable(
+    'ads', 'procurement_cycle_analysis', '采购周期分析', 'ads',
+    [{ name: 'category', comment: '物料分类' }, ...scDimensions.timePeriod],
+    [
+      { name: 'avg_requisition_to_po_days', type: 'decimal', comment: '申请到下单平均天数' },
+      { name: 'avg_po_to_delivery_days', type: 'decimal', comment: '下单到到货平均天数' },
+      { name: 'avg_delivery_to_stock_days', type: 'decimal', comment: '到货到入库平均天数' },
+      { name: 'total_cycle_days', type: 'decimal', comment: '全流程周期(天)' },
+      { name: 'cycle_vs_target', type: 'decimal', comment: '与目标差异(天)' },
+    ],
+  ),
+
+  // ---------- Emergency Procurement ----------
+  generateSummaryTable(
+    'ads', 'emergency_procurement_analysis', '紧急采购分析', 'ads',
+    [{ name: 'category', comment: '物料分类' }, ...scDimensions.timePeriod],
+    [
+      { name: 'emergency_po_count', type: 'bigint', comment: '紧急采购次数' },
+      { name: 'emergency_amount', type: 'decimal', comment: '紧急采购金额' },
+      { name: 'emergency_rate', type: 'decimal', comment: '紧急采购占比' },
+      { name: 'avg_premium_rate', type: 'decimal', comment: '平均溢价率' },
+      { name: 'root_cause_stockout', type: 'bigint', comment: '因缺货触发次数' },
+      { name: 'root_cause_forecast', type: 'bigint', comment: '因预测偏差触发次数' },
+      { name: 'root_cause_quality', type: 'bigint', comment: '因质量问题触发次数' },
+    ],
+  ),
+
+  // ---------- OEE Dashboard ----------
+  generateSummaryTable(
+    'ads', 'production_oee_dashboard', '生产OEE综合看板', 'ads',
+    [{ name: 'factory', comment: '工厂' }, { name: 'line_name', comment: '生产线' }, ...scDimensions.timePeriod],
+    [
+      { name: 'availability', type: 'decimal', comment: '设备可用率' },
+      { name: 'performance', type: 'decimal', comment: '性能效率' },
+      { name: 'quality_rate', type: 'decimal', comment: '质量合格率' },
+      { name: 'oee', type: 'decimal', comment: 'OEE综合效率' },
+      { name: 'planned_downtime_hours', type: 'decimal', comment: '计划停机(小时)' },
+      { name: 'unplanned_downtime_hours', type: 'decimal', comment: '非计划停机(小时)' },
     ],
   ),
 ];
