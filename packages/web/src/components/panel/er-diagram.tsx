@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -22,25 +22,30 @@ import { useSchemaStore, type SchemaTable } from '@/stores/schema-store';
 const MAX_VISIBLE_COLUMNS = 8;
 
 /** Node data shape for custom table nodes */
+interface ColumnInfo {
+  name: string;
+  type: string;
+  isPK: boolean;
+  isFK: boolean;
+}
+
 interface TableNodeData {
   label: string;
-  columns: Array<{
-    name: string;
-    type: string;
-    isPK: boolean;
-    isFK: boolean;
-  }>;
+  columns: ColumnInfo[];
+  allColumns: ColumnInfo[];
   overflowCount: number;
   [key: string]: unknown;
 }
 
-/** Custom node rendering a table with columns */
+/** Custom node rendering a table with columns — click "+N more" to expand */
 function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
-  const { label, columns, overflowCount } = data;
+  const { label, columns, overflowCount, allColumns } = data;
+  const [expanded, setExpanded] = useState(false);
+
+  const visibleCols = expanded && allColumns ? allColumns : columns;
 
   return (
-    <div className="rounded-lg border border-border bg-white shadow-md min-w-[180px] max-w-[240px]">
-      {/* Handles for edges */}
+    <div className="rounded-lg border border-border bg-white shadow-md min-w-[180px] max-w-[260px]">
       <Handle
         type="target"
         position={Position.Left}
@@ -61,20 +66,16 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
 
       {/* Columns */}
       <div className="px-2 py-1">
-        {columns.map((col) => (
+        {visibleCols.map((col) => (
           <div
             key={col.name}
             className="flex items-center gap-1.5 py-0.5 text-[11px]"
           >
             {col.isPK && (
-              <span className="text-amber-600 font-bold shrink-0 w-3 text-center">
-                K
-              </span>
+              <span className="text-amber-600 font-bold shrink-0 w-3 text-center">K</span>
             )}
             {col.isFK && !col.isPK && (
-              <span className="text-blue-600 font-bold shrink-0 w-3 text-center">
-                F
-              </span>
+              <span className="text-blue-600 font-bold shrink-0 w-3 text-center">F</span>
             )}
             {!col.isPK && !col.isFK && <span className="w-3 shrink-0" />}
             <span className="text-gray-700 truncate">{col.name}</span>
@@ -84,9 +85,16 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
           </div>
         ))}
         {overflowCount > 0 && (
-          <div className="text-[10px] text-gray-400 text-center py-0.5">
-            +{overflowCount} more
-          </div>
+          <button
+            type="button"
+            className="w-full text-[10px] text-blue-500 hover:text-blue-700 text-center py-1 cursor-pointer transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+          >
+            {expanded ? '收起' : `+${overflowCount} more`}
+          </button>
         )}
       </div>
     </div>
@@ -186,7 +194,7 @@ function ERDiagramInner({ filterTables }: { filterTables?: string[] }) {
 
     return tables.map((table) => {
       const pos = posMap.get(table.id) ?? { x: 0, y: 0 };
-      const allCols = table.columns.map((c) => ({
+      const allCols: ColumnInfo[] = table.columns.map((c) => ({
         name: c.name,
         type: c.dataType,
         isPK: c.isPrimaryKey,
@@ -203,6 +211,7 @@ function ERDiagramInner({ filterTables }: { filterTables?: string[] }) {
         data: {
           label: table.name,
           columns: visibleCols,
+          allColumns: allCols,
           overflowCount: overflow,
         },
       };
