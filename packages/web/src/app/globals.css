@@ -93,6 +93,7 @@
   --animate-scale-in: scale-in 0.15s ease-out;
   --animate-landing-entrance: landing-entrance 0.8s ease-out both;
   --animate-landing-entrance-delayed: landing-entrance 0.8s ease-out 200ms both;
+  --animate-slide-in-right: slide-in-right 0.2s ease-out;
 }
 
 @keyframes slide-up {
@@ -113,6 +114,11 @@
 @keyframes landing-entrance {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes shimmer {

@@ -2,10 +2,10 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
-import { Panel } from '@/components/layout/panel';
 import { ChatMessage } from '@/components/chat/chat-message';
 import { ChatInput } from '@/components/chat-input';
 import { ArtifactPanel } from '@/components/panel/artifact-panel';
+import { SchemaBrowser } from '@/components/panel/schema-browser';
 import { ToastProvider } from '@/components/toast';
 import { useChatStore } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -27,6 +27,8 @@ function ChatPageInner() {
   const { messages, loading, clearMessages } = useChatStore();
   const { currentProjectId, currentDatasourceId } = useProjectStore();
   const artifactOpen = usePanelStore((s) => s.artifactOpen);
+  const panelIsOpen = usePanelStore((s) => s.isOpen);
+  const closePanel = usePanelStore((s) => s.closePanel);
   const { sendQuery } = useSSEStream();
   useKeyboardShortcuts();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -57,14 +59,18 @@ function ChatPageInner() {
 
   const hasContext = currentProjectId && currentDatasourceId;
 
+  /* Right panel priority: artifact > schema browser */
+  const showSchema = panelIsOpen && !artifactOpen;
+  const showRightPanel = artifactOpen || showSchema;
+
   return (
-    <AppShell panel={<Panel onSelectQuery={handleSend} />}>
+    <AppShell>
       <ToastProvider>
         <div className="flex h-full overflow-hidden">
-          {/* Left: Conversation column */}
+          {/* Conversation column — always centered, flex-1 */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Header */}
-            <header className="flex items-center justify-between px-6 py-3 shrink-0">
+            <header className="flex items-center justify-between px-6 py-3 shrink-0 border-b border-border">
               <h2 className="text-base font-semibold text-foreground">对话</h2>
               {messages.length > 0 && (
                 <button
@@ -77,7 +83,7 @@ function ChatPageInner() {
               )}
             </header>
 
-            {/* Messages area */}
+            {/* Messages area — centered with max-width */}
             <div className="flex-1 overflow-y-auto">
               {messages.length === 0 ? (
                 <EmptyState
@@ -102,17 +108,42 @@ function ChatPageInner() {
             </div>
           </div>
 
-          {/* Right: Artifact panel */}
-          <div
-            className={`shrink-0 w-[480px] transition-all duration-300 ease-in-out overflow-hidden ${
-              artifactOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 w-0'
-            }`}
-          >
-            <ArtifactPanel />
-          </div>
+          {/* Right panel — artifact (SQL/Result/Chart) or schema browser */}
+          {showRightPanel && (
+            <div
+              className="shrink-0 border-l border-border bg-background animate-slide-in-right"
+              style={{ width: 'min(480px, 45vw)' }}
+            >
+              {artifactOpen ? (
+                <ArtifactPanel />
+              ) : (
+                <SchemaPanel onClose={closePanel} />
+              )}
+            </div>
+          )}
         </div>
       </ToastProvider>
     </AppShell>
+  );
+}
+
+/** Schema browser wrapper with header and close button */
+function SchemaPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+        <h3 className="text-sm font-medium text-foreground">Schema</h3>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+        >
+          <Icon name="x" size={16} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto pt-3">
+        <SchemaBrowser />
+      </div>
+    </div>
   );
 }
 
