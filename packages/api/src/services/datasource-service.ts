@@ -5,6 +5,7 @@ interface CreateDatasourceInput {
   projectId: string;
   name: string;
   dialect: string;
+  engineType?: string;
   connectionConfig?: Record<string, unknown>;
 }
 
@@ -18,6 +19,7 @@ export class DatasourceService {
         projectId: input.projectId,
         name: input.name,
         dialect: input.dialect,
+        engineType: input.engineType ?? 'mysql',
         connectionConfig: input.connectionConfig ?? null,
       })
       .returning();
@@ -37,7 +39,7 @@ export class DatasourceService {
     return row ?? null;
   }
 
-  async update(id: string, input: { name?: string; connectionConfig?: unknown }) {
+  async update(id: string, input: { name?: string; engineType?: string; connectionConfig?: unknown }) {
     const [row] = await this.db
       .update(datasources)
       .set(input)
