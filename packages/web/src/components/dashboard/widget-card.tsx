@@ -174,7 +174,6 @@ function MiniChart({ chartType, config }: { chartType: string; config: unknown }
       option={miniOption}
       style={{ height: '100%', width: '100%' }}
       opts={{ renderer: 'svg' }}
-      theme="dark"
     />
   );
 }

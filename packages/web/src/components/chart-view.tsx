@@ -112,7 +112,6 @@ function EChartsRenderer({
       option={option}
       style={{ height: `${height}px`, width: '100%' }}
       opts={{ renderer: 'svg' }}
-      theme="dark"
     />
   );
 }
@@ -136,12 +135,12 @@ function buildEChartsOption(chartType: ChartType, config: ChartConfig): any {
           type: 'category',
           data: config.xAxis?.data as string[],
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          axisLine: { lineStyle: { color: '#2a3145' } },
+          axisLine: { lineStyle: { color: '#e5e7eb' } },
         },
         yAxis: {
           type: 'value',
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          splitLine: { lineStyle: { color: '#1e2433' } },
+          splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         series: config.series.map((s, i) => ({
           name: s.name,
@@ -162,13 +161,13 @@ function buildEChartsOption(chartType: ChartType, config: ChartConfig): any {
         xAxis: {
           type: 'value',
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          splitLine: { lineStyle: { color: '#1e2433' } },
+          splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         yAxis: {
           type: 'category',
           data: config.yAxis?.data as string[],
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          axisLine: { lineStyle: { color: '#2a3145' } },
+          axisLine: { lineStyle: { color: '#e5e7eb' } },
           inverse: true,
         },
         series: config.series.map((s) => ({
@@ -188,13 +187,13 @@ function buildEChartsOption(chartType: ChartType, config: ChartConfig): any {
           type: 'category',
           data: config.xAxis?.data as string[],
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          axisLine: { lineStyle: { color: '#2a3145' } },
+          axisLine: { lineStyle: { color: '#e5e7eb' } },
           boundaryGap: false,
         },
         yAxis: {
           type: 'value',
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          splitLine: { lineStyle: { color: '#1e2433' } },
+          splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         series: config.series.map((s, i) => ({
           name: s.name,
@@ -219,12 +218,12 @@ function buildEChartsOption(chartType: ChartType, config: ChartConfig): any {
         xAxis: {
           type: 'value',
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          splitLine: { lineStyle: { color: '#1e2433' } },
+          splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         yAxis: {
           type: 'value',
           axisLabel: { fontSize: 11, color: '#9ca3af' },
-          splitLine: { lineStyle: { color: '#1e2433' } },
+          splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         series: config.series.map((s) => ({
           type: 'scatter',

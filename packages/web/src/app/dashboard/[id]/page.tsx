@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/app-shell';
-import { ChartView } from '@/components/chart-view';
+import { SmartChart } from '@/components/panel/smart-chart';
 import {
   useDashboardStore,
   type Widget,
@@ -134,11 +134,19 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
                   const widget = item.widget;
                   if (!widget) return null;
 
-                  const raw = widget.chartConfig as Record<string, unknown> | null;
-                  const chartConfig = {
-                    ...(raw ?? {}),
-                    series: (raw?.series as Array<{ name?: string; type: string; data: unknown[] }>) ?? [],
-                  };
+                  const chartConfig = widget.chartConfig as {
+                    chartType: string;
+                    xField?: string;
+                    yField?: string | string[];
+                    categoryField?: string;
+                    valueField?: string;
+                    title?: string;
+                  } | null;
+
+                  const snapshot = widget.dataSnapshot as {
+                    rows: Record<string, unknown>[];
+                    columns: Array<{ name: string; dataType: string }>;
+                  } | null;
 
                   return (
                     <div
@@ -169,12 +177,17 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
                         </div>
                       </div>
                       <div className="p-3">
-                        <ChartView
-                          chartType={widget.chartType as 'bar' | 'line' | 'pie' | 'table' | 'kpi' | 'horizontal_bar' | 'multi_line' | 'scatter' | 'grouped_bar'}
-                          config={chartConfig}
-                          height={280}
-                          dataSnapshot={widget.dataSnapshot as { rows: Record<string, unknown>[]; columns: Array<{ name: string; dataType: string }>; truncated?: boolean } | null}
-                        />
+                        {chartConfig && snapshot ? (
+                          <SmartChart
+                            config={{ ...chartConfig, chartType: widget.chartType }}
+                            rows={snapshot.rows}
+                            columns={snapshot.columns}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-[280px] text-muted text-xs">
+                            暂无图表数据
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
