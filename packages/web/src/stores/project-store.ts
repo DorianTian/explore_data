@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { apiFetch, apiPost } from '@/lib/api';
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, baseDelay = 1000): Promise<T> {
+  let lastResult: T | undefined;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    lastResult = await fn();
+    if ((lastResult as { success?: boolean }).success) return lastResult;
+    if (attempt < retries) {
+      await new Promise((r) => setTimeout(r, baseDelay * 2 ** attempt));
+    }
+  }
+  return lastResult as T;
+}
+
 interface Project {
   id: string;
   name: string;
@@ -59,7 +71,7 @@ export const useProjectStore = create<ProjectStore>()(
       fetchProjects: async () => {
         set({ loadingProjects: true });
         try {
-          const res = await apiFetch<Project[]>('/api/projects');
+          const res = await withRetry(() => apiFetch<Project[]>('/api/projects'));
           if (res.success && res.data) {
             set({ projects: res.data });
           }
@@ -71,7 +83,9 @@ export const useProjectStore = create<ProjectStore>()(
       fetchDatasources: async (projectId) => {
         set({ loadingDatasources: true });
         try {
-          const res = await apiFetch<Datasource[]>(`/api/datasources?projectId=${projectId}`);
+          const res = await withRetry(() =>
+            apiFetch<Datasource[]>(`/api/datasources?projectId=${projectId}`),
+          );
           if (res.success && res.data) {
             set({ datasources: res.data });
             if (res.data.length === 1) {
