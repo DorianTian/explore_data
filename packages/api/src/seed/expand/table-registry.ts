@@ -50,7 +50,7 @@ const LAYER_SUFFIXES: Record<Layer, string[]> = {
   ods: ['_df', '_di'],
   dwd: ['_detail_di', '_detail_df'],
   dws: ['_1d', '_7d', '_30d'],
-  dim: [''],
+  dim: ['', '_hist'],
   ads: ['_1d', '_7d', '_30d'],
 };
 
@@ -105,6 +105,7 @@ const SUFFIX_LABELS: Record<string, string> = {
   '_1d': '日汇总',
   '_7d': '周汇总',
   '_30d': '月汇总',
+  '_hist': '历史快照',
   '': '',
 };
 
@@ -113,7 +114,7 @@ const SUFFIX_LABELS: Record<string, string> = {
  * ────────────────────────────────────────────── */
 
 function tableName(layer: Layer, domain: Domain, area: string, suffix: string): string {
-  if (layer === 'dim') return `dim_${area}${suffix}`;
+  if (layer === 'dim') return `dim_${domain}_${area}${suffix}`;
   return `${layer}_${domain}_${area}${suffix}`;
 }
 

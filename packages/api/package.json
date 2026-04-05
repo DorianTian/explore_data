@@ -10,6 +10,7 @@
     "seed": "tsx src/seed/index.ts",
     "seed:validate": "tsx src/seed/validate.ts",
     "seed:legacy": "tsx src/seed.ts",
+    "seed:expand": "tsx src/seed/seed-expand.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
