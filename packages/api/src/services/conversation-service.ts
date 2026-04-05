@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { conversations, messages, queryHistory, type DbClient } from '@nl2sql/db';
 
 interface CreateMessageInput {
@@ -16,19 +16,22 @@ interface CreateMessageInput {
 export class ConversationService {
   constructor(private db: DbClient) {}
 
-  async createConversation(projectId: string, title?: string) {
+  async createConversation(projectId: string, title?: string, userId?: string) {
     const [row] = await this.db
       .insert(conversations)
-      .values({ projectId, title: title ?? null })
+      .values({ projectId, title: title ?? null, userId: userId ?? null })
       .returning();
     return row;
   }
 
-  async listConversations(projectId: string) {
+  async listConversations(projectId: string, userId?: string) {
+    const conditions = [eq(conversations.projectId, projectId)];
+    if (userId) conditions.push(eq(conversations.userId, userId));
+
     return this.db
       .select()
       .from(conversations)
-      .where(eq(conversations.projectId, projectId))
+      .where(and(...conditions))
       .orderBy(desc(conversations.updatedAt));
   }
 

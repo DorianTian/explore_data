@@ -22,6 +22,10 @@ const ICON_PATHS: Record<string, string[]> = {
   book: [
     'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20',
   ],
+  user: [
+    'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2',
+    'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+  ],
   plus: ['M12 5v14', 'M5 12h14'],
   chevronDown: ['M6 9l6 6 6-6'],
   chevronRight: ['M9 18l6-6-6-6'],

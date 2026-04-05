@@ -26,7 +26,7 @@ export function CtaSection() {
 
       {/* Footer */}
       <div className="max-w-6xl mx-auto mt-20 pt-8 border-t border-border/50 flex items-center justify-between">
-        <p className="text-sm text-muted">NL2SQL — 智能数据查询平台</p>
+        <p className="text-sm text-muted">DataChat — 智能数据对话平台</p>
         <p className="text-sm text-muted">
           Built with Next.js + Koa + PostgreSQL + Claude
         </p>

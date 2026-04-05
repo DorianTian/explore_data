@@ -25,23 +25,16 @@ export function AppShell({ children, panel }: AppShellProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar manages its own width via sidebar-store */}
       <Sidebar />
-
-      {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}
       </main>
-
-      {/* Right panel — slide-over on tablet, inline on desktop */}
       {panel && isOpen && (
         <>
-          {/* Overlay for tablet */}
           <div
             className="fixed inset-0 bg-black/20 z-40 lg:hidden"
             onClick={closePanel}
           />
-
           <aside
             className="fixed right-0 top-0 h-full z-50 lg:relative lg:z-auto border-l border-border bg-background w-[var(--panel-width)] overflow-hidden transition-transform duration-200 ease-in-out"
           >

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { MessageSqlBlock } from './message-sql-block';
@@ -7,6 +8,8 @@ import { MessageResultPreview } from './message-result-preview';
 import { MessageChartPreview } from './message-chart-preview';
 import { MessageFeedback } from './message-feedback';
 import { StreamingIndicator } from './streaming-indicator';
+import { Icon } from '@/components/shared/icon';
+import { Tooltip } from '@/components/ui';
 import type { ChatMessage as ChatMessageType } from '@/stores/chat-store';
 
 interface ChatMessageProps {
@@ -24,9 +27,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
 /** Right-aligned user bubble with warm amber tint */
 function UserBubble({ content }: { content: string }) {
   return (
-    <div className="flex justify-end mb-6">
+    <div className="group flex flex-col items-end mb-6">
       <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-sm bg-amber-50 text-foreground text-sm leading-relaxed">
         {content}
+      </div>
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+        <CopyButton text={content} />
       </div>
     </div>
   );
@@ -148,15 +154,45 @@ function AssistantMessage({ message }: { message: ChatMessageType }) {
           />
         )}
 
-      {/* Feedback actions */}
-      {!message.isStreaming && message.sql && (
-        <MessageFeedback
-          messageId={message.id}
-          feedback={message.feedback}
-          isGolden={message.isGolden}
-          sql={message.sql}
-        />
+      {/* Action bar: feedback + copy */}
+      {!message.isStreaming && message.content && (
+        <div className="flex items-center gap-1 mt-3">
+          {message.sql && (
+            <>
+              <MessageFeedback
+                messageId={message.id}
+                feedback={message.feedback}
+                isGolden={message.isGolden}
+                sql={message.sql}
+                inline
+              />
+              <div className="w-px h-3.5 bg-border mx-0.5" />
+            </>
+          )}
+          <CopyButton text={message.content} />
+        </div>
       )}
     </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [text]);
+
+  return (
+    <Tooltip content={copied ? '已复制' : '复制'}>
+      <button
+        onClick={handleCopy}
+        className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+      >
+        <Icon name={copied ? 'check' : 'copy'} size={14} />
+      </button>
+    </Tooltip>
   );
 }

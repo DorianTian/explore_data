@@ -6,6 +6,7 @@ import type { DbClient } from '@nl2sql/db';
 import { errorHandler, requestLogger } from './middleware/index.js';
 import {
   createHealthRouter,
+  createUserRouter,
   createProjectRouter,
   createDatasourceRouter,
   createSchemaRouter,
@@ -37,6 +38,7 @@ export function createApp(db: DbClient) {
 
   const routers = [
     createHealthRouter(db),
+    createUserRouter(db),
     createProjectRouter(db),
     createDatasourceRouter(db),
     createSchemaRouter(db),

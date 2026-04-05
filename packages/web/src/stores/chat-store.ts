@@ -1,7 +1,17 @@
 import { create } from 'zustand';
+import { apiFetch, apiDelete } from '@/lib/api';
 
 /** Pipeline step identifier — extensible, backend may send any step name */
 export type PipelineStep = string;
+
+/** Conversation summary returned by the list endpoint */
+export interface ConversationSummary {
+  id: string;
+  projectId: string;
+  title: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface PipelineStepEntry {
   step: string;
@@ -62,6 +72,8 @@ interface ChatState {
   loading: boolean;
   conversationId: string | null;
   selectedMessageId: string | null;
+  conversations: ConversationSummary[];
+  conversationsLoading: boolean;
 }
 
 interface ChatActions {
@@ -76,15 +88,20 @@ interface ChatActions {
   appendContent: (id: string, chunk: string) => void;
   appendInsight: (id: string, chunk: string) => void;
   setPipelineStatus: (id: string, status: PipelineStatus) => void;
+  fetchConversations: (projectId: string, userId?: string) => Promise<void>;
+  loadConversation: (conversationId: string) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
 }
 
 type ChatStore = ChatState & ChatActions;
 
-export const useChatStore = create<ChatStore>((set) => ({
+export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [],
   loading: false,
   conversationId: null,
   selectedMessageId: null,
+  conversations: [],
+  conversationsLoading: false,
 
   addMessage: (message) => set((s) => ({ messages: [...s.messages, message] })),
 
@@ -148,4 +165,60 @@ export const useChatStore = create<ChatStore>((set) => ({
         };
       }),
     })),
+
+  fetchConversations: async (projectId, userId?: string) => {
+    set({ conversationsLoading: true });
+    let url = `/api/conversations?projectId=${projectId}`;
+    if (userId) url += `&userId=${userId}`;
+    const res = await apiFetch<ConversationSummary[]>(url);
+    set({
+      conversations: res.data ?? [],
+      conversationsLoading: false,
+    });
+  },
+
+  loadConversation: async (conversationId) => {
+    const res = await apiFetch<{
+      conversation: ConversationSummary;
+      messages: Array<{
+        id: string;
+        role: 'user' | 'assistant';
+        content: string;
+        generatedSql: string | null;
+        executionResult: ChatMessage['executionResult'] | null;
+        chartConfig: ChatMessage['chartRecommendation'] | null;
+        confidence: number | null;
+      }>;
+    }>(`/api/conversations/${conversationId}`);
+
+    if (!res.data) return;
+
+    const hydrated: ChatMessage[] = res.data.messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      sql: m.generatedSql ?? undefined,
+      confidence: m.confidence ?? undefined,
+      executionResult: m.executionResult ?? undefined,
+      chartRecommendation: m.chartConfig ?? undefined,
+    }));
+
+    set({
+      conversationId,
+      messages: hydrated,
+      selectedMessageId: null,
+      loading: false,
+    });
+  },
+
+  deleteConversation: async (conversationId) => {
+    await apiDelete(`/api/conversations/${conversationId}`);
+    const { conversationId: currentId } = get();
+    set((s) => ({
+      conversations: s.conversations.filter((c) => c.id !== conversationId),
+      ...(currentId === conversationId
+        ? { conversationId: null, messages: [], selectedMessageId: null }
+        : {}),
+    }));
+  },
 }));

@@ -153,7 +153,7 @@ export default function LandingPage() {
               <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
             </svg>
           </div>
-          <span className="text-lg font-bold tracking-tight">NL2SQL</span>
+          <span className="text-lg font-bold tracking-tight">DataChat</span>
         </div>
 
         <div className="flex items-center gap-6">
@@ -182,7 +182,7 @@ export default function LandingPage() {
             用<span className="text-primary">自然语言</span>查询数据
           </h1>
           <p className="mt-6 text-lg text-muted max-w-xl mx-auto leading-relaxed">
-            AI 驱动的 NL2SQL 引擎，将自然语言转化为精确的 SQL 查询
+            AI 驱动的数据对话引擎，用自然语言探索数据、生成图表与洞察
           </p>
 
           <div className="mt-10 flex items-center justify-center gap-4">
@@ -216,7 +216,7 @@ export default function LandingPage() {
                 <span className="w-3 h-3 rounded-full bg-warning/60" />
                 <span className="w-3 h-3 rounded-full bg-success/60" />
               </div>
-              <span className="text-xs text-muted ml-2 font-mono">nl2sql — query</span>
+              <span className="text-xs text-muted ml-2 font-mono">datachat — query</span>
             </div>
 
             {/* Chat mockup */}
@@ -392,7 +392,7 @@ export default function LandingPage() {
       <footer className="relative z-10 border-t border-border px-6 py-8">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted">
-            Built with <span className="text-primary">Claude AI</span> · NL2SQL v2.0
+            Built with <span className="text-primary">Claude AI</span> · DataChat v2.0
           </p>
           <div className="flex items-center gap-5">
             <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-sm text-muted hover:text-foreground transition-colors">

@@ -13,6 +13,7 @@ const querySchema = z.object({
   datasourceId: z.string().uuid(),
   query: z.string().min(1).max(2000),
   conversationId: z.string().uuid().nullish(),
+  userId: z.string().uuid().nullish(),
   conversationHistory: z
     .array(
       z.object({
@@ -178,6 +179,7 @@ export function createQueryRouter(db: DbClient): Router {
         const conv = await conversationService.createConversation(
           parsed.data.projectId,
           parsed.data.query.slice(0, 50),
+          parsed.data.userId ?? undefined,
         );
         conversationId = conv.id;
         sendSSE(res, 'conversation', { id: conversationId });

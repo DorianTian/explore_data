@@ -89,7 +89,6 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
               variant="secondary"
               size="sm"
               onClick={() => setPickerOpen(true)}
-              disabled={availableWidgets.length === 0}
             >
               <Icon name="plus" size={14} className="mr-1.5" />
               添加组件
@@ -201,7 +200,8 @@ export default function DashboardEditorPage({ params }: DashboardEditorPageProps
       <WidgetPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        widgets={availableWidgets}
+        widgets={allWidgets}
+        placedWidgetIds={placedWidgetIds}
         dashboardId={id}
         onAdd={addWidgetToDashboard}
       />
@@ -214,12 +214,14 @@ function WidgetPickerDialog({
   open,
   onClose,
   widgets,
+  placedWidgetIds,
   dashboardId,
   onAdd,
 }: {
   open: boolean;
   onClose: () => void;
   widgets: Widget[];
+  placedWidgetIds: Set<string>;
   dashboardId: string;
   onAdd: (dashboardId: string, widgetId: string) => Promise<boolean>;
 }) {
@@ -269,29 +271,40 @@ function WidgetPickerDialog({
           </p>
         ) : (
           <div className="max-h-[360px] overflow-y-auto space-y-2">
-            {filtered.map((w) => (
-              <div
-                key={w.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/40 transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">{w.title}</p>
-                  <p className="text-xs text-muted truncate mt-0.5">{w.naturalLanguage}</p>
-                  <p className="text-[11px] text-muted mt-1">
-                    {w.chartType} · {new Date(w.createdAt).toLocaleDateString('zh-CN')}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="ml-3 shrink-0"
-                  onClick={() => handleAdd(w.id)}
-                  disabled={adding === w.id}
+            {filtered.map((w) => {
+              const isPlaced = placedWidgetIds.has(w.id);
+              return (
+                <div
+                  key={w.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                    isPlaced
+                      ? 'border-border/50 opacity-60'
+                      : 'border-border hover:border-primary/40'
+                  }`}
                 >
-                  {adding === w.id ? '添加中...' : '添加'}
-                </Button>
-              </div>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">{w.title}</p>
+                    <p className="text-xs text-muted truncate mt-0.5">{w.naturalLanguage}</p>
+                    <p className="text-[11px] text-muted mt-1">
+                      {w.chartType} · {new Date(w.createdAt).toLocaleDateString('zh-CN')}
+                    </p>
+                  </div>
+                  {isPlaced ? (
+                    <span className="ml-3 shrink-0 text-xs text-muted">已添加</span>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="ml-3 shrink-0"
+                      onClick={() => handleAdd(w.id)}
+                      disabled={adding === w.id}
+                    >
+                      {adding === w.id ? '添加中...' : '添加'}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </DialogBody>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { QuickChatDialog } from '@/components/quick-chat-dialog';
+import { Providers } from '@/components/providers';
 import './globals.css';
 
 const geistSans = Geist({
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NL2SQL - 智能数据查询平台',
-  description: '用自然语言查询数据，AI 自动生成 SQL',
+  title: 'DataChat — 智能数据对话平台',
+  description: '用自然语言对话探索数据，AI 驱动查询、图表与洞察',
 };
 
 export default function RootLayout({
@@ -26,8 +27,10 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className={`h-full ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col antialiased font-sans">
-        {children}
-        <QuickChatDialog />
+        <Providers>
+          {children}
+          <QuickChatDialog />
+        </Providers>
       </body>
     </html>
   );

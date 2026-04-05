@@ -11,6 +11,8 @@ interface MessageFeedbackProps {
   feedback?: 'accepted' | 'rejected';
   isGolden?: boolean;
   sql?: string;
+  /** Render buttons only, no wrapper div — for embedding in a parent flex row */
+  inline?: boolean;
 }
 
 export function MessageFeedback({
@@ -18,6 +20,7 @@ export function MessageFeedback({
   feedback,
   isGolden,
   sql,
+  inline,
 }: MessageFeedbackProps) {
   const setFeedback = useChatStore((s) => s.setFeedback);
   const setGolden = useChatStore((s) => s.setGolden);
@@ -26,9 +29,11 @@ export function MessageFeedback({
 
   if (!sql) return null;
 
+  const Wrapper = inline ? 'span' : 'div';
+
   return (
     <>
-      <div className="flex items-center gap-1 mt-3">
+      <Wrapper className={inline ? 'contents' : 'flex items-center gap-1 mt-3'}>
         <Tooltip content="标记正确">
           <button
             onClick={() => setFeedback(messageId, 'accepted')}
@@ -82,7 +87,7 @@ export function MessageFeedback({
             <Icon name="save" size={14} />
           </button>
         </Tooltip>
-      </div>
+      </Wrapper>
 
       {message && showSaveDialog && (
         <SaveWidgetDialog

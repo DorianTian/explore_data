@@ -6,6 +6,7 @@ import type { DbClient } from '@nl2sql/db';
 const createConversationSchema = z.object({
   projectId: z.string().uuid(),
   title: z.string().max(200).optional(),
+  userId: z.string().uuid().optional(),
 });
 
 const addMessageSchema = z.object({
@@ -31,7 +32,7 @@ export function createConversationRouter(db: DbClient): Router {
       };
       return;
     }
-    const conv = await service.createConversation(parsed.data.projectId, parsed.data.title);
+    const conv = await service.createConversation(parsed.data.projectId, parsed.data.title, parsed.data.userId);
     ctx.status = 201;
     ctx.body = { success: true, data: conv };
   });
@@ -46,7 +47,8 @@ export function createConversationRouter(db: DbClient): Router {
       };
       return;
     }
-    const list = await service.listConversations(projectId);
+    const userId = ctx.query.userId as string | undefined;
+    const list = await service.listConversations(projectId, userId);
     ctx.body = { success: true, data: list };
   });
 

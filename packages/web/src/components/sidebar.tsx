@@ -53,9 +53,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-5 py-4 border-b border-border">
         <h1 className="text-base font-semibold text-foreground tracking-tight">
-          NL2SQL
+          DataChat
         </h1>
-        <p className="text-xs text-muted mt-0.5">智能数据查询平台</p>
+        <p className="text-xs text-muted mt-0.5">智能数据对话平台</p>
       </div>
 
       {/* Project Selector */}
@@ -215,7 +215,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="px-4 py-3 border-t border-border">
-        <p className="text-[11px] text-muted">NL2SQL v0.1</p>
+        <p className="text-[11px] text-muted">DataChat v1.0</p>
       </div>
     </aside>
   );

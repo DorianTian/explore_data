@@ -1,3 +1,4 @@
+export { accounts } from './users.js';
 export { projects } from './projects.js';
 export { datasources } from './datasources.js';
 export { schemaTables } from './schema-tables.js';

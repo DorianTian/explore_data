@@ -13,6 +13,7 @@ import { usePanelStore } from '@/stores/panel-store';
 import { useSSEStream } from '@/hooks/use-sse-stream';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard';
 import { Icon } from '@/components/shared/icon';
+import { useUserStore } from '@/stores/user-store';
 
 const EXAMPLE_QUERIES = [
   '上个月各区域的 GMV 是多少？',
@@ -25,6 +26,7 @@ const EXAMPLE_QUERIES = [
 
 function ChatPageInner() {
   const { messages, loading, clearMessages } = useChatStore();
+  const userName = useUserStore((s) => s.user?.name);
   const { currentProjectId, currentDatasourceId } = useProjectStore();
   const panelIsOpen = usePanelStore((s) => s.isOpen);
   const { sendQuery } = useSSEStream();
@@ -122,15 +124,25 @@ function ChatPageInner() {
             {/* Header */}
             <header className="flex items-center justify-between px-6 py-3 shrink-0 border-b border-border">
               <h2 className="text-base font-semibold text-foreground">对话</h2>
-              {messages.length > 0 && (
-                <button
-                  onClick={clearMessages}
-                  className="text-xs text-muted hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <Icon name="plus" size={12} />
-                  新对话
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {messages.length > 0 && (
+                  <button
+                    onClick={clearMessages}
+                    className="text-xs text-muted hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <Icon name="plus" size={12} />
+                    新对话
+                  </button>
+                )}
+                {userName && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-medium">
+                      {userName[0]}
+                    </div>
+                    <span>{userName}</span>
+                  </div>
+                )}
+              </div>
             </header>
 
             {isEmpty ? (

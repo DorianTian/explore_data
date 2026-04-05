@@ -8,6 +8,8 @@ import { usePanelStore } from '@/stores/panel-store';
 import { Icon, type IconName } from '@/components/shared/icon';
 import { Tooltip } from '@/components/ui';
 import { WorkspaceSelector } from './workspace-selector';
+import { ConversationList } from './conversation-list';
+import { useUserStore } from '@/stores/user-store';
 
 interface NavItem {
   href: string;
@@ -16,7 +18,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: '首页', icon: 'home' },
   { href: '/chat', label: '对话', icon: 'message' },
   { href: '/dashboard', label: 'BI 市场', icon: 'layout' },
   { href: '/schema', label: '数据源', icon: 'database' },
@@ -33,6 +34,8 @@ export function Sidebar() {
 
   const togglePanel = usePanelStore((s) => s.togglePanel);
   const isPanelOpen = usePanelStore((s) => s.isOpen);
+  const userName = useUserStore((s) => s.user?.name);
+  const logout = useUserStore((s) => s.logout);
 
   const startResize = useCallback(
     (e: React.MouseEvent) => {
@@ -68,19 +71,22 @@ export function Sidebar() {
       {/* Drag handle */}
       <div className="resize-handle" onMouseDown={startResize} />
 
-      {/* Brand */}
-      <div className={`border-b border-sidebar-border ${isCollapsed ? 'px-2 py-3' : 'px-4 py-3'}`}>
+      {/* Brand — click to landing */}
+      <Link
+        href="/"
+        className={`block border-b border-sidebar-border hover:bg-surface-hover transition-colors ${isCollapsed ? 'px-2 py-3' : 'px-4 py-3'}`}
+      >
         {isCollapsed ? (
           <div className="flex justify-center">
-            <span className="text-sm font-bold text-primary">N</span>
+            <span className="text-sm font-bold text-primary">D</span>
           </div>
         ) : (
           <div>
-            <h1 className="text-sm font-bold text-foreground tracking-tight">NL2SQL</h1>
-            <p className="text-[11px] text-muted mt-0.5">智能数据查询平台</p>
+            <h1 className="text-sm font-bold text-foreground tracking-tight">DataChat</h1>
+            <p className="text-[11px] text-muted mt-0.5">智能数据对话平台</p>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Workspace selector */}
       <div className={`border-b border-sidebar-border ${isCollapsed ? 'p-1.5' : 'p-2'}`}>
@@ -111,7 +117,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-1.5 space-y-0.5 overflow-y-auto">
+      <nav className="p-1.5 space-y-0.5 shrink-0">
         {navItems.map((item) => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
 
@@ -152,6 +158,13 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Conversation history (chat page only) */}
+      {pathname === '/chat' && (
+        <div className="flex-1 min-h-0 border-t border-sidebar-border">
+          <ConversationList collapsed={isCollapsed} />
+        </div>
+      )}
+
       {/* Panel toggle (chat page only) */}
       {pathname === '/chat' && (
         <div className={`border-t border-sidebar-border ${isCollapsed ? 'p-1.5' : 'px-2 py-1.5'}`}>
@@ -176,20 +189,37 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Collapse toggle + version */}
+      {/* User + collapse */}
       <div className={`border-t border-sidebar-border ${isCollapsed ? 'p-1.5' : 'px-2 py-1.5'}`}>
         {isCollapsed ? (
-          <Tooltip content="展开侧栏" side="right">
-            <button
-              onClick={toggleCollapse}
-              className="flex items-center justify-center w-full p-2 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
-            >
-              <Icon name="chevronRight" size={16} />
-            </button>
-          </Tooltip>
+          <div className="space-y-1">
+            <Tooltip content={userName ?? '未登录'} side="right">
+              <button
+                onClick={logout}
+                className="flex items-center justify-center w-full p-2 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+              >
+                <Icon name="user" size={16} />
+              </button>
+            </Tooltip>
+            <Tooltip content="展开侧栏" side="right">
+              <button
+                onClick={toggleCollapse}
+                className="flex items-center justify-center w-full p-2 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+              >
+                <Icon name="chevronRight" size={16} />
+              </button>
+            </Tooltip>
+          </div>
         ) : (
           <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted px-1">v2.0</p>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 px-1 py-1 text-xs text-muted hover:text-foreground transition-colors cursor-pointer rounded-[var(--radius-md)] hover:bg-surface"
+              title="切换账号"
+            >
+              <Icon name="user" size={14} />
+              <span className="truncate max-w-[120px]">{userName ?? '未登录'}</span>
+            </button>
             <button
               onClick={toggleCollapse}
               className="flex items-center justify-center p-1.5 rounded-[var(--radius-md)] text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"

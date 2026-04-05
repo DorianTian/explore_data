@@ -5,6 +5,7 @@ import { connectSSE, type SSEEvent } from '@/lib/sse';
 import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 import { usePanelStore } from '@/stores/panel-store';
 import { useProjectStore } from '@/stores/project-store';
+import { useUserStore } from '@/stores/user-store';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3100';
 
@@ -19,10 +20,12 @@ export function useSSEStream() {
   const setConversationId = useChatStore((s) => s.setConversationId);
   const setPipelineStatus = useChatStore((s) => s.setPipelineStatus);
   const conversationId = useChatStore((s) => s.conversationId);
+  const fetchConversations = useChatStore((s) => s.fetchConversations);
 
   const openArtifact = usePanelStore((s) => s.openArtifact);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const currentDatasourceId = useProjectStore((s) => s.currentDatasourceId);
+  const userId = useUserStore((s) => s.user?.id);
 
   const sendQuery = useCallback(
     (
@@ -56,6 +59,7 @@ export function useSSEStream() {
         switch (event.event) {
           case 'conversation':
             setConversationId(data.id as string);
+            if (currentProjectId) fetchConversations(currentProjectId, userId);
             break;
 
           case 'status':
@@ -130,6 +134,7 @@ export function useSSEStream() {
           datasourceId: currentDatasourceId,
           query,
           conversationId: conversationId ?? undefined,
+          userId: userId ?? undefined,
           conversationHistory,
         },
         handleEvent,
@@ -149,6 +154,8 @@ export function useSSEStream() {
       setConversationId,
       setPipelineStatus,
       openArtifact,
+      fetchConversations,
+      userId,
     ],
   );
 

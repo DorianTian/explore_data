@@ -270,10 +270,10 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
   );
 
   useEffect(() => {
-    if (currentDatasourceId && !tables.length) {
+    if (currentDatasourceId) {
       loadSchema();
     }
-  }, [currentDatasourceId, tables.length, loadSchema]);
+  }, [currentDatasourceId, loadSchema]);
 
   const toggleGroup = useCallback((layer: string) => {
     setExpandedGroups((prev) => {

@@ -1,11 +1,13 @@
 import { pgTable, uuid, varchar, text, real, jsonb, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { projects } from './projects.js';
+import { accounts } from './users.js';
 
 export const conversations = pgTable('conversations', {
   id: uuid('id').defaultRandom().primaryKey(),
   projectId: uuid('project_id')
     .notNull()
     .references(() => projects.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => accounts.id, { onDelete: 'set null' }),
   title: varchar('title', { length: 200 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

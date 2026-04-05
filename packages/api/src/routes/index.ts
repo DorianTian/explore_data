@@ -1,4 +1,5 @@
 export { createHealthRouter } from './health.js';
+export { createUserRouter } from './users.js';
 export { createProjectRouter } from './projects.js';
 export { createDatasourceRouter } from './datasources.js';
 export { createSchemaRouter } from './schema.js';
