@@ -38,6 +38,19 @@ import { createPhysicalSchemas, createPhysicalTables, insertSampleData } from '.
 
 const ALL_ENGINES: EngineSeedDefinition[] = [hiveSeed, mysqlSeed, dorisSeed, icebergSeed, sparkSeed];
 
+/** Parse DATABASE_URL into connection config fields for QueryExecutor */
+function parseDbUrl(url: string): { host: string; port: number; database: string; username: string; password?: string; ssl?: boolean } {
+  const u = new URL(url);
+  return {
+    host: u.hostname,
+    port: parseInt(u.port || '5432', 10),
+    database: u.pathname.replace(/^\//, ''),
+    username: u.username,
+    password: u.password || undefined,
+    ssl: u.searchParams.get('sslmode') === 'require' || u.searchParams.get('ssl') === 'true',
+  };
+}
+
 async function seed() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -84,10 +97,7 @@ async function seed() {
           dialect: engine.dialect,
           engineType: engine.engineType,
           connectionConfig: {
-            host: 'localhost',
-            port: 5432,
-            database: 'nl2sql',
-            username: 'postgres',
+            ...parseDbUrl(databaseUrl),
             schema: engine.pgSchema,
           },
         })
