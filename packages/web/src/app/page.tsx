@@ -1,5 +1,85 @@
 import Link from 'next/link';
 
+/* ─── Data Guide: Stats & Domain Quick Start ─── */
+const DATA_STATS = [
+  { value: '290+', label: '数据表', sub: '覆盖全链路数仓分层' },
+  { value: '5', label: '数据引擎', sub: 'Hive / MySQL / Doris / Iceberg / Spark' },
+  { value: '4', label: '业务域', sub: '交易 · 用户 · 商品 · 风控' },
+  { value: '100+', label: '业务指标', sub: '预置核心分析指标' },
+];
+
+const DOMAINS = [
+  {
+    name: '交易域',
+    desc: '订单、支付、退款、物流、结算',
+    tables: 96,
+    metrics: 40,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+      </svg>
+    ),
+    queries: [
+      '上个月各区域的 GMV 是多少？',
+      '本月订单取消率和上月相比有什么变化？',
+      '客单价最高的渠道是哪个？',
+    ],
+  },
+  {
+    name: '用户域',
+    desc: '登录、注册、行为、留存、画像',
+    tables: 73,
+    metrics: 30,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+    queries: [
+      '最近 7 天日活用户趋势如何？',
+      '复购率最高的用户群体是哪个城市？',
+      '用户 7 日留存率是多少？',
+    ],
+  },
+  {
+    name: '商品域',
+    desc: '浏览、库存、价格、品类、销量',
+    tables: 67,
+    metrics: 25,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16.5 9.4l-9-5.19" />
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />
+      </svg>
+    ),
+    queries: [
+      '销量 Top 10 的商品有哪些？',
+      '各品类 GMV 占比是多少？',
+      '库存周转率最低的品类？',
+    ],
+  },
+  {
+    name: '风控域',
+    desc: '告警、KYC、黑名单、交易监控',
+    tables: 54,
+    metrics: 20,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+    queries: [
+      '本月风险拦截率趋势如何？',
+      '告警类型分布情况？',
+      '高风险交易占比多少？',
+    ],
+  },
+];
+
 /* ─── Static mock SQL for the hero preview ─── */
 const MOCK_SQL_LINES = [
   { tokens: [{ type: 'keyword', text: 'SELECT' }, { type: 'plain', text: ' region,' }] },
@@ -221,6 +301,66 @@ export default function LandingPage() {
                 <div className="text-xs font-mono text-primary mb-2">{s.num}</div>
                 <h3 className="text-lg font-semibold mb-2">{s.title}</h3>
                 <p className="text-sm text-muted leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════ DATA GUIDE: STATS BANNER ═══════════ */}
+      <section className="relative z-10 px-6 py-28">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-4">平台数据一览</h2>
+          <p className="text-center text-muted mb-16 max-w-lg mx-auto">
+            覆盖核心业务场景的企业级数据资产，开箱即用
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-20">
+            {DATA_STATS.map((s) => (
+              <div key={s.label} className="text-center">
+                <div className="text-3xl font-bold text-primary mb-1">{s.value}</div>
+                <div className="text-base font-semibold text-foreground mb-1">{s.label}</div>
+                <div className="text-sm text-muted">{s.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* ─── Domain Quick Start Cards ─── */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {DOMAINS.map((d) => (
+              <div
+                key={d.name}
+                className="group rounded-[var(--radius-xl)] border border-border bg-white p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col"
+              >
+                <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-primary/8 text-primary flex items-center justify-center mb-4 group-hover:bg-primary/12 transition-colors">
+                  {d.icon}
+                </div>
+                <h3 className="text-lg font-semibold mb-1">{d.name}</h3>
+                <p className="text-sm text-muted mb-2">{d.desc}</p>
+                <p className="text-xs text-muted mb-4">{d.tables} 张表 · {d.metrics} 个指标</p>
+
+                <div className="flex flex-col gap-1.5 mb-5 flex-1">
+                  {d.queries.map((q) => (
+                    <Link
+                      key={q}
+                      href={`/chat?q=${encodeURIComponent(q)}`}
+                      className="text-[13px] px-3 py-1.5 rounded-[var(--radius-md)] bg-surface text-muted hover:text-foreground hover:bg-surface-hover transition-colors text-left truncate"
+                      title={q}
+                    >
+                      {q}
+                    </Link>
+                  ))}
+                </div>
+
+                <Link
+                  href="/chat"
+                  className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover transition-colors mt-auto"
+                >
+                  开始提问
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
+                  </svg>
+                </Link>
               </div>
             ))}
           </div>
