@@ -144,17 +144,19 @@ export function ResultTab({ message }: ResultTabProps) {
                 )}
               </div>
             )}
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
                 handleCopySql();
               }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleCopySql(); } }}
               className="ml-auto flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors cursor-pointer"
             >
               <Icon name={copied ? 'check' : 'copy'} size={12} />
               {copied ? '已复制' : '复制'}
-            </button>
+            </span>
           </button>
 
           {/* Collapsed preview */}
