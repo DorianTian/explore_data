@@ -3,6 +3,8 @@
 import { type ReactNode, useEffect } from 'react';
 import { Sidebar } from './sidebar';
 import { usePanelStore } from '@/stores/panel-store';
+import { useProjectStore } from '@/stores/project-store';
+import { useSchemaStore } from '@/stores/schema-store';
 
 interface AppShellProps {
   children: ReactNode;
@@ -12,6 +14,15 @@ interface AppShellProps {
 export function AppShell({ children, panel }: AppShellProps) {
   const isOpen = usePanelStore((s) => s.isOpen);
   const closePanel = usePanelStore((s) => s.closePanel);
+  const currentDatasourceId = useProjectStore((s) => s.currentDatasourceId);
+  const fetchSchema = useSchemaStore((s) => s.fetchSchema);
+
+  /* Pre-load schema when datasource changes — available across all tabs */
+  useEffect(() => {
+    if (currentDatasourceId) {
+      fetchSchema(currentDatasourceId);
+    }
+  }, [currentDatasourceId, fetchSchema]);
 
   /* Auto-close panel on narrow viewports */
   useEffect(() => {

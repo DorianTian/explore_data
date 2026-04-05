@@ -443,6 +443,54 @@ export class NL2SqlPipeline {
       thinking: `Tables used: ${result.tablesUsed?.join(', ') ?? 'N/A'}\nConfidence: ${result.confidence}\nExplanation: ${result.explanation?.slice(0, 200) ?? 'N/A'}`,
     });
 
+    // Node 7.5: Table name validation — reject hallucinated table names
+    if (result.sql) {
+      const allowedTables = new Set(schema.tables.map((t) => t.name.toLowerCase()));
+      const sqlTableRegex = /(?:FROM|JOIN)\s+"?(\w+)"?(?:\."?(\w+)"?)?/gi;
+      const sqlTables: string[] = [];
+      let tm;
+      while ((tm = sqlTableRegex.exec(result.sql)) !== null) {
+        sqlTables.push((tm[2] ?? tm[1]).toLowerCase());
+      }
+      const invalidTables = sqlTables.filter((t) => !allowedTables.has(t));
+
+      if (invalidTables.length > 0) {
+        progress('table_validation', `发现幻觉表名: ${invalidTables.join(', ')}，重新生成`, {
+          thinking: `Hallucinated tables: ${invalidTables.join(', ')}\nAllowed: ${[...allowedTables].join(', ')}\nRetrying SQL generation with explicit constraint.`,
+        });
+
+        // Retry with explicit table constraint appended to query
+        const constrainedContext = {
+          ...context,
+          userQuery: `${context.userQuery}\n\n⚠️ 重要约束：你只能使用以下表，不能使用任何其他表名：\n${schema.tables.map((t) => `- ${t.name}`).join('\n')}`,
+        };
+        const retryResult = await this.sqlGenerator.generate(constrainedContext, onToken);
+
+        // Validate retry
+        const retryTables: string[] = [];
+        let rm;
+        const retryRegex = /(?:FROM|JOIN)\s+"?(\w+)"?(?:\."?(\w+)"?)?/gi;
+        while ((rm = retryRegex.exec(retryResult.sql)) !== null) {
+          retryTables.push((rm[2] ?? rm[1]).toLowerCase());
+        }
+        const retryInvalid = retryTables.filter((t) => !allowedTables.has(t));
+
+        if (retryInvalid.length === 0) {
+          result = retryResult;
+          progress('table_validation', '表名校验通过（重试后）', {
+            thinking: `Retry succeeded. Tables used: ${retryTables.join(', ')}`,
+          });
+        } else {
+          progress('table_validation', `重试仍有无效表名: ${retryInvalid.join(', ')}，使用原始结果`, {
+            thinking: `Retry still has invalid tables: ${retryInvalid.join(', ')}. Keeping original result and lowering confidence.`,
+          });
+          result = { ...result, confidence: Math.min(result.confidence, 0.3) };
+        }
+      } else {
+        progress('table_validation', '表名校验通过');
+      }
+    }
+
     // Node 8: Verification Loop — dual-stage (static + LLM semantic) with scoring
     progress('sql_verification', '正在审查 SQL 正确性...');
     if (!result.sql || result.confidence >= PIPELINE.verificationThreshold) {

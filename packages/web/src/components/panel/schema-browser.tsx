@@ -90,8 +90,7 @@ interface SchemaBrowserProps {
 
 export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
   const { currentDatasourceId } = useProjectStore();
-  const { tables, relationships, setTables, setRelationships, loadColumns } =
-    useSchemaStore();
+  const { tables, relationships, loadColumns } = useSchemaStore();
   const messages = useChatStore((s) => s.messages);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 200);
@@ -129,7 +128,9 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
     let base = tables;
     if (filterTables && filterTables.length > 0) {
       const filterSet = new Set(filterTables.map((n) => n.toLowerCase()));
-      base = tables.filter((t) => filterSet.has(t.name.toLowerCase()));
+      const matched = tables.filter((t) => filterSet.has(t.name.toLowerCase()));
+      /* Fallback to all tables when filter matches nothing (schema might use different naming) */
+      base = matched.length > 0 ? matched : tables;
     }
     if (!debouncedSearch.trim()) return base;
     const q = debouncedSearch.toLowerCase();
@@ -208,41 +209,15 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
     overscan: 10,
   });
 
-  /* Load schema on mount */
-  const loadSchema = useCallback(async () => {
-    if (!currentDatasourceId) return;
+  const fetchSchema = useSchemaStore((s) => s.fetchSchema);
 
-    const tablesResult = await apiFetch<SchemaTableResponse[]>(
-      `/api/schema/tables?datasourceId=${currentDatasourceId}`,
-    );
-    if (!tablesResult.success || !tablesResult.data) return;
-
-    // Load table list only (no columns) — columns loaded lazily on expand
-    const tables = tablesResult.data.map((t) => ({
-      id: t.id,
-      name: t.name,
-      comment: t.comment,
-      columns: [] as SchemaColumn[],
-      layer: t.layer?.toUpperCase() ?? inferLayer(t.name),
-      domain: t.domain ?? undefined,
-      columnsLoaded: false,
-    }));
-    setTables(tables);
-
-    const relResult = await apiFetch<
-      Array<{
-        id: string;
-        relationshipType: string;
-        fromTableId: string;
-        fromColumnId: string;
-        toTableId: string;
-        toColumnId: string;
-      }>
-    >(`/api/schema/relationships?datasourceId=${currentDatasourceId}`);
-    if (relResult.success && relResult.data) {
-      setRelationships(relResult.data);
-    }
-  }, [currentDatasourceId, setTables, setRelationships]);
+  /* Reload schema — delegates to store (which deduplicates by datasourceId) */
+  const loadSchema = useCallback(
+    (force?: boolean) => {
+      if (currentDatasourceId) fetchSchema(currentDatasourceId, force);
+    },
+    [currentDatasourceId, fetchSchema],
+  );
 
   /* Lazy load columns for a table */
   const loadTableColumns = useCallback(
@@ -326,13 +301,11 @@ export function SchemaBrowser({ filterTables }: SchemaBrowserProps = {}) {
       {/* Header */}
       <div className="flex items-center gap-2 mb-2.5 shrink-0">
         <span className="text-[11px] text-muted">
-          {filterTables
-            ? `${filteredTables.length} 张涉及表`
-            : `${tables.length} 张表`}
+          {filteredTables.length} 张{filterTables && filterTables.length > 0 && filteredTables.length < tables.length ? '涉及' : ''}表
         </span>
         <button
           type="button"
-          onClick={loadSchema}
+          onClick={() => loadSchema(true)}
           className="text-muted hover:text-foreground cursor-pointer p-0.5 ml-auto"
           title="刷新 Schema"
         >

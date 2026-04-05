@@ -28,6 +28,24 @@ export function ArtifactPanel() {
     [messages, selectedMessageId],
   );
 
+  /** Derive tables from SQL when tablesUsed is empty */
+  const filterTables = useMemo(() => {
+    if (message?.tablesUsed && message.tablesUsed.length > 0) {
+      return message.tablesUsed;
+    }
+    if (!message?.sql) return undefined;
+    /* Match FROM/JOIN followed by optional "schema"."table" or just table */
+    const regex = /(?:FROM|JOIN)\s+"?(\w+)"?(?:\."?(\w+)"?)?/gi;
+    const tables: string[] = [];
+    let m;
+    while ((m = regex.exec(message.sql)) !== null) {
+      /* group 2 = table when schema.table, group 1 = table when no schema */
+      tables.push(m[2] ?? m[1]);
+    }
+    const unique = [...new Set(tables)];
+    return unique.length > 0 ? unique : undefined;
+  }, [message?.tablesUsed, message?.sql]);
+
   return (
     <div className="flex flex-col h-full bg-background-secondary">
       {/* Header — minimal tab bar */}
@@ -68,7 +86,7 @@ export function ArtifactPanel() {
         )}
         {artifactTab === 'schema' && (
           <div className="h-full">
-            <SchemaTab filterTables={message?.tablesUsed} />
+            <SchemaTab filterTables={filterTables} />
           </div>
         )}
       </div>
