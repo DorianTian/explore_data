@@ -14,6 +14,7 @@ export interface Datasource {
   projectId: string;
   name: string;
   dialect: string;
+  engineType: string;
   connectionConfig: z.infer<typeof connectionConfigSchema> | null;
   createdAt: Date;
 }
@@ -25,6 +26,8 @@ export interface SchemaTable {
   comment: string | null;
   rowCount: number | null;
   ddl: string | null;
+  layer: string | null;
+  domain: string | null;
   createdAt: Date;
 }
 

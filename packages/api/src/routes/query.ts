@@ -162,8 +162,13 @@ export function createQueryRouter(db: DbClient): Router {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': ctx.get('Origin') || '*',
-      'Access-Control-Allow-Credentials': 'true',
+      // CORS: reflect Origin when present (with credentials), fallback to * without credentials
+      ...(ctx.get('Origin')
+        ? {
+            'Access-Control-Allow-Origin': ctx.get('Origin'),
+            'Access-Control-Allow-Credentials': 'true',
+          }
+        : { 'Access-Control-Allow-Origin': '*' }),
     });
     res.flushHeaders();
 
@@ -193,7 +198,8 @@ export function createQueryRouter(db: DbClient): Router {
         userQuery: parsed.data.query,
         conversationHistory: parsed.data.conversationHistory,
         dialect: parsed.data.dialect,
-        onProgress: (step, message) => sendSSE(res, 'status', { step, message }),
+        onProgress: (step, message, detail) =>
+          sendSSE(res, 'status', { step, message, thinking: detail?.thinking, data: detail?.data }),
         onToken: (token) => sendSSE(res, 'token', { text: token }),
       });
 
@@ -259,11 +265,11 @@ export function createQueryRouter(db: DbClient): Router {
           if (ds?.connectionConfig) {
             sendSSE(res, 'status', { step: 'executing', message: '正在执行查询...' });
 
-            const { QueryExecutor, ChartRecommender } = await import('@nl2sql/engine');
+            const { QueryExecutor, ChartSelector, verifyChart } = await import('@nl2sql/engine');
             const executor = new QueryExecutor();
             const execResult = await executor.execute(
               finalResult.sql,
-              ds.connectionConfig as never,
+              ds.connectionConfig as import('@nl2sql/engine').ExecutionConfig,
               { timeoutMs: 30000, rowLimit: 1000 },
             );
 
@@ -275,15 +281,37 @@ export function createQueryRouter(db: DbClient): Router {
             };
             sendSSE(res, 'execution_result', executionResult);
 
-            const recommender = new ChartRecommender();
-            const chart = recommender.recommend(execResult.rows, execResult.columns);
-            if (chart) {
-              chartRecommendation = {
-                chartType: chart.chartType,
-                config: chart.config,
-              };
-              sendSSE(res, 'chart', chartRecommendation);
+            // LLM-driven chart selection + verification
+            sendSSE(res, 'status', { step: 'chart_selection', message: '正在推荐图表类型...' });
+            const pipelineConfig = getPipelineConfig();
+            const chartSelector = new ChartSelector(
+              pipelineConfig.anthropicApiKey,
+              pipelineConfig.anthropicBaseUrl,
+            );
+            let chartConfig = await chartSelector.select(
+              parsed.data.query,
+              finalResult.sql!,
+              execResult.columns,
+              execResult.rows.slice(0, 5),
+            );
+
+            // Verify and potentially fix chart config
+            const chartVerification = await verifyChart(
+              chartConfig,
+              parsed.data.query,
+              finalResult.sql!,
+              execResult.columns,
+              execResult.rows.slice(0, 5),
+              pipelineConfig.anthropicApiKey,
+              pipelineConfig.anthropicBaseUrl,
+            );
+
+            if (!chartVerification.passed && chartVerification.suggestedFix) {
+              chartConfig = chartVerification.suggestedFix;
             }
+
+            chartRecommendation = chartConfig;
+            sendSSE(res, 'chart', chartRecommendation);
           }
         } catch (execErr: unknown) {
           const execMsg = execErr instanceof Error ? execErr.message : String(execErr);
@@ -335,7 +363,13 @@ export function createQueryRouter(db: DbClient): Router {
       sendSSE(res, 'done', {});
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId });
+      if (!res.writableEnded) {
+        try {
+          sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId });
+        } catch {
+          /* socket closed */
+        }
+      }
     } finally {
       res.end();
     }

@@ -64,3 +64,8 @@ export const VALIDATION = {
   maxSubqueryDepth: 3,
   maxJoinCount: 5,
 } as const;
+
+export const VERIFICATION = {
+  maxRounds: 3,
+  passThreshold: 90,
+} as const;

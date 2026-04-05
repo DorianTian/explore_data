@@ -269,7 +269,7 @@ export class SkillExecutor {
         })
       : [];
 
-    const result = await selector.select(userQuery, parsedColumns, 0);
+    const result = await selector.select(userQuery, '', parsedColumns, []);
     return { success: true, data: result };
   }
 }

@@ -7,7 +7,7 @@ import {
   type DbClient,
 } from '@nl2sql/db';
 import { EmbeddingService } from './embedding-service.js';
-import type { SchemaContext } from './types.js';
+import type { SchemaContext, ProgressCallback } from './types.js';
 
 /**
  * Schema Linker — resolves which tables/columns are relevant to a user query.
@@ -107,16 +107,27 @@ export class SchemaLinker {
     return schemaContext;
   }
 
-  async linkSchema(datasourceId: string, userQuery: string): Promise<SchemaContext> {
+  async linkSchema(
+    datasourceId: string,
+    userQuery: string,
+    onProgress?: ProgressCallback,
+  ): Promise<SchemaContext> {
     const fullSchema = await this.loadSchema(datasourceId);
 
     const totalColumns = fullSchema.tables.reduce((sum, t) => sum + t.columns.length, 0);
 
     if (totalColumns <= 50 || !this.embeddingService) {
+      onProgress?.(
+        'schema_linking',
+        `Small schema (${totalColumns} columns), returning full schema`,
+        {
+          thinking: `Total tables: ${fullSchema.tables.length}, columns: ${totalColumns}. Below threshold (50), skipping embedding filter.`,
+        },
+      );
       return fullSchema;
     }
 
-    return this.twoStageEmbeddingFilter(fullSchema, datasourceId, userQuery);
+    return this.twoStageEmbeddingFilter(fullSchema, datasourceId, userQuery, onProgress);
   }
 
   /**
@@ -186,6 +197,7 @@ export class SchemaLinker {
     fullSchema: SchemaContext,
     datasourceId: string,
     userQuery: string,
+    onProgress?: ProgressCallback,
   ): Promise<SchemaContext> {
     if (!this.embeddingService) return fullSchema;
 
@@ -215,22 +227,59 @@ export class SchemaLinker {
 
     // Extract table names from top-K columns
     const relevantTableNames = new Set<string>();
+    const candidateScores: Array<{ table: string; column: string; distance: number }> = [];
     for (const row of topColumns.rows) {
       const tableMatch = row.text_representation.match(/^Table:\s*(\S+)/);
       if (tableMatch) {
-        relevantTableNames.add(tableMatch[1].toLowerCase());
+        const tableName = tableMatch[1].toLowerCase();
+        relevantTableNames.add(tableName);
+        candidateScores.push({
+          table: tableName,
+          column: row.text_representation.slice(0, 80),
+          distance: row.distance,
+        });
       }
     }
 
+    const preExpansionCount = relevantTableNames.size;
+
     // Stage 2: Include FK-connected tables
+    const fkExpanded: string[] = [];
     for (const rel of fullSchema.relationships) {
-      if (relevantTableNames.has(rel.fromTable.toLowerCase())) {
+      if (
+        relevantTableNames.has(rel.fromTable.toLowerCase()) &&
+        !relevantTableNames.has(rel.toTable.toLowerCase())
+      ) {
         relevantTableNames.add(rel.toTable.toLowerCase());
+        fkExpanded.push(`${rel.fromTable} -> ${rel.toTable}`);
       }
-      if (relevantTableNames.has(rel.toTable.toLowerCase())) {
+      if (
+        relevantTableNames.has(rel.toTable.toLowerCase()) &&
+        !relevantTableNames.has(rel.fromTable.toLowerCase())
+      ) {
         relevantTableNames.add(rel.fromTable.toLowerCase());
+        fkExpanded.push(`${rel.toTable} -> ${rel.fromTable}`);
       }
     }
+
+    // Emit thinking details
+    const topCandidates = candidateScores
+      .slice(0, 10)
+      .map((c) => `  ${c.table}: dist=${c.distance.toFixed(4)} (${c.column})`)
+      .join('\n');
+
+    onProgress?.(
+      'schema_linking',
+      `Embedding recall: ${preExpansionCount} tables, FK expansion: +${fkExpanded.length}`,
+      {
+        thinking: `Top candidate columns by similarity:\n${topCandidates}\n\nFK expansion: ${fkExpanded.length > 0 ? fkExpanded.join(', ') : 'none'}`,
+        data: {
+          embeddingRecall: preExpansionCount,
+          fkExpansion: fkExpanded.length,
+          totalTables: relevantTableNames.size,
+        },
+      },
+    );
 
     const filtered: SchemaContext = {
       tables: fullSchema.tables.filter((t) => relevantTableNames.has(t.name.toLowerCase())),

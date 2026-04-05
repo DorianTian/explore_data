@@ -1,6 +1,6 @@
 /**
- * Seed orchestrator — imports all 7 domain definitions (~1000 tables),
- * generates DDL, and seeds the database via service layer.
+ * V3 Seed orchestrator — seeds 5 engine-type based datasources with
+ * DWD/DWS/DIM/ADS layered tables, physical PostgreSQL tables, and sample data.
  *
  * Usage: tsx packages/api/src/seed/index.ts
  */
@@ -10,198 +10,291 @@ import { resolve } from 'path';
 config({ path: resolve(process.cwd(), '../../.env') });
 config({ path: resolve(process.cwd(), '.env') });
 
-import pino from 'pino';
-import { createDbClient } from '@nl2sql/db';
-import { ProjectService } from '../services/project-service.js';
-import { DatasourceService } from '../services/datasource-service.js';
-import { SchemaService } from '../services/schema-service.js';
-import { MetricService } from '../services/metric-service.js';
-import { KnowledgeService } from '../services/knowledge-service.js';
-import { ConversationService } from '../services/conversation-service.js';
-import { generateDomainDdl } from './generator.js';
-import type { DomainDefinition } from './domains/types.js';
+import { eq } from 'drizzle-orm';
+import pg from 'pg';
+import {
+  projects,
+  datasources,
+  schemaTables,
+  schemaColumns,
+  schemaRelationships,
+  metrics,
+  glossaryEntries,
+  conversations,
+  messages,
+  queryHistory,
+  knowledgeDocs,
+  knowledgeChunks,
+  columnEmbeddings,
+  widgets,
+  dashboards,
+  dashboardWidgets,
+  favorites,
+} from '@nl2sql/db';
+import { createDbClient, type DbClient } from '@nl2sql/db';
+import { hiveSeed, mysqlSeed, dorisSeed, icebergSeed, sparkSeed } from './engines/index.js';
+import type { EngineSeedDefinition } from './engines/types.js';
+import {
+  createPhysicalSchemas,
+  createPhysicalTables,
+  insertSampleData,
+} from './physical-tables.js';
 
-import { ecommerceDomain } from './domains/ecommerce.js';
-import { financeDomain } from './domains/finance.js';
-import { userGrowthDomain } from './domains/user-growth.js';
-import { supplyChainDomain } from './domains/supply-chain.js';
-import { marketingDomain } from './domains/marketing.js';
-import { crmContentDomain } from './domains/crm-content.js';
-import { dataGovernanceDomain } from './domains/data-governance.js';
-
-const logger = pino({ level: 'info' });
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  logger.error('DATABASE_URL is required');
-  process.exit(1);
-}
-
-const ALL_DOMAINS: DomainDefinition[] = [
-  ecommerceDomain,
-  financeDomain,
-  userGrowthDomain,
-  supplyChainDomain,
-  marketingDomain,
-  crmContentDomain,
-  dataGovernanceDomain,
+const ALL_ENGINES: EngineSeedDefinition[] = [
+  hiveSeed,
+  mysqlSeed,
+  dorisSeed,
+  icebergSeed,
+  sparkSeed,
 ];
 
-/** Find table ID from ingest result by table name */
-function findTableId(
-  tables: Array<{ table: { id: string; name: string } }>,
-  name: string,
-  domainName: string,
-): string {
-  const t = tables.find((r) => r.table.name === name);
-  if (!t) {
-    logger.warn({ table: name, domain: domainName }, 'Table not found, skipping metric');
-    return '';
-  }
-  return t.table.id;
-}
-
-async function seedDomain(
-  domain: DomainDefinition,
-  projectId: string,
-  services: {
-    ds: DatasourceService;
-    schema: SchemaService;
-    metric: MetricService;
-    knowledge: KnowledgeService;
-    conversation: ConversationService;
-  },
-) {
-  const { ds, schema, metric, knowledge, conversation } = services;
-
-  /* Datasource + DDL */
-  const datasource = await ds.create({
-    projectId,
-    name: domain.name,
-    dialect: domain.dialect as 'postgresql' | 'mysql',
-  });
-
-  const ddl = generateDomainDdl(domain.tables);
-  const ingest = await schema.ingestDdl(datasource.id, ddl);
-  logger.info(
-    { domain: domain.name, tables: ingest.tables.length, rels: ingest.relationships.length },
-    'Schema ingested',
-  );
-
-  /* Metrics */
-  let metricCount = 0;
-  for (const m of domain.metrics) {
-    const tableId = findTableId(ingest.tables, m.sourceTable, domain.name);
-    if (!tableId) continue;
-    await metric.create({
-      projectId,
-      name: m.name,
-      displayName: m.displayName,
-      description: m.description,
-      expression: m.expression,
-      metricType: m.metricType,
-      sourceTableId: tableId,
-      filters: m.filters as Parameters<typeof metric.create>[0]['filters'],
-      dimensions: m.dimensions,
-      granularity: m.granularity,
-      format: m.format ?? 'number',
-    });
-    metricCount++;
-  }
-
-  /* Glossary */
-  for (const g of domain.glossary) {
-    await knowledge.createGlossaryEntry({ projectId, ...g });
-  }
-
-  /* Knowledge docs */
-  for (const d of domain.knowledgeDocs) {
-    await knowledge.createDoc({ projectId, ...d });
-  }
-
-  /* Conversations */
-  for (const conv of domain.conversations) {
-    const row = await conversation.createConversation(projectId, conv.title);
-    for (const msg of conv.messages) {
-      await conversation.addMessage({
-        conversationId: row.id,
-        role: msg.role,
-        content: msg.content,
-        generatedSql: msg.sql,
-        confidence: msg.confidence,
-      });
-    }
-  }
-
-  /* Query history */
-  for (const q of domain.queryHistory) {
-    await conversation.recordQuery(projectId, {
-      naturalLanguage: q.naturalLanguage,
-      generatedSql: q.generatedSql,
-      status: q.status,
-      isGolden: q.isGolden,
-      tablesUsed: q.tablesUsed,
-    });
-  }
-
-  logger.info(
-    {
-      domain: domain.name,
-      metrics: metricCount,
-      glossary: domain.glossary.length,
-      docs: domain.knowledgeDocs.length,
-      conversations: domain.conversations.length,
-      queries: domain.queryHistory.length,
-    },
-    'Domain seed complete',
-  );
+/** Parse DATABASE_URL into connection config fields for QueryExecutor */
+function parseDbUrl(url: string): {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password?: string;
+  ssl?: boolean;
+} {
+  const u = new URL(url);
+  return {
+    host: u.hostname,
+    port: parseInt(u.port || '5432', 10),
+    database: u.pathname.replace(/^\//, ''),
+    username: u.username,
+    password: u.password || undefined,
+    ssl: u.searchParams.get('sslmode') === 'require' || u.searchParams.get('ssl') === 'true',
+  };
 }
 
 async function seed() {
-  const db = createDbClient(DATABASE_URL!);
-  const projSvc = new ProjectService(db);
-  const services = {
-    ds: new DatasourceService(db),
-    schema: new SchemaService(db),
-    metric: new MetricService(db),
-    knowledge: new KnowledgeService(db),
-    conversation: new ConversationService(db),
-  };
-
-  logger.info('=== NL2SQL Enterprise Seed ===');
-
-  const project = await projSvc.create({
-    name: 'NL2SQL Enterprise Demo',
-    description:
-      '企业级数据平台示例，覆盖电商、金融、用户增长、供应链、营销、客服、数据治理 7 大业务域',
-  });
-  logger.info({ projectId: project.id }, 'Project created');
-
-  let totalTables = 0;
-  let totalMetrics = 0;
-  let totalGlossary = 0;
-
-  for (const domain of ALL_DOMAINS) {
-    await seedDomain(domain, project.id, services);
-    totalTables += domain.tables.length;
-    totalMetrics += domain.metrics.length;
-    totalGlossary += domain.glossary.length;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set');
   }
 
-  logger.info(
-    {
-      projectId: project.id,
-      domains: ALL_DOMAINS.length,
-      tables: totalTables,
-      metrics: totalMetrics,
-      glossary: totalGlossary,
-    },
-    '=== Seed Complete ===',
-  );
+  const db = createDbClient(databaseUrl);
+  const pool = new pg.Pool({ connectionString: databaseUrl });
 
-  process.exit(0);
+  try {
+    console.log('=== NL2SQL V3 Enterprise Seed ===\n');
+
+    // 1. Clean existing data
+    console.log('[1/6] Cleaning existing data...');
+    await cleanAll(db);
+    // Also drop physical schemas
+    for (const engine of ALL_ENGINES) {
+      await pool.query(`DROP SCHEMA IF EXISTS "${engine.pgSchema}" CASCADE`);
+    }
+
+    // 2. Create project
+    console.log('[2/6] Creating project...');
+    const [project] = await db
+      .insert(projects)
+      .values({ name: 'NL2SQL Enterprise Platform', description: '企业级 NL2SQL 智能查询平台' })
+      .returning();
+    console.log(`  Project: ${project.id}`);
+
+    // 3. Seed each engine
+    console.log('[3/6] Seeding engine datasources and metadata...');
+    let totalTables = 0;
+    let totalMetrics = 0;
+    let totalGlossary = 0;
+
+    for (const engine of ALL_ENGINES) {
+      console.log(`  Engine: ${engine.name} (${engine.engineType})...`);
+
+      // Create datasource
+      const [ds] = await db
+        .insert(datasources)
+        .values({
+          projectId: project.id,
+          name: engine.name,
+          dialect: engine.dialect,
+          engineType: engine.engineType,
+          connectionConfig: {
+            ...parseDbUrl(databaseUrl),
+            schema: engine.pgSchema,
+          },
+        })
+        .returning();
+
+      // Ingest tables with layer/domain
+      const tableIdMap = new Map<string, string>();
+      const columnIdMap = new Map<string, string>();
+
+      for (const tableDef of engine.tables) {
+        const [table] = await db
+          .insert(schemaTables)
+          .values({
+            datasourceId: ds.id,
+            name: tableDef.name,
+            comment: tableDef.comment,
+            rowCount: 100,
+            layer: tableDef.layer,
+            domain: tableDef.domain,
+          })
+          .returning();
+
+        tableIdMap.set(tableDef.name, table.id);
+
+        // Insert columns
+        if (tableDef.columns.length > 0) {
+          const insertedCols = await db
+            .insert(schemaColumns)
+            .values(
+              tableDef.columns.map((col, idx) => ({
+                tableId: table.id,
+                name: col.name,
+                dataType: col.dataType,
+                comment: col.comment,
+                isPrimaryKey: col.isPrimaryKey ?? false,
+                isNullable: col.isNullable ?? true,
+                isPii: col.isPii ?? false,
+                sampleValues: col.sampleValues ?? null,
+                ordinalPosition: idx + 1,
+              })),
+            )
+            .returning();
+
+          for (const col of insertedCols) {
+            columnIdMap.set(`${tableDef.name}.${col.name}`, col.id);
+          }
+        }
+
+        totalTables++;
+      }
+
+      // Insert FK relationships
+      for (const tableDef of engine.tables) {
+        for (const col of tableDef.columns) {
+          if (col.referencesTable && col.referencesColumn) {
+            const fromTableId = tableIdMap.get(tableDef.name);
+            const fromColId = columnIdMap.get(`${tableDef.name}.${col.name}`);
+            const toTableId = tableIdMap.get(col.referencesTable);
+            const toColId = columnIdMap.get(`${col.referencesTable}.${col.referencesColumn}`);
+
+            if (fromTableId && fromColId && toTableId && toColId) {
+              await db.insert(schemaRelationships).values({
+                datasourceId: ds.id,
+                fromTableId,
+                fromColumnId: fromColId,
+                toTableId,
+                toColumnId: toColId,
+                relationshipType: 'fk',
+              });
+            }
+          }
+        }
+      }
+
+      // Insert metrics
+      for (const metricDef of engine.metrics) {
+        const sourceTableId = tableIdMap.get(metricDef.sourceTable) ?? null;
+        await db.insert(metrics).values({
+          projectId: project.id,
+          name: metricDef.name,
+          displayName: metricDef.displayName,
+          description: metricDef.description ?? null,
+          expression: metricDef.expression,
+          metricType: metricDef.metricType,
+          sourceTableId,
+          filters: metricDef.filters ?? null,
+          dimensions: metricDef.dimensions ?? null,
+          granularity: metricDef.granularity ?? null,
+          format: metricDef.format ?? 'number',
+        });
+        totalMetrics++;
+      }
+
+      // Insert glossary
+      for (const entry of engine.glossary) {
+        await db.insert(glossaryEntries).values({
+          projectId: project.id,
+          term: entry.term,
+          sqlExpression: entry.sqlExpression,
+          description: entry.description,
+        });
+        totalGlossary++;
+      }
+
+      console.log(
+        `    ${engine.tables.length} tables, ${engine.metrics.length} metrics, ${engine.glossary.length} glossary`,
+      );
+    }
+
+    console.log(
+      `  Total: ${totalTables} tables, ${totalMetrics} metrics, ${totalGlossary} glossary\n`,
+    );
+
+    // 4. Create physical tables
+    console.log('[4/6] Creating physical PostgreSQL schemas and tables...');
+    await createPhysicalSchemas(pool, ALL_ENGINES);
+    const physicalCount = await createPhysicalTables(pool, ALL_ENGINES);
+    console.log(`  Created ${physicalCount} physical tables\n`);
+
+    // 5. Insert sample data
+    console.log('[5/6] Inserting sample data (100 rows per table)...');
+    const rowCount = await insertSampleData(pool, ALL_ENGINES, 100);
+    console.log(`  Inserted ${rowCount} total rows\n`);
+
+    // 6. Generate embeddings (best-effort)
+    console.log('[6/6] Generating column embeddings (best-effort)...');
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const { SchemaLinker } = await import('@nl2sql/engine');
+        const dsRows = await db
+          .select()
+          .from(datasources)
+          .where(eq(datasources.projectId, project.id));
+        let embCount = 0;
+        for (const dsRow of dsRows) {
+          const linker = new SchemaLinker(
+            db,
+            process.env.OPENAI_API_KEY!,
+            process.env.OPENAI_BASE_URL,
+          );
+          embCount += await linker.generateColumnEmbeddings(dsRow.id);
+        }
+        console.log(`  Generated ${embCount} embeddings\n`);
+      } catch (err: unknown) {
+        console.log(
+          `  Embedding generation skipped: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+      }
+    } else {
+      console.log('  OPENAI_API_KEY not set, skipping embeddings\n');
+    }
+
+    console.log('=== Seed complete! ===');
+  } finally {
+    await pool.end();
+  }
+}
+
+async function cleanAll(db: DbClient) {
+  // Delete in reverse dependency order
+  await db.delete(dashboardWidgets);
+  await db.delete(dashboards);
+  await db.delete(favorites);
+  await db.delete(widgets);
+  await db.delete(columnEmbeddings);
+  await db.delete(knowledgeChunks);
+  await db.delete(knowledgeDocs);
+  await db.delete(glossaryEntries);
+  await db.delete(queryHistory);
+  await db.delete(messages);
+  await db.delete(conversations);
+  await db.delete(metrics);
+  await db.delete(schemaRelationships);
+  await db.delete(schemaColumns);
+  await db.delete(schemaTables);
+  await db.delete(datasources);
+  await db.delete(projects);
 }
 
 seed().catch((err) => {
-  logger.error({ err }, 'Seed failed');
+  console.error('Seed failed:', err);
   process.exit(1);
 });

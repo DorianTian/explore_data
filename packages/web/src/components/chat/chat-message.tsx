@@ -144,9 +144,7 @@ function AssistantMessage({ message }: { message: ChatMessageType }) {
           <MessageChartPreview
             messageId={message.id}
             chartType={message.chartRecommendation.chartType}
-            config={
-              message.chartRecommendation.config as Record<string, unknown>
-            }
+            config={message.chartRecommendation as Record<string, unknown>}
           />
         )}
 

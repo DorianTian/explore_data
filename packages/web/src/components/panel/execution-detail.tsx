@@ -239,32 +239,20 @@ export function ExecutionDetail() {
               {message.chartRecommendation.chartType === 'kpi' ? (
                 <div className="p-6 text-center">
                   <p className="text-xs text-muted mb-1">
-                    {
-                      (
-                        message.chartRecommendation.config as Record<
-                          string,
-                          Record<string, string>
-                        >
-                      )?.title?.text
-                    }
+                    {message.chartRecommendation?.title}
                   </p>
                   <p className="text-3xl font-bold text-foreground">
                     {String(
-                      (
-                        (
-                          message.chartRecommendation.config as Record<
-                            string,
-                            Array<{ data: unknown[] }>
-                          >
-                        )?.series
-                      )?.[0]?.data?.[0] ?? '\u2014',
+                      message.chartRecommendation?.series?.[0]
+                        ? (message.chartRecommendation.series[0] as unknown as { data: unknown[] })?.data?.[0] ?? '\u2014'
+                        : '\u2014',
                     )}
                   </p>
                 </div>
               ) : (
                 <ReactECharts
                   option={
-                    message.chartRecommendation.config as Record<
+                    message.chartRecommendation as unknown as Record<
                       string,
                       unknown
                     >

@@ -10,5 +10,9 @@ export const schemaTables = pgTable('schema_tables', {
   comment: text('comment'),
   rowCount: bigint('row_count', { mode: 'number' }),
   ddl: text('ddl'),
+  /** Data warehouse layer: ods | dwd | dws | dim | ads */
+  layer: varchar('layer', { length: 10 }),
+  /** Business domain: trade | user | product | risk */
+  domain: varchar('domain', { length: 50 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
