@@ -78,7 +78,8 @@ export function useSSEStream() {
               sql: data.sql as string | undefined,
               confidence: data.confidence as number | undefined,
               tablesUsed: data.tablesUsed as string[] | undefined,
-              isStreaming: false,
+              /* isStreaming stays true — chart + insight arrive after result.
+                 done/error handlers set isStreaming: false */
             });
             openArtifact(assistantMessageId, 'result');
             break;

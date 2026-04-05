@@ -92,6 +92,13 @@ export function ResultTab({ message }: ResultTabProps) {
 
   const chartConfig = message.chartRecommendation ?? null;
 
+  /* Derive loading states from existing fields — no extra store fields needed */
+  const hasExecution = Boolean(message.executionResult);
+  const isChartLoading =
+    Boolean(message.isStreaming) && hasExecution && !message.chartRecommendation;
+  const isInsightLoading =
+    Boolean(message.isStreaming) && hasExecution && !message.insight;
+
   const noContent = !message.sql && !message.executionResult;
 
   if (noContent) {
@@ -191,17 +198,26 @@ export function ResultTab({ message }: ResultTabProps) {
       )}
 
       {/* ── Data Insight ── */}
-      {message.insight && (
+      {message.insight ? (
         <div className="rounded-lg border border-border bg-surface/50 p-3">
           <h4 className="text-xs font-medium text-muted mb-1.5">数据分析</h4>
           <div className="text-sm text-foreground leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none">
             <ReactMarkdown>{message.insight}</ReactMarkdown>
           </div>
         </div>
-      )}
+      ) : isInsightLoading ? (
+        <div className="rounded-lg border border-border bg-surface/50 p-3">
+          <h4 className="text-xs font-medium text-muted mb-1.5">数据分析</h4>
+          <div className="space-y-2 animate-pulse">
+            <div className="h-3 bg-border/60 rounded w-3/4" />
+            <div className="h-3 bg-border/60 rounded w-1/2" />
+            <div className="h-3 bg-border/60 rounded w-5/6" />
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Chart Section ── */}
-      {hasChart && chartConfig && message.executionResult && (
+      {hasChart && chartConfig && message.executionResult ? (
         <ChartErrorBoundary>
           <SmartChart
             config={chartConfig}
@@ -209,7 +225,20 @@ export function ResultTab({ message }: ResultTabProps) {
             columns={message.executionResult.columns}
           />
         </ChartErrorBoundary>
-      )}
+      ) : isChartLoading ? (
+        <div className="rounded-lg border border-border bg-surface/50 p-3">
+          <h4 className="text-xs font-medium text-muted mb-1.5">图表</h4>
+          <div className="flex items-center justify-center h-[180px] animate-pulse">
+            <div className="flex items-end gap-2">
+              <div className="w-6 h-16 bg-border/60 rounded" />
+              <div className="w-6 h-24 bg-border/60 rounded" />
+              <div className="w-6 h-12 bg-border/60 rounded" />
+              <div className="w-6 h-20 bg-border/60 rounded" />
+              <div className="w-6 h-14 bg-border/60 rounded" />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Data Table Section ── */}
       {message.executionResult && (
