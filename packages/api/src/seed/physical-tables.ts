@@ -168,7 +168,11 @@ function generateValue(
     return Math.random() > 0.3;
   }
 
-  // Text fallback
+  // Common business columns — realistic Chinese values
+  const semanticValue = getSemanticValue(col.name, index);
+  if (semanticValue !== undefined) return semanticValue;
+
+  // Text fallback with readable names
   if (col.name.includes('name') || col.name.includes('title')) {
     return `${col.comment?.slice(0, 4) ?? col.name}_${index + 1}`;
   }
@@ -178,6 +182,51 @@ function generateValue(
   }
 
   return `val_${index + 1}`;
+}
+
+/** Map common column names to realistic business values */
+function getSemanticValue(colName: string, index: number): string | undefined {
+  const pools: Record<string, string[]> = {
+    city: ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '南京', '重庆', '苏州', '西安', '长沙'],
+    region: ['华东', '华南', '华北', '华中', '西南', '西北', '东北'],
+    region_name: ['华东', '华南', '华北', '华中', '西南', '西北', '东北'],
+    province: ['广东', '浙江', '江苏', '北京', '上海', '四川', '湖北', '湖南', '山东', '福建'],
+    country: ['中国', '美国', '日本', '韩国', '英国', '德国', '法国', '澳大利亚'],
+    channel: ['App', 'H5', '小程序', 'PC Web', '线下门店'],
+    platform: ['iOS', 'Android', 'Web', '小程序'],
+    device_type: ['iPhone', 'Android', 'iPad', 'Desktop', 'Mobile'],
+    category: ['电子产品', '服装鞋帽', '食品饮料', '家居用品', '美妆个护', '母婴用品', '运动户外', '图书文娱'],
+    category_name: ['电子产品', '服装鞋帽', '食品饮料', '家居用品', '美妆个护', '母婴用品', '运动户外', '图书文娱'],
+    brand: ['Apple', 'Nike', '华为', '小米', '阿迪达斯', '优衣库', '戴森', '雀巢'],
+    brand_name: ['Apple', 'Nike', '华为', '小米', '阿迪达斯', '优衣库', '戴森', '雀巢'],
+    gender: ['男', '女'],
+    age_group: ['18-24', '25-34', '35-44', '45-54', '55+'],
+    user_tier: ['高价值', '中价值', '低价值', '新用户', '流失用户'],
+    payment_method: ['支付宝', '微信支付', '银行卡', '信用卡', 'Apple Pay'],
+    order_status: ['已完成', '待支付', '已发货', '已取消', '退款中'],
+    status: ['active', 'inactive', 'pending', 'completed', 'cancelled'],
+    risk_type: ['欺诈交易', '账户盗用', '恶意刷单', '虚假注册', '异常登录'],
+    risk_level: ['高风险', '中风险', '低风险'],
+    check_type: ['实名认证', 'KYC审核', '风控规则', '黑名单检查', '设备指纹'],
+    seller_name: ['旗舰店A', '品牌直营B', '优选商家C', '海外代购D', '工厂直销E'],
+    merchant_name: ['旗舰店A', '品牌直营B', '优选商家C', '海外代购D', '工厂直销E'],
+    product_name: ['iPhone 16 Pro', 'MacBook Air M4', 'AirPods Pro 3', 'Nike Air Max', '华为 Mate 70'],
+    step_name: ['浏览商品', '加入购物车', '提交订单', '完成支付', '确认收货'],
+    event_type: ['page_view', 'click', 'add_to_cart', 'purchase', 'search', 'share'],
+    action: ['浏览', '点击', '收藏', '加购', '下单', '支付'],
+    source: ['自然搜索', '付费推广', '社交分享', '直接访问', '邮件营销'],
+    tag: ['高消费', '活跃用户', '新注册', '沉默用户', '品牌忠诚'],
+    cohort_date: ['2026-01-01', '2026-01-08', '2026-01-15', '2026-01-22', '2026-02-01'],
+    user_name: ['张三', '李四', '王五', '赵六', '陈七', '刘八', '周九', '吴十'],
+  };
+
+  for (const [key, values] of Object.entries(pools)) {
+    if (colName === key || colName.endsWith(`_${key}`)) {
+      return values[index % values.length];
+    }
+  }
+
+  return undefined;
 }
 
 function domainIdOffset(domain: string): number {
