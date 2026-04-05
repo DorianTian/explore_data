@@ -3,10 +3,10 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { MessageSqlBlock } from './message-sql-block';
+import { MessageResultPreview } from './message-result-preview';
+import { MessageChartPreview } from './message-chart-preview';
 import { MessageFeedback } from './message-feedback';
 import { StreamingIndicator } from './streaming-indicator';
-import { Icon } from '@/components/shared/icon';
-import { usePanelStore } from '@/stores/panel-store';
 import type { ChatMessage as ChatMessageType } from '@/stores/chat-store';
 
 interface ChatMessageProps {
@@ -34,8 +34,6 @@ function UserBubble({ content }: { content: string }) {
 
 /** Left-aligned assistant message: plain text, no bubble background */
 function AssistantMessage({ message }: { message: ChatMessageType }) {
-  const { openArtifact } = usePanelStore();
-
   return (
     <div className="mb-6">
       {/* Streaming status — subscribes directly to store for real-time updates */}
@@ -129,25 +127,26 @@ function AssistantMessage({ message }: { message: ChatMessageType }) {
         />
       )}
 
-      {/* Result summary — link to right panel instead of inline preview */}
+      {/* Compact result preview */}
       {message.executionResult && (
-        <button
-          onClick={() => openArtifact(message.id, 'result')}
-          className="mt-2 flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
-        >
-          <Icon name="barChart" size={12} />
-          <span>
-            {message.executionResult.rows.length} 行数据
-            {message.executionResult.executionTimeMs
-              ? ` · ${message.executionResult.executionTimeMs}ms`
-              : ''}
-            {message.chartRecommendation
-              ? ` · ${message.chartRecommendation.chartType}`
-              : ''}
-          </span>
-          <span className="text-muted">在面板中查看</span>
-        </button>
+        <MessageResultPreview
+          messageId={message.id}
+          columns={message.executionResult.columns}
+          rows={message.executionResult.rows}
+          truncated={message.executionResult.truncated}
+          executionTimeMs={message.executionResult.executionTimeMs}
+        />
       )}
+
+      {/* Chart thumbnail */}
+      {message.chartRecommendation &&
+        message.chartRecommendation.chartType !== 'table' && (
+          <MessageChartPreview
+            messageId={message.id}
+            chartType={message.chartRecommendation.chartType}
+            config={message.chartRecommendation as Record<string, unknown>}
+          />
+        )}
 
       {/* Feedback actions */}
       {!message.isStreaming && message.sql && (

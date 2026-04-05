@@ -199,22 +199,6 @@ export function ResultTab({ message }: ResultTabProps) {
         </div>
       )}
 
-      {/* ── Loading skeleton while waiting for execution result ── */}
-      {message.sql && !message.executionResult && (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-[200px] rounded-lg bg-muted/30 flex items-center justify-center">
-            <div className="flex items-center gap-2 text-muted text-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-40" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
-              正在执行查询并分析数据...
-            </div>
-          </div>
-          <div className="h-[120px] rounded-lg bg-muted/20" />
-        </div>
-      )}
-
       {/* ── Chart Section ── */}
       {hasChart && chartConfig && message.executionResult && (
         <ChartErrorBoundary>
