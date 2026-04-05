@@ -36,8 +36,8 @@ function UserBubble({ content }: { content: string }) {
 function AssistantMessage({ message }: { message: ChatMessageType }) {
   return (
     <div className="mb-6">
-      {/* Streaming status — subscribes directly to store for real-time updates */}
-      {message.isStreaming && (
+      {/* Pipeline steps — live during streaming, collapsible after completion */}
+      {(message.isStreaming || (message.pipelineStatus?.steps?.length ?? 0) > 0) && (
         <StreamingIndicator messageId={message.id} />
       )}
 

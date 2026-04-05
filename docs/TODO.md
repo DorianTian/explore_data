@@ -1,33 +1,41 @@
 # NL2SQL — 待办项
 
-> 最后更新：2026-04-04
+> 最后更新：2026-04-05
 
-## P0 — 数据分析与趋势展示
+## 已完成 (V3 Enterprise Refactor)
 
-- [ ] **数据分析（insight）流式展示**：SQL 执行成功后，`streamDataInsight` 生成的分析内容应实时流式展示在 artifact panel 的"数据分析"区域。当前因 SQL 执行常失败，insight 从未在 UI 中展示过
-- [ ] **趋势分析图表**：时间序列查询（如"本月 vs 上月取消率"）需要趋势折线图。ChartRecommender 需增加时间序列趋势类推荐逻辑
-- [ ] **执行 → 分析 → 可视化全链路打通**：目前 SQL 生成可用，但下游执行/分析/图表因物理表缺失未跑通
+- [x] **5 Engine-type datasources**: Hive/Iceberg/Spark/MySQL/Doris，each with pgSchema isolation
+- [x] **290 DW layered tables**: ODS/DWD/DWS/DIM/ADS + physical tables + 100-row sample data per table
+- [x] **90+ metrics**: aligned with ADS tables, metric hit → fast path query
+- [x] **Dual-stage verification loop**: static AST + LLM 5-dimension scoring (pass >= 90, max 3 rounds)
+- [x] **LLM chart recommendation**: 10 chart types + verification scoring
+- [x] **Rich SSE streaming**: thinking content per pipeline step (schema linking, verification breakdown)
+- [x] **Artifact panel**: 2-tab (Result + Schema), virtualized schema browser, fuzzy search
+- [x] **Smart chart renderer**: MetricCard + 9 ECharts types + ChartErrorBoundary
+- [x] **Data insight streaming**: `streamDataInsight` → `insight_token` SSE → ResultTab 数据分析区域
+- [x] **SQL execution → analysis → chart 全链路**: pipeline 完整，5 engine datasource 均有物理表
+- [x] **Trend analysis charts**: ChartRecommender temporal 分支 (line/multi-line)
+- [x] **Conversation history persistence**: DB-backed, multi-turn follow-up in pipeline (up to 20 turns)
+- [x] **Seed data cleanup**: V3 `cleanAll()` 每次 seed 先清空，无重复 datasource 问题
+- [x] **Knowledge docs embedding**: upload 自动 embed, pgvector RAG retrieval in pipeline
+- [x] **Production deploy fixes**: `.env.production` (build-time API URL) + retry with exponential backoff
+- [x] **18 bugs fixed**: chart payload, hooks order, connection pool leak, CORS, N+1 fetch, hydration error, etc.
 
-## P1 — Seed 数据对齐
+## P0 — End-to-end 体验打磨
 
-- [ ] **Metadata 与物理表不匹配**：7 个大域 seed（电商交易分析、金融风控分析等，共 2000+ 表 metadata）没有对应物理表，SQL 执行必定报 `relation does not exist`。仅"电商主库""金融风控库""运维日志库"3 个小数据源有物理表（含样本数据）
-- [ ] **重复数据源清理**：seed 跑了两次，7 个大域各有 2 条 datasource 记录（有 FK 依赖无法直接删除）
-- [ ] **方案选择**：(A) 为 seed metadata 创建 stub 物理表（DDL only, no data）；(B) QueryExecutor 执行失败时优雅降级；(C) 只保留有物理表的数据源做 demo
+- [ ] **Error UX 优化**: execution error 有中文提示，但 pipeline failure 仍暴露原始 PG 错误文本，需要 user-friendly 降级
+- [ ] **前端 execution results 渲染验证**: 上轮 session 发现 95% confidence queries 结果不渲染，疑似 .next cache 或 SSE timing，需 browser console 调试确认
+- [ ] **Deploy V3 to AWS EC2**: V3 refactor 代码尚未部署到线上
 
-## P2 — 前端交互优化
+## P1 — Feature Gaps (低优先级)
 
-- [ ] **Chat vs Artifact 内容分工**（已部分实现）：chat 只展示简短说明 + SQL 卡片，artifact panel 展示 SQL 编辑器 + 数据分析 + 涉及表结构
-- [ ] **Pipeline 流式步骤**（已实现）：SSE 实时推送 + 累积 log 展示（Koa `ctx.res.flushHeaders()` 修复了缓冲问题）
-- [ ] **ER 图集成到 artifact panel**：查询涉及的表以 ER 图形式展示关联关系
+- [ ] **Dashboard/BI market**: Gallery UI 可用，但缺 engineType 过滤
+- [ ] **Golden query management**: session 内可标记，缺跨 session 管理页面
+- [ ] **Schema annotation UI**: layer/domain 已展示，不可编辑
+- [ ] **ER 图**: 查询涉及的表以 ER 图形式展示关联关系
 
-## 已完成（本轮 session）
+## Infra 注意事项
 
-- [x] dotenv 加载（server.ts + seed/index.ts）
-- [x] SSE Koa response buffering 修复（`ctx.res` + `flushHeaders` 替代 `ctx.body = PassThrough`）
-- [x] Pipeline `onProgress` callback 穿透（pipeline → orchestrator → runFullPipeline）
-- [x] StreamingIndicator 累积 log 模式（步骤一条条叠加，非替换）
-- [x] QueryExecutor `$1` 语法错误修复 + `user`/`username` 字段兼容
-- [x] Seed 2000+ 表 metadata + 业务物理表（orders/products/users/transactions 等）
-- [x] 所有 datasource connection_config 补齐
-- [x] Artifact panel 新增"表结构" tab + `filterTables` 过滤
-- [x] Chat 不再重复 artifact panel 的完整内容
+- PM2 startup systemd hook 未注册 — EC2 reboot 仍需手动恢复
+- Dev server: `WATCHPACK_POLLING=true pnpm dev:web` (Turbopack EMFILE workaround)
+- Next.js 有 breaking changes — 写前端代码前读 `node_modules/next/dist/docs/`

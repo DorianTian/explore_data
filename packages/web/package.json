@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-virtual": "^3.13.23",
     "@xyflow/react": "^12.10.2",
     "echarts": "^6.0.0",
@@ -32,6 +33,9 @@
     "typescript": "^5"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": ["sharp", "unrs-resolver"]
+    "ignoredBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }

@@ -7,6 +7,7 @@ import { useProjectStore } from '@/stores/project-store';
 import { apiPost } from '@/lib/api';
 import { Icon } from '@/components/shared/icon';
 import { Badge } from '@/components/ui';
+import ReactMarkdown from 'react-markdown';
 import { SqlEditor } from './sql-editor';
 import { SmartChart } from './smart-chart';
 import { ChartErrorBoundary } from './chart-error-boundary';
@@ -193,9 +194,9 @@ export function ResultTab({ message }: ResultTabProps) {
       {message.insight && (
         <div className="rounded-lg border border-border bg-surface/50 p-3">
           <h4 className="text-xs font-medium text-muted mb-1.5">数据分析</h4>
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-            {message.insight}
-          </p>
+          <div className="text-sm text-foreground leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none">
+            <ReactMarkdown>{message.insight}</ReactMarkdown>
+          </div>
         </div>
       )}
 

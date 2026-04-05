@@ -79,7 +79,6 @@ export function useSSEStream() {
               confidence: data.confidence as number | undefined,
               tablesUsed: data.tablesUsed as string[] | undefined,
               isStreaming: false,
-              pipelineStatus: undefined,
             });
             openArtifact(assistantMessageId, 'result');
             break;
@@ -104,7 +103,6 @@ export function useSSEStream() {
             updateMessage(assistantMessageId, {
               content: `查询出错: ${data.message}`,
               isStreaming: false,
-              pipelineStatus: undefined,
             });
             setLoading(false);
             break;
@@ -115,13 +113,12 @@ export function useSSEStream() {
         updateMessage(assistantMessageId, {
           content: `连接失败: ${error.message}`,
           isStreaming: false,
-          pipelineStatus: undefined,
         });
         setLoading(false);
       };
 
       const handleDone = () => {
-        updateMessage(assistantMessageId, { isStreaming: false, pipelineStatus: undefined });
+        updateMessage(assistantMessageId, { isStreaming: false });
         setLoading(false);
       };
 

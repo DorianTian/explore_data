@@ -36,18 +36,26 @@ interface StreamingIndicatorProps {
 }
 
 /**
- * Cumulative pipeline log with collapsible thinking content per step.
- * Current step is expanded by default, completed steps are collapsed.
+ * Pipeline reasoning display — ChatGPT-style thinking visibility.
+ * - During streaming: thinking auto-expanded for all steps (no click needed)
+ * - After completion: collapses into compact header, click to review
  */
 export function StreamingIndicator({ messageId }: StreamingIndicatorProps) {
   const message = useChatStore((s) => s.messages.find((m) => m.id === messageId));
+  const [sectionExpanded, setSectionExpanded] = useState(true);
 
-  if (!message?.isStreaming) return null;
+  const isStreaming = message?.isStreaming ?? false;
+  const steps = message?.pipelineStatus?.steps ?? [];
 
-  const status = message.pipelineStatus;
-  const steps = status?.steps ?? [];
+  /* Auto-collapse section when streaming finishes */
+  useEffect(() => {
+    if (!isStreaming && steps.length > 0) {
+      setSectionExpanded(false);
+    }
+  }, [isStreaming, steps.length]);
 
   if (steps.length === 0) {
+    if (!isStreaming) return null;
     return (
       <div className="flex items-center gap-2 py-2">
         <PulsingDot />
@@ -56,6 +64,43 @@ export function StreamingIndicator({ messageId }: StreamingIndicatorProps) {
     );
   }
 
+  /* Completed state: compact header with toggle */
+  if (!isStreaming) {
+    const thinkingCount = steps.filter((s) => s.thinking).length;
+    return (
+      <div className="py-1">
+        <button
+          type="button"
+          onClick={() => setSectionExpanded((prev) => !prev)}
+          className="flex items-center gap-2 py-1 px-1.5 rounded-md text-xs text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
+        >
+          <Icon
+            name="chevronRight"
+            size={10}
+            className={`shrink-0 transition-transform duration-200 ${sectionExpanded ? 'rotate-90' : ''}`}
+          />
+          <span>
+            Pipeline · {steps.length} steps
+            {thinkingCount > 0 && ` · ${thinkingCount} with reasoning`}
+          </span>
+        </button>
+        {sectionExpanded && (
+          <div className="space-y-0.5 mt-1 ml-1 pl-3 border-l-2 border-border/40">
+            {steps.map((entry, i) => (
+              <StepRow
+                key={`${entry.step}-${i}`}
+                entry={entry}
+                isCurrent={false}
+                isStreaming={false}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* Streaming state: live step list, thinking auto-expanded */
   return (
     <div className="space-y-0.5 py-2">
       {steps.map((entry, i) => (
@@ -63,33 +108,33 @@ export function StreamingIndicator({ messageId }: StreamingIndicatorProps) {
           key={`${entry.step}-${i}`}
           entry={entry}
           isCurrent={i === steps.length - 1}
-          defaultExpanded={i === steps.length - 1}
+          isStreaming
         />
       ))}
     </div>
   );
 }
 
-/** Single step row — collapsible if it has thinking content */
+/** Single step row — during streaming thinking is always visible, after streaming it's togglable */
 function StepRow({
   entry,
   isCurrent,
-  defaultExpanded,
+  isStreaming,
 }: {
   entry: PipelineStepEntry;
   isCurrent: boolean;
-  defaultExpanded: boolean;
+  isStreaming: boolean;
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [manualToggle, setManualToggle] = useState<boolean | null>(null);
   const hasThinking = Boolean(entry.thinking);
 
-  /* Auto-expand current step, auto-collapse when no longer current */
-  useEffect(() => {
-    setExpanded(isCurrent);
-  }, [isCurrent]);
+  // During streaming: always show thinking. After: default collapsed, user can toggle.
+  const expanded = isStreaming
+    ? hasThinking
+    : manualToggle ?? false;
 
   const toggle = useCallback(() => {
-    if (hasThinking) setExpanded((prev) => !prev);
+    if (hasThinking) setManualToggle((prev) => !(prev ?? false));
   }, [hasThinking]);
 
   const label = entry.message || STEP_LABELS[entry.step] || entry.step;
@@ -123,7 +168,7 @@ function StepRow({
         )}
       </button>
 
-      {/* Thinking content block */}
+      {/* Thinking content — auto-visible during streaming */}
       {expanded && hasThinking && (
         <div className="ml-5 mt-1 mb-1.5 px-3 py-2 rounded-md bg-surface/80 border border-border/50">
           <pre className="text-xs font-mono text-muted leading-relaxed whitespace-pre-wrap break-words">

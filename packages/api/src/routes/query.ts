@@ -211,6 +211,16 @@ export function createQueryRouter(db: DbClient): Router {
         const validator = new SqlValidator(parsed.data.dialect ?? 'postgresql');
         let validation = validator.validate(result.sql);
 
+        sendSSE(res, 'status', {
+          step: 'sql_validation',
+          message: validation.valid
+            ? 'SQL 校验通过'
+            : `SQL 校验发现 ${validation.errors.length} 个问题`,
+          thinking: validation.valid
+            ? 'Static validation passed. No dangerous operations detected.'
+            : `Issues:\n${validation.errors.map((e: { message: string }) => `- ${e.message}`).join('\n')}`,
+        });
+
         // Error recovery — same retry count as sync endpoint
         if (!validation.valid) {
           sendSSE(res, 'status', { step: 'error_recovery', message: '检测到问题，正在修复...' });
@@ -279,6 +289,12 @@ export function createQueryRouter(db: DbClient): Router {
               truncated: execResult.truncated,
               executionTimeMs: execResult.executionTimeMs,
             };
+
+            sendSSE(res, 'status', {
+              step: 'executing',
+              message: `查询完成 · ${execResult.rows.length} 行 · ${execResult.executionTimeMs}ms`,
+              thinking: `Rows returned: ${execResult.rows.length}${execResult.truncated ? ' (truncated)' : ''}\nColumns: ${execResult.columns.map((c: { name: string; dataType: string }) => `${c.name}(${c.dataType})`).join(', ')}\nExecution time: ${execResult.executionTimeMs}ms`,
+            });
             sendSSE(res, 'execution_result', executionResult);
 
             // LLM-driven chart selection + verification
@@ -311,11 +327,21 @@ export function createQueryRouter(db: DbClient): Router {
             }
 
             chartRecommendation = chartConfig;
+
+            sendSSE(res, 'status', {
+              step: 'chart_selection',
+              message: `推荐图表: ${chartConfig.chartType ?? 'table'}${chartVerification.passed ? '' : ' (已修正)'}`,
+              thinking: `Chart type: ${chartConfig.chartType}\nTitle: ${chartConfig.title ?? 'N/A'}\nVerification: ${chartVerification.passed ? 'passed' : 'failed → applied suggestedFix'}\nScore: ${chartVerification.score ?? 'N/A'}`,
+            });
             sendSSE(res, 'chart', chartRecommendation);
           }
         } catch (execErr: unknown) {
           const execMsg = execErr instanceof Error ? execErr.message : String(execErr);
-          sendSSE(res, 'status', { step: 'execution_error', message: `执行失败: ${execMsg}` });
+          sendSSE(res, 'status', {
+            step: 'execution_error',
+            message: `执行失败: ${execMsg}`,
+            thinking: `Error: ${execMsg}\nSQL: ${finalResult.sql?.slice(0, 200) ?? 'N/A'}`,
+          });
           process.stderr.write(
             JSON.stringify({ level: 'warn', msg: 'SQL execution failed', error: execMsg }) + '\n',
           );
@@ -327,15 +353,16 @@ export function createQueryRouter(db: DbClient): Router {
       if (executionResult && finalResult.sql) {
         try {
           sendSSE(res, 'status', { step: 'data_insight', message: '正在分析数据...' });
-          insightText = await streamDataInsight(
-            res,
-            parsed.data.query,
-            finalResult.sql,
-            executionResult as {
-              rows: Record<string, unknown>[];
-              columns: Array<{ name: string; dataType: string }>;
-            },
-          );
+          const execData = executionResult as {
+            rows: Record<string, unknown>[];
+            columns: Array<{ name: string; dataType: string }>;
+          };
+          insightText = await streamDataInsight(res, parsed.data.query, finalResult.sql, execData);
+          sendSSE(res, 'status', {
+            step: 'data_insight',
+            message: `数据分析完成 · ${insightText.length} 字`,
+            thinking: `Input: ${execData.rows.length} rows × ${execData.columns.length} columns\nInsight length: ${insightText.length} chars`,
+          });
         } catch {
           /* Insight generation is best-effort */
         }

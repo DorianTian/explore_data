@@ -71,6 +71,13 @@ export class NL2SqlPipeline {
     // Step 1: Router — classify intent + complexity
     progress('intent_classification', '正在分析查询意图...');
     const classification = await this.router.classify(input.userQuery, conversationHistory);
+    progress(
+      'intent_classification',
+      `意图: ${classification.type} · ${classification.complexity}`,
+      {
+        thinking: `Type: ${classification.type}\nComplexity: ${classification.complexity}\nConfidence: ${classification.confidence}\nReason: ${classification.reason}`,
+      },
+    );
 
     // Off-topic / clarification → agent handles conversationally
     if (classification.type === 'off_topic' || classification.type === 'clarification') {
@@ -88,6 +95,9 @@ export class NL2SqlPipeline {
     progress('metric_resolution', '正在匹配业务指标...');
     const metricResult = await this.tryMetricResolution(input);
     if (metricResult) return metricResult;
+    progress('metric_resolution', '未命中预定义指标，走全链路', {
+      thinking: 'No matching metric found in metrics table. Falling back to full NL2SQL pipeline.',
+    });
 
     // Step 3: Route by complexity
     if (classification.complexity === 'complex') {
@@ -305,6 +315,23 @@ export class NL2SqlPipeline {
     // Node 1: Query Decomposition — detect if query needs multi-step reasoning
     progress('query_decomposition', '正在拆解查询逻辑...');
     const decomposition = await this.queryDecomposer.decompose(input.userQuery);
+    {
+      const stepsDesc = decomposition.subQueries
+        .map(
+          (sq) =>
+            `Step ${sq.step}: ${sq.description}${sq.dependsOn.length > 0 ? ` (depends: ${sq.dependsOn.join(',')})` : ''}`,
+        )
+        .join('\n');
+      progress(
+        'query_decomposition',
+        decomposition.isComplex
+          ? `拆解为 ${decomposition.subQueries.length} 个子查询 (${decomposition.mergeStrategy})`
+          : '单步查询，无需拆解',
+        {
+          thinking: `Complex: ${decomposition.isComplex}\nMerge strategy: ${decomposition.mergeStrategy}\n\n${stepsDesc}`,
+        },
+      );
+    }
 
     // Node 2: Schema Linking (embedding recall)
     progress('schema_linking', '正在匹配数据模型...');
@@ -328,10 +355,32 @@ export class NL2SqlPipeline {
     // Node 5: RAG — retrieve relevant knowledge documents
     progress('knowledge_retrieval', '正在检索相关知识文档...');
     const knowledgeContext = await this.retrieveKnowledgeContext(input.projectId, input.userQuery);
+    progress('knowledge_retrieval', `检索到 ${knowledgeContext.length} 条知识文档`, {
+      thinking:
+        knowledgeContext.length > 0
+          ? knowledgeContext
+              .map(
+                (doc, i) =>
+                  `${i + 1}. ${typeof doc === 'string' ? doc.slice(0, 120) : JSON.stringify(doc).slice(0, 120)}`,
+              )
+              .join('\n')
+          : 'No relevant knowledge documents found.',
+    });
 
     // Node 6: Data flywheel — retrieve similar accepted queries as few-shot examples
     progress('few_shot_retrieval', '正在检索相似案例...');
     const fewShotExamples = await this.retrieveFewShotExamples(input.projectId, input.userQuery);
+    progress('few_shot_retrieval', `检索到 ${fewShotExamples.length} 条相似案例`, {
+      thinking:
+        fewShotExamples.length > 0
+          ? fewShotExamples
+              .map(
+                (ex, i) =>
+                  `${i + 1}. Q: ${ex.question}\n   SQL: ${ex.sql.slice(0, 100)}${ex.sql.length > 100 ? '...' : ''}`,
+              )
+              .join('\n')
+          : 'No similar examples found in history.',
+    });
 
     // Build generation context
     let queryForGeneration = input.userQuery;
@@ -390,8 +439,21 @@ export class NL2SqlPipeline {
       result = await this.sqlGenerator.generate(context, onToken);
     }
 
+    progress('sql_generation', `SQL 生成完成 · confidence: ${result.confidence}`, {
+      thinking: `Tables used: ${result.tablesUsed?.join(', ') ?? 'N/A'}\nConfidence: ${result.confidence}\nExplanation: ${result.explanation?.slice(0, 200) ?? 'N/A'}`,
+    });
+
     // Node 8: Verification Loop — dual-stage (static + LLM semantic) with scoring
     progress('sql_verification', '正在审查 SQL 正确性...');
+    if (!result.sql || result.confidence >= PIPELINE.verificationThreshold) {
+      progress(
+        'sql_verification',
+        `Confidence ${result.confidence} >= ${PIPELINE.verificationThreshold}，跳过验证`,
+        {
+          thinking: `SQL confidence (${result.confidence}) meets threshold (${PIPELINE.verificationThreshold}). Verification loop skipped.`,
+        },
+      );
+    }
     if (result.sql && result.confidence < PIPELINE.verificationThreshold) {
       const anthropicBase = this.config.anthropicBaseUrl ?? process.env.ANTHROPIC_BASE_URL;
       const loopResult = await runVerificationLoop(
