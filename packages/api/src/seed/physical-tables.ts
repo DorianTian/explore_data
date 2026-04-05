@@ -101,6 +101,17 @@ function generateValue(
 ): unknown {
   const upper = col.dataType.toUpperCase();
 
+  // Array types → PostgreSQL TEXT[] literal
+  if (upper.startsWith('ARRAY') || upper.includes('[]')) {
+    const items = [`item_${index % 5 + 1}`, `item_${(index + 1) % 5 + 1}`];
+    return `{${items.join(',')}}`;
+  }
+
+  // Map/JSON types → valid JSONB object
+  if (upper.startsWith('MAP') || upper === 'JSON' || upper === 'JSONB') {
+    return JSON.stringify({ [`key_${index % 3}`]: `value_${index % 10}` });
+  }
+
   // If has sample values, pick from them
   if (col.sampleValues && col.sampleValues.length > 0) {
     return col.sampleValues[index % col.sampleValues.length];
