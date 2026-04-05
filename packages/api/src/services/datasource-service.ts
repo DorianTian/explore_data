@@ -39,7 +39,10 @@ export class DatasourceService {
     return row ?? null;
   }
 
-  async update(id: string, input: { name?: string; engineType?: string; connectionConfig?: unknown }) {
+  async update(
+    id: string,
+    input: { name?: string; engineType?: string; connectionConfig?: unknown },
+  ) {
     const [row] = await this.db
       .update(datasources)
       .set(input)

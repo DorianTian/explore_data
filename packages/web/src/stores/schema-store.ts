@@ -79,9 +79,7 @@ export const useSchemaStore = create<SchemaStore>((set) => ({
   loadColumns: (tableId, columns) =>
     set((state) => ({
       tables: state.tables.map((table) =>
-        table.id === tableId
-          ? { ...table, columns, columnsLoaded: true }
-          : table,
+        table.id === tableId ? { ...table, columns, columnsLoaded: true } : table,
       ),
     })),
 

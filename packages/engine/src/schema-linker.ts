@@ -120,7 +120,9 @@ export class SchemaLinker {
       onProgress?.(
         'schema_linking',
         `Small schema (${totalColumns} columns), returning full schema`,
-        { thinking: `Total tables: ${fullSchema.tables.length}, columns: ${totalColumns}. Below threshold (50), skipping embedding filter.` },
+        {
+          thinking: `Total tables: ${fullSchema.tables.length}, columns: ${totalColumns}. Below threshold (50), skipping embedding filter.`,
+        },
       );
       return fullSchema;
     }
@@ -231,7 +233,11 @@ export class SchemaLinker {
       if (tableMatch) {
         const tableName = tableMatch[1].toLowerCase();
         relevantTableNames.add(tableName);
-        candidateScores.push({ table: tableName, column: row.text_representation.slice(0, 80), distance: row.distance });
+        candidateScores.push({
+          table: tableName,
+          column: row.text_representation.slice(0, 80),
+          distance: row.distance,
+        });
       }
     }
 
@@ -240,11 +246,17 @@ export class SchemaLinker {
     // Stage 2: Include FK-connected tables
     const fkExpanded: string[] = [];
     for (const rel of fullSchema.relationships) {
-      if (relevantTableNames.has(rel.fromTable.toLowerCase()) && !relevantTableNames.has(rel.toTable.toLowerCase())) {
+      if (
+        relevantTableNames.has(rel.fromTable.toLowerCase()) &&
+        !relevantTableNames.has(rel.toTable.toLowerCase())
+      ) {
         relevantTableNames.add(rel.toTable.toLowerCase());
         fkExpanded.push(`${rel.fromTable} -> ${rel.toTable}`);
       }
-      if (relevantTableNames.has(rel.toTable.toLowerCase()) && !relevantTableNames.has(rel.fromTable.toLowerCase())) {
+      if (
+        relevantTableNames.has(rel.toTable.toLowerCase()) &&
+        !relevantTableNames.has(rel.fromTable.toLowerCase())
+      ) {
         relevantTableNames.add(rel.fromTable.toLowerCase());
         fkExpanded.push(`${rel.toTable} -> ${rel.fromTable}`);
       }
@@ -261,7 +273,11 @@ export class SchemaLinker {
       `Embedding recall: ${preExpansionCount} tables, FK expansion: +${fkExpanded.length}`,
       {
         thinking: `Top candidate columns by similarity:\n${topCandidates}\n\nFK expansion: ${fkExpanded.length > 0 ? fkExpanded.join(', ') : 'none'}`,
-        data: { embeddingRecall: preExpansionCount, fkExpansion: fkExpanded.length, totalTables: relevantTableNames.size },
+        data: {
+          embeddingRecall: preExpansionCount,
+          fkExpansion: fkExpanded.length,
+          totalTables: relevantTableNames.size,
+        },
       },
     );
 

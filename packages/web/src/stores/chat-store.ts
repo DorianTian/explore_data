@@ -134,14 +134,10 @@ export const useChatStore = create<ChatStore>((set) => ({
           thinking: pipelineStatus.thinking,
           data: pipelineStatus.data,
         };
-        const existingIdx = prevSteps.findIndex(
-          (entry) => entry.step === incoming.step,
-        );
+        const existingIdx = prevSteps.findIndex((entry) => entry.step === incoming.step);
         const nextSteps =
           existingIdx >= 0
-            ? prevSteps.map((entry, i) =>
-                i === existingIdx ? { ...entry, ...incoming } : entry,
-              )
+            ? prevSteps.map((entry, i) => (i === existingIdx ? { ...entry, ...incoming } : entry))
             : [...prevSteps, incoming];
         return {
           ...m,

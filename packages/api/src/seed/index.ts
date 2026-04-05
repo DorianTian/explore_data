@@ -34,12 +34,29 @@ import {
 import { createDbClient, type DbClient } from '@nl2sql/db';
 import { hiveSeed, mysqlSeed, dorisSeed, icebergSeed, sparkSeed } from './engines/index.js';
 import type { EngineSeedDefinition } from './engines/types.js';
-import { createPhysicalSchemas, createPhysicalTables, insertSampleData } from './physical-tables.js';
+import {
+  createPhysicalSchemas,
+  createPhysicalTables,
+  insertSampleData,
+} from './physical-tables.js';
 
-const ALL_ENGINES: EngineSeedDefinition[] = [hiveSeed, mysqlSeed, dorisSeed, icebergSeed, sparkSeed];
+const ALL_ENGINES: EngineSeedDefinition[] = [
+  hiveSeed,
+  mysqlSeed,
+  dorisSeed,
+  icebergSeed,
+  sparkSeed,
+];
 
 /** Parse DATABASE_URL into connection config fields for QueryExecutor */
-function parseDbUrl(url: string): { host: string; port: number; database: string; username: string; password?: string; ssl?: boolean } {
+function parseDbUrl(url: string): {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password?: string;
+  ssl?: boolean;
+} {
   const u = new URL(url);
   return {
     host: u.hostname,
@@ -202,10 +219,14 @@ async function seed() {
         totalGlossary++;
       }
 
-      console.log(`    ${engine.tables.length} tables, ${engine.metrics.length} metrics, ${engine.glossary.length} glossary`);
+      console.log(
+        `    ${engine.tables.length} tables, ${engine.metrics.length} metrics, ${engine.glossary.length} glossary`,
+      );
     }
 
-    console.log(`  Total: ${totalTables} tables, ${totalMetrics} metrics, ${totalGlossary} glossary\n`);
+    console.log(
+      `  Total: ${totalTables} tables, ${totalMetrics} metrics, ${totalGlossary} glossary\n`,
+    );
 
     // 4. Create physical tables
     console.log('[4/6] Creating physical PostgreSQL schemas and tables...');
@@ -223,15 +244,24 @@ async function seed() {
     if (process.env.OPENAI_API_KEY) {
       try {
         const { SchemaLinker } = await import('@nl2sql/engine');
-        const dsRows = await db.select().from(datasources).where(eq(datasources.projectId, project.id));
+        const dsRows = await db
+          .select()
+          .from(datasources)
+          .where(eq(datasources.projectId, project.id));
         let embCount = 0;
         for (const dsRow of dsRows) {
-          const linker = new SchemaLinker(db, process.env.OPENAI_API_KEY!, process.env.OPENAI_BASE_URL);
+          const linker = new SchemaLinker(
+            db,
+            process.env.OPENAI_API_KEY!,
+            process.env.OPENAI_BASE_URL,
+          );
           embCount += await linker.generateColumnEmbeddings(dsRow.id);
         }
         console.log(`  Generated ${embCount} embeddings\n`);
       } catch (err: unknown) {
-        console.log(`  Embedding generation skipped: ${err instanceof Error ? err.message : String(err)}\n`);
+        console.log(
+          `  Embedding generation skipped: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
       }
     } else {
       console.log('  OPENAI_API_KEY not set, skipping embeddings\n');

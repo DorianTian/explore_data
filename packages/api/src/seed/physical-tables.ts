@@ -52,13 +52,19 @@ function generateDDL(pgSchema: string, table: TableDef): string {
   return `CREATE TABLE IF NOT EXISTS "${pgSchema}"."${table.name}" (\n${cols.join(',\n')}\n)`;
 }
 
-export async function createPhysicalSchemas(pool: Pool, engines: EngineSeedDefinition[]): Promise<void> {
+export async function createPhysicalSchemas(
+  pool: Pool,
+  engines: EngineSeedDefinition[],
+): Promise<void> {
   for (const engine of engines) {
     await pool.query(`CREATE SCHEMA IF NOT EXISTS "${engine.pgSchema}"`);
   }
 }
 
-export async function createPhysicalTables(pool: Pool, engines: EngineSeedDefinition[]): Promise<number> {
+export async function createPhysicalTables(
+  pool: Pool,
+  engines: EngineSeedDefinition[],
+): Promise<number> {
   let count = 0;
   for (const engine of engines) {
     for (const table of engine.tables) {
@@ -68,7 +74,9 @@ export async function createPhysicalTables(pool: Pool, engines: EngineSeedDefini
         count++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        process.stderr.write(`[physical-tables] Failed to create ${engine.pgSchema}.${table.name}: ${msg}\n`);
+        process.stderr.write(
+          `[physical-tables] Failed to create ${engine.pgSchema}.${table.name}: ${msg}\n`,
+        );
       }
     }
   }
@@ -93,17 +101,12 @@ function generateRows(table: TableDef, rowCount: number): Array<Record<string, u
   return rows;
 }
 
-function generateValue(
-  col: ColumnDef,
-  index: number,
-  totalRows: number,
-  domain: string,
-): unknown {
+function generateValue(col: ColumnDef, index: number, totalRows: number, domain: string): unknown {
   const upper = col.dataType.toUpperCase();
 
   // Array types → PostgreSQL TEXT[] literal
   if (upper.startsWith('ARRAY') || upper.includes('[]')) {
-    const items = [`item_${index % 5 + 1}`, `item_${(index + 1) % 5 + 1}`];
+    const items = [`item_${(index % 5) + 1}`, `item_${((index + 1) % 5) + 1}`];
     return `{${items.join(',')}}`;
   }
 
@@ -155,7 +158,12 @@ function generateValue(
     if (col.name.includes('rate') || col.name.includes('ratio')) {
       return Number((Math.random() * 100).toFixed(2));
     }
-    if (col.name.includes('amount') || col.name.includes('price') || col.name.includes('gmv') || col.name.includes('revenue')) {
+    if (
+      col.name.includes('amount') ||
+      col.name.includes('price') ||
+      col.name.includes('gmv') ||
+      col.name.includes('revenue')
+    ) {
       return Number((Math.random() * 5000 + 10).toFixed(2));
     }
     if (col.name.includes('score')) {
@@ -174,7 +182,10 @@ function generateValue(
 
   // Business numbers / codes (ORD000100001, PAY000200002...)
   if (col.name.endsWith('_no') || col.name.endsWith('_code') || col.name === 'barcode') {
-    const prefix = col.name.replace(/_(no|code)$/, '').toUpperCase().slice(0, 3);
+    const prefix = col.name
+      .replace(/_(no|code)$/, '')
+      .toUpperCase()
+      .slice(0, 3);
     return `${prefix}${String(domainIdOffset(domain) + index + 1).padStart(12, '0')}`;
   }
 
@@ -204,8 +215,22 @@ function generateValue(
   }
 
   // Content / review / comment / detail text
-  if (col.name.includes('content') || col.name.includes('comment') || col.name.includes('detail') || col.name.includes('feedback')) {
-    const texts = ['商品质量很好，物流很快', '性价比不错，推荐购买', '包装完整，与描述相符', '客服态度好，响应及时', '使用体验一般，有待改进', '颜色和图片一致，很满意', '发货速度快，次日达', '做工精细，超出预期'];
+  if (
+    col.name.includes('content') ||
+    col.name.includes('comment') ||
+    col.name.includes('detail') ||
+    col.name.includes('feedback')
+  ) {
+    const texts = [
+      '商品质量很好，物流很快',
+      '性价比不错，推荐购买',
+      '包装完整，与描述相符',
+      '客服态度好，响应及时',
+      '使用体验一般，有待改进',
+      '颜色和图片一致，很满意',
+      '发货速度快，次日达',
+      '做工精细，超出预期',
+    ];
     return texts[index % texts.length];
   }
 
@@ -249,13 +274,42 @@ function generateValue(
 function getSemanticValue(colName: string, index: number): string | undefined {
   const pools: Record<string, string[]> = {
     // ── Geography ──
-    city: ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '南京', '重庆', '苏州', '西安', '长沙'],
-    district: ['朝阳区', '海淀区', '南山区', '浦东新区', '天河区', '武侯区', '江干区', '雨花台区', '福田区', '西湖区'],
+    city: [
+      '北京',
+      '上海',
+      '广州',
+      '深圳',
+      '杭州',
+      '成都',
+      '武汉',
+      '南京',
+      '重庆',
+      '苏州',
+      '西安',
+      '长沙',
+    ],
+    district: [
+      '朝阳区',
+      '海淀区',
+      '南山区',
+      '浦东新区',
+      '天河区',
+      '武侯区',
+      '江干区',
+      '雨花台区',
+      '福田区',
+      '西湖区',
+    ],
     region: ['华东', '华南', '华北', '华中', '西南', '西北', '东北'],
     region_name: ['华东', '华南', '华北', '华中', '西南', '西北', '东北'],
     province: ['广东', '浙江', '江苏', '北京', '上海', '四川', '湖北', '湖南', '山东', '福建'],
     country: ['中国', '美国', '日本', '韩国', '英国', '德国', '法国', '澳大利亚'],
-    address: ['朝阳区建国路88号', '浦东新区陆家嘴环路1000号', '南山区科技园南路1号', '西湖区文三路398号'],
+    address: [
+      '朝阳区建国路88号',
+      '浦东新区陆家嘴环路1000号',
+      '南山区科技园南路1号',
+      '西湖区文三路398号',
+    ],
     zip_code: ['100000', '200000', '510000', '310000', '610000', '430000'],
     zipcode: ['100000', '200000', '510000', '310000', '610000', '430000'],
     city_tier: ['一线', '新一线', '二线', '三线', '四线'],
@@ -267,28 +321,69 @@ function getSemanticValue(colName: string, index: number): string | undefined {
     channel_name: ['App', 'H5', '小程序', 'PC Web', '线下门店'],
     platform: ['iOS', 'Android', 'Web', '小程序'],
     device_type: ['iPhone', 'Android', 'iPad', 'Desktop', 'Mobile'],
-    device_model: ['iPhone 16 Pro', 'iPhone 15', 'Huawei Mate 70', 'Samsung Galaxy S25', 'Xiaomi 15', 'iPad Pro'],
+    device_model: [
+      'iPhone 16 Pro',
+      'iPhone 15',
+      'Huawei Mate 70',
+      'Samsung Galaxy S25',
+      'Xiaomi 15',
+      'iPad Pro',
+    ],
     os: ['iOS', 'Android', 'Windows', 'macOS', 'Linux'],
     os_version: ['iOS 19.0', 'iOS 18.2', 'Android 15', 'Android 14', 'Windows 11', 'macOS 15.3'],
     app_version: ['4.8.0', '4.7.2', '4.6.1', '4.5.0', '3.9.9'],
     browser: ['Chrome', 'Safari', 'Firefox', 'Edge', 'WeChat Browser'],
     browser_type: ['Chrome', 'Safari', 'Firefox', 'Edge', 'WeChat Browser'],
-    browser_ua: ['Mozilla/5.0 (iPhone; CPU iPhone OS 19_0)', 'Mozilla/5.0 (Linux; Android 15)', 'Mozilla/5.0 (Windows NT 10.0)'],
+    browser_ua: [
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 19_0)',
+      'Mozilla/5.0 (Linux; Android 15)',
+      'Mozilla/5.0 (Windows NT 10.0)',
+    ],
     screen_resolution: ['1920x1080', '2560x1440', '1080x2400', '750x1334', '1170x2532'],
     carrier: ['顺丰速运', '中通快递', '圆通速递', '韵达快递', '京东物流', '极兔速递'],
     device_fingerprint: ['fp_a1b2c3d4', 'fp_e5f6g7h8', 'fp_i9j0k1l2', 'fp_m3n4o5p6'],
 
     // ── Product / Commerce ──
-    category: ['电子产品', '服装鞋帽', '食品饮料', '家居用品', '美妆个护', '母婴用品', '运动户外', '图书文娱'],
-    category_name: ['电子产品', '服装鞋帽', '食品饮料', '家居用品', '美妆个护', '母婴用品', '运动户外', '图书文娱'],
+    category: [
+      '电子产品',
+      '服装鞋帽',
+      '食品饮料',
+      '家居用品',
+      '美妆个护',
+      '母婴用品',
+      '运动户外',
+      '图书文娱',
+    ],
+    category_name: [
+      '电子产品',
+      '服装鞋帽',
+      '食品饮料',
+      '家居用品',
+      '美妆个护',
+      '母婴用品',
+      '运动户外',
+      '图书文娱',
+    ],
     category_l1: ['电子产品', '服装鞋帽', '食品饮料', '家居用品', '美妆个护'],
     category_l2: ['手机通讯', '男装', '休闲零食', '厨房用品', '面部护肤'],
     category_l3: ['智能手机', 'T恤', '坚果炒货', '锅具', '面膜'],
     category_path: ['数码/手机/智能手机', '服装/女装/连衣裙', '食品/零食/坚果', '家居/厨房/锅具'],
     brand: ['Apple', 'Nike', '华为', '小米', '阿迪达斯', '优衣库', '戴森', '雀巢'],
     brand_name: ['Apple', 'Nike', '华为', '小米', '阿迪达斯', '优衣库', '戴森', '雀巢'],
-    product_name: ['iPhone 16 Pro', 'MacBook Air M4', 'AirPods Pro 3', 'Nike Air Max 2025', '华为 Mate 70', '小米 15 Ultra'],
-    sku_name: ['iPhone 16 Pro 256GB 黑色', 'MacBook Air M4 16+512', 'AirPods Pro 3 白色', 'Nike Air Max 黑白'],
+    product_name: [
+      'iPhone 16 Pro',
+      'MacBook Air M4',
+      'AirPods Pro 3',
+      'Nike Air Max 2025',
+      '华为 Mate 70',
+      '小米 15 Ultra',
+    ],
+    sku_name: [
+      'iPhone 16 Pro 256GB 黑色',
+      'MacBook Air M4 16+512',
+      'AirPods Pro 3 白色',
+      'Nike Air Max 黑白',
+    ],
     currency: ['CNY', 'USD', 'EUR', 'JPY', 'GBP'],
 
     // ── User ──
@@ -365,7 +460,12 @@ function getSemanticValue(colName: string, index: number): string | undefined {
 }
 
 function domainIdOffset(domain: string): number {
-  const offsets: Record<string, number> = { trade: 100000, user: 200000, product: 300000, risk: 400000 };
+  const offsets: Record<string, number> = {
+    trade: 100000,
+    user: 200000,
+    product: 300000,
+    risk: 400000,
+  };
   return offsets[domain] ?? 500000;
 }
 
@@ -382,7 +482,10 @@ function timestampOffset(index: number, totalRows: number): string {
   const msSpan = 90 * 86400000;
   const msOffset = Math.floor((index / totalRows) * msSpan);
   const hourJitter = Math.floor(Math.random() * 86400000);
-  return new Date(base.getTime() + msOffset + hourJitter).toISOString().replace('T', ' ').slice(0, 19);
+  return new Date(base.getTime() + msOffset + hourJitter)
+    .toISOString()
+    .replace('T', ' ')
+    .slice(0, 19);
 }
 
 export async function insertSampleData(
@@ -408,9 +511,7 @@ export async function insertSampleData(
 
           for (let ri = 0; ri < chunk.length; ri++) {
             const row = chunk[ri];
-            const rowPlaceholders = columns.map(
-              (_, ci) => `$${ri * columns.length + ci + 1}`,
-            );
+            const rowPlaceholders = columns.map((_, ci) => `$${ri * columns.length + ci + 1}`);
             placeholders.push(`(${rowPlaceholders.join(', ')})`);
             for (const col of table.columns) {
               values.push(row[col.name]);

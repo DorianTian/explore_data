@@ -48,9 +48,13 @@ export class SchemaReranker {
   ): Promise<SchemaContext> {
     // For small schemas (≤5 tables), skip reranking
     if (schema.tables.length <= 5) {
-      onProgress?.('schema_rerank', `Small schema (${schema.tables.length} tables), skipping rerank`, {
-        thinking: `Table count (${schema.tables.length}) <= 5, reranking unnecessary.`,
-      });
+      onProgress?.(
+        'schema_rerank',
+        `Small schema (${schema.tables.length} tables), skipping rerank`,
+        {
+          thinking: `Table count (${schema.tables.length}) <= 5, reranking unnecessary.`,
+        },
+      );
       return schema;
     }
 
@@ -103,7 +107,11 @@ export class SchemaReranker {
         `Reranked ${schema.tables.length} → ${filtered.tables.length} tables`,
         {
           thinking: `Selected tables: ${result.tables.join(', ')}\nReason: ${reason ?? 'N/A'}`,
-          data: { before: schema.tables.length, after: filtered.tables.length, selected: result.tables },
+          data: {
+            before: schema.tables.length,
+            after: filtered.tables.length,
+            selected: result.tables,
+          },
         },
       );
 
@@ -111,7 +119,8 @@ export class SchemaReranker {
     }
 
     onProgress?.('schema_rerank', 'Reranking returned no results, using original schema', {
-      thinking: 'LLM reranker did not return usable table selection. Falling back to full embedding recall.',
+      thinking:
+        'LLM reranker did not return usable table selection. Falling back to full embedding recall.',
     });
     return schema;
   }

@@ -16,25 +16,27 @@ const str = (name: string, comment: string, extra: Record<string, unknown> = {})
 const dec = (name: string, comment: string) =>
   ({ name, dataType: 'DECIMAL(18,2)', comment }) as const;
 
-const ts = (name: string, comment: string) =>
-  ({ name, dataType: 'TIMESTAMP', comment }) as const;
+const ts = (name: string, comment: string) => ({ name, dataType: 'TIMESTAMP', comment }) as const;
 
 const int = (name: string, comment: string, extra: Record<string, unknown> = {}) =>
   ({ name, dataType: 'INT', comment, ...extra }) as const;
 
-const dbl = (name: string, comment: string) =>
-  ({ name, dataType: 'DOUBLE', comment }) as const;
+const dbl = (name: string, comment: string) => ({ name, dataType: 'DOUBLE', comment }) as const;
 
-const bool = (name: string, comment: string) =>
-  ({ name, dataType: 'BOOLEAN', comment }) as const;
+const bool = (name: string, comment: string) => ({ name, dataType: 'BOOLEAN', comment }) as const;
 
-const dt = (name: string, comment: string) =>
-  ({ name, dataType: 'DATE', comment }) as const;
+const dt = (name: string, comment: string) => ({ name, dataType: 'DATE', comment }) as const;
 
 const ds = () => dt('ds', '数据分区日期');
 
 const fk = (name: string, refTable: string, comment: string) =>
-  ({ name, dataType: 'BIGINT', comment, referencesTable: refTable, referencesColumn: 'id' }) as const;
+  ({
+    name,
+    dataType: 'BIGINT',
+    comment,
+    referencesTable: refTable,
+    referencesColumn: 'id',
+  }) as const;
 
 /* ═══════════════════════════════════════════════
  * DWD Layer — 30 detail fact tables
@@ -56,7 +58,9 @@ const dwdTables: TableDef[] = [
       dec('discount_amount', '优惠金额'),
       dec('pay_amount', '实付金额'),
       int('item_count', '商品件数'),
-      str('order_status', '订单状态', { sampleValues: ['created', 'paid', 'shipped', 'completed', 'cancelled'] }),
+      str('order_status', '订单状态', {
+        sampleValues: ['created', 'paid', 'shipped', 'completed', 'cancelled'],
+      }),
       str('channel', '下单渠道', { sampleValues: ['app', 'h5', 'mini_program', 'pc'] }),
       ts('order_time', '下单时间'),
       str('platform', '平台', { sampleValues: ['ios', 'android', 'web'] }),
@@ -74,7 +78,9 @@ const dwdTables: TableDef[] = [
       fk('user_id', 'dim_user_profile', '支付用户ID'),
       str('payment_no', '支付单号'),
       dec('pay_amount', '支付金额'),
-      str('pay_method', '支付方式', { sampleValues: ['alipay', 'wechat_pay', 'bank_card', 'balance'] }),
+      str('pay_method', '支付方式', {
+        sampleValues: ['alipay', 'wechat_pay', 'bank_card', 'balance'],
+      }),
       str('pay_status', '支付状态', { sampleValues: ['pending', 'success', 'failed', 'refunded'] }),
       str('third_party_no', '第三方流水号'),
       ts('pay_time', '支付完成时间'),
@@ -92,8 +98,12 @@ const dwdTables: TableDef[] = [
       fk('user_id', 'dim_user_profile', '退款用户ID'),
       str('refund_no', '退款单号'),
       dec('refund_amount', '退款金额'),
-      str('refund_reason', '退款原因', { sampleValues: ['quality_issue', 'wrong_item', 'not_needed', 'logistics_delay'] }),
-      str('refund_status', '退款状态', { sampleValues: ['applied', 'approved', 'rejected', 'completed'] }),
+      str('refund_reason', '退款原因', {
+        sampleValues: ['quality_issue', 'wrong_item', 'not_needed', 'logistics_delay'],
+      }),
+      str('refund_status', '退款状态', {
+        sampleValues: ['applied', 'approved', 'rejected', 'completed'],
+      }),
       ts('apply_time', '申请时间'),
       ts('complete_time', '退款完成时间'),
       ds(),
@@ -159,7 +169,9 @@ const dwdTables: TableDef[] = [
       fk('user_id', 'dim_user_profile', '用户ID'),
       fk('order_id', 'dwd_trade_order_di', '关联订单ID'),
       str('coupon_id', '优惠券ID'),
-      str('coupon_type', '优惠券类型', { sampleValues: ['full_reduction', 'discount', 'free_shipping'] }),
+      str('coupon_type', '优惠券类型', {
+        sampleValues: ['full_reduction', 'discount', 'free_shipping'],
+      }),
       dec('coupon_value', '优惠券面值'),
       dec('actual_discount', '实际抵扣金额'),
       ts('use_time', '使用时间'),
@@ -175,8 +187,12 @@ const dwdTables: TableDef[] = [
       pk('logistics_id', '物流记录ID'),
       fk('order_id', 'dwd_trade_order_di', '订单ID'),
       str('tracking_no', '运单号'),
-      str('carrier', '物流公司', { sampleValues: ['sf_express', 'yto', 'zto', 'yunda', 'jd_logistics'] }),
-      str('logistics_status', '物流状态', { sampleValues: ['collected', 'in_transit', 'delivering', 'signed'] }),
+      str('carrier', '物流公司', {
+        sampleValues: ['sf_express', 'yto', 'zto', 'yunda', 'jd_logistics'],
+      }),
+      str('logistics_status', '物流状态', {
+        sampleValues: ['collected', 'in_transit', 'delivering', 'signed'],
+      }),
       ts('status_time', '状态更新时间'),
       str('current_city', '当前所在城市'),
       ds(),
@@ -227,7 +243,9 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('login_id', '登录记录ID'),
       fk('user_id', 'dim_user_profile', '用户ID'),
-      str('login_method', '登录方式', { sampleValues: ['password', 'sms', 'wechat', 'fingerprint'] }),
+      str('login_method', '登录方式', {
+        sampleValues: ['password', 'sms', 'wechat', 'fingerprint'],
+      }),
       str('device_type', '设备类型', { sampleValues: ['ios', 'android', 'web', 'h5'] }),
       str('device_model', '设备型号'),
       str('ip_address', '登录IP'),
@@ -245,7 +263,9 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('register_id', '注册记录ID'),
       bigint('user_id', '新用户ID'),
-      str('register_channel', '注册渠道', { sampleValues: ['organic', 'invite', 'ad_campaign', 'social'] }),
+      str('register_channel', '注册渠道', {
+        sampleValues: ['organic', 'invite', 'ad_campaign', 'social'],
+      }),
       str('register_source', '注册来源', { sampleValues: ['app', 'wechat_mini', 'h5', 'pc'] }),
       str('device_type', '设备类型', { sampleValues: ['ios', 'android', 'web'] }),
       str('ip_address', '注册IP'),
@@ -262,7 +282,9 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('event_id', '事件ID'),
       fk('user_id', 'dim_user_profile', '用户ID'),
-      str('event_type', '事件类型', { sampleValues: ['click', 'expose', 'scroll', 'share', 'search'] }),
+      str('event_type', '事件类型', {
+        sampleValues: ['click', 'expose', 'scroll', 'share', 'search'],
+      }),
       str('page_id', '页面ID'),
       str('element_id', '元素ID'),
       str('session_id', '会话ID'),
@@ -296,9 +318,13 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('feedback_id', '反馈ID'),
       fk('user_id', 'dim_user_profile', '用户ID'),
-      str('feedback_type', '反馈类型', { sampleValues: ['bug', 'suggestion', 'complaint', 'praise'] }),
+      str('feedback_type', '反馈类型', {
+        sampleValues: ['bug', 'suggestion', 'complaint', 'praise'],
+      }),
       str('content', '反馈内容'),
-      str('feedback_status', '处理状态', { sampleValues: ['pending', 'processing', 'resolved', 'closed'] }),
+      str('feedback_status', '处理状态', {
+        sampleValues: ['pending', 'processing', 'resolved', 'closed'],
+      }),
       int('priority', '优先级1-5'),
       ts('submit_time', '提交时间'),
       ds(),
@@ -344,7 +370,9 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('record_id', '记录ID'),
       fk('user_id', 'dim_user_profile', '用户ID'),
-      str('change_type', '变动类型', { sampleValues: ['earn_purchase', 'earn_sign_in', 'spend', 'expire'] }),
+      str('change_type', '变动类型', {
+        sampleValues: ['earn_purchase', 'earn_sign_in', 'spend', 'expire'],
+      }),
       int('point_change', '积分变动量'),
       int('balance_after', '变动后余额'),
       str('source', '来源', { sampleValues: ['order', 'activity', 'sign_in', 'admin'] }),
@@ -381,7 +409,9 @@ const dwdTables: TableDef[] = [
       pk('click_id', '点击ID'),
       fk('user_id', 'dim_user_profile', '用户ID'),
       fk('sku_id', 'dim_product_sku', '商品SKU ID'),
-      str('click_position', '点击位置', { sampleValues: ['banner', 'recommend_list', 'search_result', 'flash_sale'] }),
+      str('click_position', '点击位置', {
+        sampleValues: ['banner', 'recommend_list', 'search_result', 'flash_sale'],
+      }),
       int('rank_position', '排序位置'),
       str('page_id', '页面ID'),
       ts('click_time', '点击时间'),
@@ -414,7 +444,9 @@ const dwdTables: TableDef[] = [
       fk('sku_id', 'dim_product_sku', '商品SKU ID'),
       dec('old_price', '原价'),
       dec('new_price', '新价'),
-      str('change_reason', '调价原因', { sampleValues: ['promotion', 'cost_adjust', 'competitor', 'clearance'] }),
+      str('change_reason', '调价原因', {
+        sampleValues: ['promotion', 'cost_adjust', 'competitor', 'clearance'],
+      }),
       str('operator', '操作人'),
       ts('change_time', '变动时间'),
       ds(),
@@ -460,11 +492,15 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('alert_id', '告警ID'),
       fk('user_id', 'dim_user_profile', '关联用户ID'),
-      str('alert_type', '告警类型', { sampleValues: ['fraud', 'abnormal_login', 'money_laundering', 'bot_traffic'] }),
+      str('alert_type', '告警类型', {
+        sampleValues: ['fraud', 'abnormal_login', 'money_laundering', 'bot_traffic'],
+      }),
       str('risk_level', '风险等级', { sampleValues: ['low', 'medium', 'high', 'critical'] }),
       str('alert_source', '告警来源', { sampleValues: ['rule_engine', 'ml_model', 'manual'] }),
       str('alert_detail', '告警详情'),
-      str('alert_status', '处理状态', { sampleValues: ['open', 'investigating', 'resolved', 'dismissed'] }),
+      str('alert_status', '处理状态', {
+        sampleValues: ['open', 'investigating', 'resolved', 'dismissed'],
+      }),
       dbl('risk_score', '风险评分(0-100)'),
       ts('alert_time', '告警时间'),
       ds(),
@@ -478,8 +514,12 @@ const dwdTables: TableDef[] = [
     columns: [
       pk('kyc_id', '认证ID'),
       fk('user_id', 'dim_user_profile', '用户ID'),
-      str('kyc_level', '认证级别', { sampleValues: ['L1_basic', 'L2_id_verify', 'L3_face_verify'] }),
-      str('kyc_status', '认证状态', { sampleValues: ['pending', 'approved', 'rejected', 'expired'] }),
+      str('kyc_level', '认证级别', {
+        sampleValues: ['L1_basic', 'L2_id_verify', 'L3_face_verify'],
+      }),
+      str('kyc_status', '认证状态', {
+        sampleValues: ['pending', 'approved', 'rejected', 'expired'],
+      }),
       str('reject_reason', '拒绝原因'),
       str('id_type', '证件类型', { sampleValues: ['id_card', 'passport', 'business_license'] }),
       ts('submit_time', '提交时间'),
@@ -545,7 +585,9 @@ const dwdTables: TableDef[] = [
     domain: 'risk',
     columns: [
       pk('event_id', '事件ID'),
-      str('event_type', '事件类型', { sampleValues: ['data_breach', 'regulation_violation', 'policy_update', 'audit_finding'] }),
+      str('event_type', '事件类型', {
+        sampleValues: ['data_breach', 'regulation_violation', 'policy_update', 'audit_finding'],
+      }),
       str('severity', '严重级别', { sampleValues: ['info', 'warning', 'critical'] }),
       str('description', '事件描述'),
       str('affected_scope', '影响范围'),
@@ -605,7 +647,9 @@ const dwsTables: TableDef[] = [
     domain: 'trade',
     columns: [
       pk('id', '主键ID'),
-      str('pay_method', '支付方式', { sampleValues: ['alipay', 'wechat_pay', 'bank_card', 'balance'] }),
+      str('pay_method', '支付方式', {
+        sampleValues: ['alipay', 'wechat_pay', 'bank_card', 'balance'],
+      }),
       bigint('pay_count', '支付笔数'),
       dec('pay_amount', '支付总额'),
       bigint('success_count', '成功笔数'),
@@ -621,7 +665,9 @@ const dwsTables: TableDef[] = [
     domain: 'trade',
     columns: [
       pk('id', '主键ID'),
-      str('refund_reason', '退款原因', { sampleValues: ['quality_issue', 'wrong_item', 'not_needed', 'logistics_delay'] }),
+      str('refund_reason', '退款原因', {
+        sampleValues: ['quality_issue', 'wrong_item', 'not_needed', 'logistics_delay'],
+      }),
       bigint('refund_count', '退款笔数'),
       dec('refund_amount', '退款总额'),
       bigint('user_count', '退款用户数'),
@@ -685,7 +731,9 @@ const dwsTables: TableDef[] = [
     domain: 'user',
     columns: [
       pk('id', '主键ID'),
-      str('register_channel', '注册渠道', { sampleValues: ['organic', 'invite', 'ad_campaign', 'social'] }),
+      str('register_channel', '注册渠道', {
+        sampleValues: ['organic', 'invite', 'ad_campaign', 'social'],
+      }),
       dt('cohort_date', '注册日期'),
       bigint('cohort_size', '注册人数'),
       bigint('retained_d1', '次日留存数'),
@@ -702,7 +750,9 @@ const dwsTables: TableDef[] = [
     domain: 'user',
     columns: [
       pk('id', '主键ID'),
-      str('register_channel', '注册渠道', { sampleValues: ['organic', 'invite', 'ad_campaign', 'social'] }),
+      str('register_channel', '注册渠道', {
+        sampleValues: ['organic', 'invite', 'ad_campaign', 'social'],
+      }),
       dt('cohort_date', '注册日期'),
       bigint('cohort_size', '注册人数'),
       bigint('retained_d14', '14日留存数'),
@@ -718,7 +768,9 @@ const dwsTables: TableDef[] = [
     domain: 'user',
     columns: [
       pk('id', '主键ID'),
-      str('event_type', '事件类型', { sampleValues: ['click', 'expose', 'scroll', 'share', 'search'] }),
+      str('event_type', '事件类型', {
+        sampleValues: ['click', 'expose', 'scroll', 'share', 'search'],
+      }),
       str('platform', '平台', { sampleValues: ['ios', 'android', 'web'] }),
       bigint('event_count', '事件总数'),
       bigint('user_count', '触发用户数'),
@@ -748,7 +800,9 @@ const dwsTables: TableDef[] = [
     domain: 'user',
     columns: [
       pk('id', '主键ID'),
-      str('user_segment', '用户分层', { sampleValues: ['high_value', 'medium_value', 'low_value', 'dormant'] }),
+      str('user_segment', '用户分层', {
+        sampleValues: ['high_value', 'medium_value', 'low_value', 'dormant'],
+      }),
       bigint('user_count', '用户数'),
       dec('avg_ltv', '平均LTV'),
       dec('total_revenue', '总收入'),
@@ -880,7 +934,9 @@ const dwsTables: TableDef[] = [
     domain: 'risk',
     columns: [
       pk('id', '主键ID'),
-      str('fraud_type', '欺诈类型', { sampleValues: ['card_fraud', 'identity_theft', 'account_takeover', 'promo_abuse'] }),
+      str('fraud_type', '欺诈类型', {
+        sampleValues: ['card_fraud', 'identity_theft', 'account_takeover', 'promo_abuse'],
+      }),
       bigint('detected_count', '检测数'),
       bigint('confirmed_count', '确认数'),
       dec('loss_amount', '损失金额'),
@@ -908,9 +964,15 @@ const dimTables: TableDef[] = [
       int('age', '年龄'),
       str('city', '所在城市'),
       str('province', '所在省份'),
-      str('membership_level', '会员等级', { sampleValues: ['normal', 'silver', 'gold', 'platinum', 'diamond'] }),
-      str('user_tag', '用户标签', { sampleValues: ['high_value', 'price_sensitive', 'new_user', 'dormant'] }),
-      str('register_channel', '注册渠道', { sampleValues: ['organic', 'invite', 'ad_campaign', 'social'] }),
+      str('membership_level', '会员等级', {
+        sampleValues: ['normal', 'silver', 'gold', 'platinum', 'diamond'],
+      }),
+      str('user_tag', '用户标签', {
+        sampleValues: ['high_value', 'price_sensitive', 'new_user', 'dormant'],
+      }),
+      str('register_channel', '注册渠道', {
+        sampleValues: ['organic', 'invite', 'ad_campaign', 'social'],
+      }),
       dt('register_date', '注册日期'),
       dt('last_active_date', '最近活跃日期'),
       ts('etl_time', 'ETL更新时间'),
@@ -946,7 +1008,9 @@ const dimTables: TableDef[] = [
       str('category_name', '品类名称'),
       int('category_level', '品类层级1-3'),
       bigint('parent_category_id', '父品类ID'),
-      str('category_path', '品类路径', { sampleValues: ['数码/手机/智能手机', '服装/女装/连衣裙', '食品/零食/坚果'] }),
+      str('category_path', '品类路径', {
+        sampleValues: ['数码/手机/智能手机', '服装/女装/连衣裙', '食品/零食/坚果'],
+      }),
       bool('is_leaf', '是否叶子节点'),
       int('sort_order', '排序权重'),
       ts('etl_time', 'ETL更新时间'),
@@ -960,8 +1024,12 @@ const dimTables: TableDef[] = [
     columns: [
       pk('merchant_id', '商家ID'),
       str('merchant_name', '商家名称'),
-      str('merchant_type', '商家类型', { sampleValues: ['self_operated', 'third_party', 'flagship'] }),
-      str('industry', '行业', { sampleValues: ['electronics', 'fashion', 'food', 'home_appliance'] }),
+      str('merchant_type', '商家类型', {
+        sampleValues: ['self_operated', 'third_party', 'flagship'],
+      }),
+      str('industry', '行业', {
+        sampleValues: ['electronics', 'fashion', 'food', 'home_appliance'],
+      }),
       str('province', '所在省份'),
       str('city', '所在城市'),
       str('status', '商家状态', { sampleValues: ['active', 'suspended', 'closed'] }),
@@ -977,7 +1045,9 @@ const dimTables: TableDef[] = [
     domain: 'trade',
     columns: [
       pk('region_id', '地区ID'),
-      str('region_name', '大区名称', { sampleValues: ['华东', '华南', '华北', '西南', '东北', '西北', '华中'] }),
+      str('region_name', '大区名称', {
+        sampleValues: ['华东', '华南', '华北', '西南', '东北', '西北', '华中'],
+      }),
       str('province', '省份'),
       str('city', '城市'),
       str('district', '区县'),
@@ -993,7 +1063,9 @@ const dimTables: TableDef[] = [
     domain: 'user',
     columns: [
       pk('channel_id', '渠道ID'),
-      str('channel_name', '渠道名称', { sampleValues: ['app_store', 'google_play', 'wechat_mini', 'h5', 'pc_web'] }),
+      str('channel_name', '渠道名称', {
+        sampleValues: ['app_store', 'google_play', 'wechat_mini', 'h5', 'pc_web'],
+      }),
       str('channel_type', '渠道类型', { sampleValues: ['organic', 'paid', 'social', 'direct'] }),
       str('medium', '媒介', { sampleValues: ['cpc', 'cpm', 'referral', 'organic'] }),
       str('source', '来源', { sampleValues: ['baidu', 'toutiao', 'wechat', 'douyin'] }),
@@ -1009,7 +1081,9 @@ const dimTables: TableDef[] = [
     columns: [
       pk('warehouse_id', '仓库ID'),
       str('warehouse_name', '仓库名称'),
-      str('warehouse_type', '仓库类型', { sampleValues: ['central', 'regional', 'bonded', 'front'] }),
+      str('warehouse_type', '仓库类型', {
+        sampleValues: ['central', 'regional', 'bonded', 'front'],
+      }),
       str('province', '所在省份'),
       str('city', '所在城市'),
       int('capacity', '库容(件)'),
@@ -1025,7 +1099,9 @@ const dimTables: TableDef[] = [
     columns: [
       pk('coupon_id', '优惠券ID'),
       str('coupon_name', '优惠券名称'),
-      str('coupon_type', '优惠券类型', { sampleValues: ['full_reduction', 'discount', 'free_shipping'] }),
+      str('coupon_type', '优惠券类型', {
+        sampleValues: ['full_reduction', 'discount', 'free_shipping'],
+      }),
       dec('face_value', '面值'),
       dec('min_order_amount', '使用门槛'),
       dt('start_date', '生效日期'),
@@ -1042,8 +1118,12 @@ const dimTables: TableDef[] = [
     columns: [
       pk('rule_id', '规则ID'),
       str('rule_name', '规则名称'),
-      str('rule_type', '规则类型', { sampleValues: ['threshold', 'velocity', 'pattern', 'ml_model'] }),
-      str('target_event', '目标事件', { sampleValues: ['login', 'payment', 'register', 'withdraw'] }),
+      str('rule_type', '规则类型', {
+        sampleValues: ['threshold', 'velocity', 'pattern', 'ml_model'],
+      }),
+      str('target_event', '目标事件', {
+        sampleValues: ['login', 'payment', 'register', 'withdraw'],
+      }),
       str('risk_level', '对应风险等级', { sampleValues: ['low', 'medium', 'high', 'critical'] }),
       bool('is_enabled', '是否启用'),
       str('description', '规则描述'),
@@ -1158,8 +1238,12 @@ const adsTables: TableDef[] = [
     columns: [
       pk('id', '主键ID'),
       ds(),
-      str('user_segment', '用户分层', { sampleValues: ['high_value', 'medium_value', 'low_value', 'dormant', 'churned'] }),
-      str('membership_level', '会员等级', { sampleValues: ['normal', 'silver', 'gold', 'platinum'] }),
+      str('user_segment', '用户分层', {
+        sampleValues: ['high_value', 'medium_value', 'low_value', 'dormant', 'churned'],
+      }),
+      str('membership_level', '会员等级', {
+        sampleValues: ['normal', 'silver', 'gold', 'platinum'],
+      }),
       bigint('user_count', '用户数'),
       dec('avg_order_amount', '平均客单价'),
       dbl('avg_order_frequency', '平均月下单频次'),
@@ -1210,7 +1294,9 @@ const adsTables: TableDef[] = [
     columns: [
       pk('id', '主键ID'),
       ds(),
-      str('risk_type', '风险类型', { sampleValues: ['fraud', 'abnormal_login', 'money_laundering', 'bot_traffic'] }),
+      str('risk_type', '风险类型', {
+        sampleValues: ['fraud', 'abnormal_login', 'money_laundering', 'bot_traffic'],
+      }),
       bigint('alert_count', '告警数'),
       bigint('blocked_count', '拦截数'),
       bigint('resolved_count', '已处理数'),
@@ -1228,7 +1314,9 @@ const adsTables: TableDef[] = [
     columns: [
       pk('id', '主键ID'),
       ds(),
-      str('monitor_item', '监控项', { sampleValues: ['transaction_qps', 'block_rate', 'model_latency', 'rule_hit_rate'] }),
+      str('monitor_item', '监控项', {
+        sampleValues: ['transaction_qps', 'block_rate', 'model_latency', 'rule_hit_rate'],
+      }),
       str('risk_level', '风险等级', { sampleValues: ['low', 'medium', 'high', 'critical'] }),
       dbl('current_value', '当前值'),
       dbl('threshold_value', '阈值'),
@@ -1540,7 +1628,8 @@ const metrics: MetricDef[] = [
 const glossary: GlossaryDef[] = [
   {
     term: '活跃用户',
-    sqlExpression: "COUNT(DISTINCT user_id) WHERE last_active_date >= CURRENT_DATE - INTERVAL '30' DAY",
+    sqlExpression:
+      "COUNT(DISTINCT user_id) WHERE last_active_date >= CURRENT_DATE - INTERVAL '30' DAY",
     description: '最近30天有登录行为的用户',
   },
   {
@@ -1565,7 +1654,8 @@ const glossary: GlossaryDef[] = [
   },
   {
     term: '动销率',
-    sqlExpression: 'COUNT(DISTINCT CASE WHEN sale_qty > 0 THEN sku_id END) / COUNT(DISTINCT sku_id) * 100',
+    sqlExpression:
+      'COUNT(DISTINCT CASE WHEN sale_qty > 0 THEN sku_id END) / COUNT(DISTINCT sku_id) * 100',
     description: '有销量的SKU占总在售SKU的比例',
   },
   {
@@ -1575,7 +1665,8 @@ const glossary: GlossaryDef[] = [
   },
   {
     term: '用户LTV',
-    sqlExpression: "SUM(pay_amount) FROM dwd_trade_payment_di WHERE user_id = ? AND pay_status = 'success'",
+    sqlExpression:
+      "SUM(pay_amount) FROM dwd_trade_payment_di WHERE user_id = ? AND pay_status = 'success'",
     description: '用户生命周期价值(Life-Time Value)，用户历史累计付费金额',
   },
   {

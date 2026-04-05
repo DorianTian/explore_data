@@ -7,28 +7,29 @@ import type { EngineSeedDefinition, TableDef, MetricDef, GlossaryDef } from './t
 const c = {
   pk: (name: string, comment: string) =>
     ({ name, dataType: 'BIGINT', comment, isPrimaryKey: true }) as const,
-  bigint: (name: string, comment: string) =>
-    ({ name, dataType: 'BIGINT', comment }) as const,
-  int: (name: string, comment: string) =>
-    ({ name, dataType: 'INT', comment }) as const,
+  bigint: (name: string, comment: string) => ({ name, dataType: 'BIGINT', comment }) as const,
+  int: (name: string, comment: string) => ({ name, dataType: 'INT', comment }) as const,
   tinyint: (name: string, comment: string, sampleValues?: string[]) =>
     ({ name, dataType: 'TINYINT', comment, ...(sampleValues ? { sampleValues } : {}) }) as const,
   varchar: (name: string, comment: string, opts?: { sampleValues?: string[]; isPii?: boolean }) =>
     ({ name, dataType: 'VARCHAR(255)', comment, ...opts }) as const,
   decimal: (name: string, comment: string) =>
     ({ name, dataType: 'DECIMAL(18,2)', comment }) as const,
-  double: (name: string, comment: string) =>
-    ({ name, dataType: 'DOUBLE', comment }) as const,
-  datetime: (name: string, comment: string) =>
-    ({ name, dataType: 'DATETIME', comment }) as const,
-  date: (name: string, comment: string) =>
-    ({ name, dataType: 'DATE', comment }) as const,
-  text: (name: string, comment: string) =>
-    ({ name, dataType: 'TEXT', comment }) as const,
+  double: (name: string, comment: string) => ({ name, dataType: 'DOUBLE', comment }) as const,
+  datetime: (name: string, comment: string) => ({ name, dataType: 'DATETIME', comment }) as const,
+  date: (name: string, comment: string) => ({ name, dataType: 'DATE', comment }) as const,
+  text: (name: string, comment: string) => ({ name, dataType: 'TEXT', comment }) as const,
   enumCol: (name: string, comment: string, sampleValues: string[]) =>
     ({ name, dataType: 'ENUM', comment, sampleValues }) as const,
   fk: (name: string, refTable: string, comment: string) =>
-    ({ name, dataType: 'BIGINT', comment, isNullable: false, referencesTable: refTable, referencesColumn: 'id' }) as const,
+    ({
+      name,
+      dataType: 'BIGINT',
+      comment,
+      isNullable: false,
+      referencesTable: refTable,
+      referencesColumn: 'id',
+    }) as const,
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -45,8 +46,12 @@ const odsTables: TableDef[] = [
       c.pk('order_id', '订单ID'),
       c.fk('user_id', 'ods_user_register_df', '下单用户ID'),
       c.fk('merchant_id', 'dim_merchant', '商家ID'),
-      c.varchar('order_no', '订单编号', { sampleValues: ['ORD20250101000001', 'ORD20250101000002'] }),
-      c.varchar('order_status', '订单状态', { sampleValues: ['pending', 'paid', 'shipped', 'completed', 'cancelled'] }),
+      c.varchar('order_no', '订单编号', {
+        sampleValues: ['ORD20250101000001', 'ORD20250101000002'],
+      }),
+      c.varchar('order_status', '订单状态', {
+        sampleValues: ['pending', 'paid', 'shipped', 'completed', 'cancelled'],
+      }),
       c.decimal('total_amount', '订单总金额'),
       c.decimal('discount_amount', '优惠金额'),
       c.decimal('actual_amount', '实付金额'),
@@ -71,7 +76,9 @@ const odsTables: TableDef[] = [
       c.varchar('payment_no', '支付流水号'),
       c.fk('payment_method_id', 'dim_payment_method', '支付方式ID'),
       c.decimal('payment_amount', '支付金额'),
-      c.varchar('payment_status', '支付状态', { sampleValues: ['pending', 'success', 'failed', 'refunded'] }),
+      c.varchar('payment_status', '支付状态', {
+        sampleValues: ['pending', 'success', 'failed', 'refunded'],
+      }),
       c.varchar('third_party_trade_no', '第三方交易号'),
       c.datetime('payment_time', '支付完成时间'),
       c.datetime('created_at', '记录创建时间'),
@@ -88,9 +95,13 @@ const odsTables: TableDef[] = [
       c.fk('order_id', 'ods_trade_order_df', '原始订单ID'),
       c.fk('user_id', 'ods_user_register_df', '退款用户ID'),
       c.varchar('refund_no', '退款编号'),
-      c.varchar('refund_reason', '退款原因', { sampleValues: ['商品质量问题', '发错货', '不想要了', '未按时发货'] }),
+      c.varchar('refund_reason', '退款原因', {
+        sampleValues: ['商品质量问题', '发错货', '不想要了', '未按时发货'],
+      }),
       c.decimal('refund_amount', '退款金额'),
-      c.varchar('refund_status', '退款状态', { sampleValues: ['applying', 'approved', 'rejected', 'completed'] }),
+      c.varchar('refund_status', '退款状态', {
+        sampleValues: ['applying', 'approved', 'rejected', 'completed'],
+      }),
       c.datetime('apply_time', '申请时间'),
       c.datetime('complete_time', '退款完成时间'),
       c.date('ds', '数据分区日期'),
@@ -141,8 +152,12 @@ const odsTables: TableDef[] = [
       c.pk('logistics_id', '物流ID'),
       c.fk('order_id', 'ods_trade_order_df', '订单ID'),
       c.varchar('logistics_no', '物流单号'),
-      c.varchar('carrier', '承运商', { sampleValues: ['顺丰', '中通', '圆通', '韵达', '京东物流'] }),
-      c.varchar('logistics_status', '物流状态', { sampleValues: ['shipping', 'in_transit', 'delivered', 'signed'] }),
+      c.varchar('carrier', '承运商', {
+        sampleValues: ['顺丰', '中通', '圆通', '韵达', '京东物流'],
+      }),
+      c.varchar('logistics_status', '物流状态', {
+        sampleValues: ['shipping', 'in_transit', 'delivered', 'signed'],
+      }),
       c.datetime('ship_time', '发货时间'),
       c.datetime('sign_time', '签收时间'),
       c.varchar('receiver_province', '收件省份'),
@@ -186,7 +201,9 @@ const odsTables: TableDef[] = [
       c.varchar('device_type', '设备类型', { sampleValues: ['ios', 'android', 'web'] }),
       c.varchar('device_model', '设备型号'),
       c.varchar('app_version', '应用版本'),
-      c.varchar('login_method', '登录方式', { sampleValues: ['password', 'sms', 'wechat', 'fingerprint'] }),
+      c.varchar('login_method', '登录方式', {
+        sampleValues: ['password', 'sms', 'wechat', 'fingerprint'],
+      }),
       c.tinyint('login_result', '登录结果: 1-成功 0-失败', ['0', '1']),
       c.date('ds', '数据分区日期'),
     ],
@@ -218,9 +235,13 @@ const odsTables: TableDef[] = [
     columns: [
       c.pk('feedback_id', '反馈ID'),
       c.fk('user_id', 'ods_user_register_df', '用户ID'),
-      c.varchar('feedback_type', '反馈类型', { sampleValues: ['complaint', 'suggestion', 'bug_report', 'praise'] }),
+      c.varchar('feedback_type', '反馈类型', {
+        sampleValues: ['complaint', 'suggestion', 'bug_report', 'praise'],
+      }),
       c.text('content', '反馈内容'),
-      c.varchar('feedback_status', '处理状态', { sampleValues: ['open', 'processing', 'resolved', 'closed'] }),
+      c.varchar('feedback_status', '处理状态', {
+        sampleValues: ['open', 'processing', 'resolved', 'closed'],
+      }),
       c.int('priority', '优先级: 1-低 2-中 3-高'),
       c.datetime('submit_time', '提交时间'),
       c.date('ds', '数据分区日期'),
@@ -242,7 +263,9 @@ const odsTables: TableDef[] = [
       c.decimal('original_price', '原价'),
       c.decimal('selling_price', '售价'),
       c.int('stock_quantity', '库存数量'),
-      c.varchar('product_status', '商品状态', { sampleValues: ['on_sale', 'off_sale', 'pre_sale', 'deleted'] }),
+      c.varchar('product_status', '商品状态', {
+        sampleValues: ['on_sale', 'off_sale', 'pre_sale', 'deleted'],
+      }),
       c.tinyint('is_featured', '是否推荐', ['0', '1']),
       c.datetime('publish_time', '上架时间'),
       c.datetime('created_at', '创建时间'),
@@ -276,7 +299,9 @@ const odsTables: TableDef[] = [
       c.pk('log_id', '日志ID'),
       c.fk('sku_id', 'dim_product_sku', 'SKU ID'),
       c.fk('product_id', 'ods_product_info_df', '商品ID'),
-      c.varchar('change_type', '变动类型', { sampleValues: ['purchase', 'sale', 'return', 'adjust', 'transfer'] }),
+      c.varchar('change_type', '变动类型', {
+        sampleValues: ['purchase', 'sale', 'return', 'adjust', 'transfer'],
+      }),
       c.int('change_quantity', '变动数量'),
       c.int('stock_after', '变动后库存'),
       c.varchar('operator', '操作人'),
@@ -294,7 +319,9 @@ const odsTables: TableDef[] = [
       c.fk('product_id', 'ods_product_info_df', '商品ID'),
       c.decimal('old_price', '调整前价格'),
       c.decimal('new_price', '调整后价格'),
-      c.varchar('change_reason', '调价原因', { sampleValues: ['promotion', 'cost_change', 'market_adjust', 'clearance'] }),
+      c.varchar('change_reason', '调价原因', {
+        sampleValues: ['promotion', 'cost_change', 'market_adjust', 'clearance'],
+      }),
       c.varchar('operator', '操作人'),
       c.datetime('change_time', '变动时间'),
       c.date('ds', '数据分区日期'),
@@ -311,11 +338,15 @@ const odsTables: TableDef[] = [
       c.pk('event_id', '事件ID'),
       c.fk('user_id', 'ods_user_register_df', '触发用户ID'),
       c.fk('rule_id', 'dim_risk_rule', '触发规则ID'),
-      c.varchar('event_type', '事件类型', { sampleValues: ['login_anomaly', 'payment_fraud', 'bot_attack', 'identity_theft'] }),
+      c.varchar('event_type', '事件类型', {
+        sampleValues: ['login_anomaly', 'payment_fraud', 'bot_attack', 'identity_theft'],
+      }),
       c.varchar('risk_level', '风险等级', { sampleValues: ['low', 'medium', 'high', 'critical'] }),
       c.int('risk_score', '风险评分 0-100'),
       c.varchar('event_detail', '事件详情'),
-      c.varchar('action_taken', '处置动作', { sampleValues: ['pass', 'captcha', 'sms_verify', 'block', 'freeze'] }),
+      c.varchar('action_taken', '处置动作', {
+        sampleValues: ['pass', 'captcha', 'sms_verify', 'block', 'freeze'],
+      }),
       c.varchar('ip_address', 'IP地址'),
       c.datetime('event_time', '事件时间'),
       c.date('ds', '数据分区日期'),
@@ -347,7 +378,9 @@ const odsTables: TableDef[] = [
       c.pk('audit_id', '审核ID'),
       c.fk('event_id', 'ods_risk_event_di', '关联事件ID'),
       c.varchar('auditor', '审核人'),
-      c.varchar('audit_result', '审核结果', { sampleValues: ['approved', 'rejected', 'escalated'] }),
+      c.varchar('audit_result', '审核结果', {
+        sampleValues: ['approved', 'rejected', 'escalated'],
+      }),
       c.text('audit_comment', '审核备注'),
       c.datetime('audit_time', '审核时间'),
       c.date('ds', '数据分区日期'),
@@ -382,7 +415,9 @@ const odsTables: TableDef[] = [
       c.pk('log_id', '日志ID'),
       c.fk('user_id', 'ods_user_register_df', '用户ID'),
       c.int('points_change', '积分变动值'),
-      c.varchar('change_type', '变动类型', { sampleValues: ['earn', 'redeem', 'expire', 'adjust'] }),
+      c.varchar('change_type', '变动类型', {
+        sampleValues: ['earn', 'redeem', 'expire', 'adjust'],
+      }),
       c.varchar('source', '变动来源'),
       c.varchar('ref_order_id', '关联订单号'),
       c.int('balance_after', '变动后积分余额'),
@@ -400,7 +435,9 @@ const odsTables: TableDef[] = [
       c.fk('user_id', 'ods_user_register_df', '用户ID'),
       c.fk('order_id', 'ods_trade_order_df', '订单ID'),
       c.bigint('coupon_id', '优惠券ID'),
-      c.varchar('coupon_type', '优惠券类型', { sampleValues: ['full_reduction', 'percentage_off', 'free_shipping'] }),
+      c.varchar('coupon_type', '优惠券类型', {
+        sampleValues: ['full_reduction', 'percentage_off', 'free_shipping'],
+      }),
       c.decimal('coupon_value', '优惠券面值'),
       c.decimal('actual_discount', '实际优惠金额'),
       c.datetime('use_time', '使用时间'),
@@ -422,9 +459,15 @@ const dimTables: TableDef[] = [
     columns: [
       c.pk('id', '用户画像ID'),
       c.fk('user_id', 'ods_user_register_df', '用户ID'),
-      c.varchar('age_group', '年龄段', { sampleValues: ['18-24', '25-30', '31-40', '41-50', '50+'] }),
-      c.varchar('consumption_level', '消费水平', { sampleValues: ['low', 'medium', 'high', 'premium'] }),
-      c.varchar('lifecycle_stage', '生命周期阶段', { sampleValues: ['new', 'active', 'dormant', 'churned'] }),
+      c.varchar('age_group', '年龄段', {
+        sampleValues: ['18-24', '25-30', '31-40', '41-50', '50+'],
+      }),
+      c.varchar('consumption_level', '消费水平', {
+        sampleValues: ['low', 'medium', 'high', 'premium'],
+      }),
+      c.varchar('lifecycle_stage', '生命周期阶段', {
+        sampleValues: ['new', 'active', 'dormant', 'churned'],
+      }),
       c.varchar('preferred_category', '偏好类目'),
       c.int('login_frequency', '月均登录次数'),
       c.tinyint('status', '状态: 1-有效 0-无效', ['0', '1']),
@@ -439,7 +482,9 @@ const dimTables: TableDef[] = [
     domain: 'user',
     columns: [
       c.pk('id', '等级ID'),
-      c.varchar('level_name', '等级名称', { sampleValues: ['普通会员', '银卡会员', '金卡会员', '钻石会员'] }),
+      c.varchar('level_name', '等级名称', {
+        sampleValues: ['普通会员', '银卡会员', '金卡会员', '钻石会员'],
+      }),
       c.int('level_code', '等级编码'),
       c.int('min_points', '所需最低积分'),
       c.double('discount_rate', '折扣率'),
@@ -458,7 +503,9 @@ const dimTables: TableDef[] = [
     columns: [
       c.pk('id', '标签ID'),
       c.varchar('tag_name', '标签名称'),
-      c.varchar('tag_group', '标签分组', { sampleValues: ['behavior', 'preference', 'value', 'demographic'] }),
+      c.varchar('tag_group', '标签分组', {
+        sampleValues: ['behavior', 'preference', 'value', 'demographic'],
+      }),
       c.varchar('display_name', '显示名称'),
       c.text('tag_definition', '标签定义SQL或规则'),
       c.tinyint('status', '状态: 1-启用 0-停用', ['0', '1']),
@@ -516,8 +563,12 @@ const dimTables: TableDef[] = [
       c.varchar('brand_name', '品牌名称'),
       c.varchar('display_name', '显示名称'),
       c.varchar('brand_logo_url', '品牌LOGO地址'),
-      c.varchar('country_of_origin', '原产国', { sampleValues: ['中国', '美国', '日本', '韩国', '德国'] }),
-      c.varchar('brand_level', '品牌档次', { sampleValues: ['luxury', 'premium', 'mid_range', 'budget'] }),
+      c.varchar('country_of_origin', '原产国', {
+        sampleValues: ['中国', '美国', '日本', '韩国', '德国'],
+      }),
+      c.varchar('brand_level', '品牌档次', {
+        sampleValues: ['luxury', 'premium', 'mid_range', 'budget'],
+      }),
       c.tinyint('status', '状态: 1-启用 0-停用', ['0', '1']),
       c.datetime('created_at', '创建时间'),
       c.datetime('updated_at', '更新时间'),
@@ -533,7 +584,9 @@ const dimTables: TableDef[] = [
       c.fk('category_id', 'dim_product_category', '所属类目ID'),
       c.varchar('attribute_name', '属性名称'),
       c.varchar('display_name', '显示名称'),
-      c.varchar('attribute_type', '属性类型', { sampleValues: ['select', 'input', 'multi_select'] }),
+      c.varchar('attribute_type', '属性类型', {
+        sampleValues: ['select', 'input', 'multi_select'],
+      }),
       c.text('attribute_values', '可选值列表(JSON)'),
       c.tinyint('is_required', '是否必填', ['0', '1']),
       c.tinyint('status', '状态: 1-启用 0-停用', ['0', '1']),
@@ -552,7 +605,9 @@ const dimTables: TableDef[] = [
       c.pk('id', '商家ID'),
       c.varchar('merchant_name', '商家名称'),
       c.varchar('display_name', '显示名称'),
-      c.varchar('merchant_type', '商家类型', { sampleValues: ['self_operated', 'third_party', 'franchise'] }),
+      c.varchar('merchant_type', '商家类型', {
+        sampleValues: ['self_operated', 'third_party', 'franchise'],
+      }),
       c.varchar('contact_phone', '联系电话', { isPii: true }),
       c.varchar('province', '所在省份'),
       c.varchar('city', '所在城市'),
@@ -587,7 +642,9 @@ const dimTables: TableDef[] = [
     domain: 'trade',
     columns: [
       c.pk('id', '渠道ID'),
-      c.varchar('channel_code', '渠道编码', { sampleValues: ['app', 'wechat', 'h5', 'web', 'mini_program'] }),
+      c.varchar('channel_code', '渠道编码', {
+        sampleValues: ['app', 'wechat', 'h5', 'web', 'mini_program'],
+      }),
       c.varchar('channel_name', '渠道名称'),
       c.varchar('display_name', '显示名称'),
       c.varchar('channel_group', '渠道分组', { sampleValues: ['online', 'offline', 'social'] }),
@@ -603,7 +660,9 @@ const dimTables: TableDef[] = [
     domain: 'trade',
     columns: [
       c.pk('id', '支付方式ID'),
-      c.varchar('method_code', '支付编码', { sampleValues: ['alipay', 'wechat_pay', 'credit_card', 'debit_card', 'balance'] }),
+      c.varchar('method_code', '支付编码', {
+        sampleValues: ['alipay', 'wechat_pay', 'credit_card', 'debit_card', 'balance'],
+      }),
       c.varchar('method_name', '支付名称'),
       c.varchar('display_name', '显示名称'),
       c.double('fee_rate', '手续费率'),
@@ -621,7 +680,9 @@ const dimTables: TableDef[] = [
       c.pk('id', '优惠券ID'),
       c.varchar('coupon_name', '优惠券名称'),
       c.varchar('display_name', '显示名称'),
-      c.varchar('coupon_type', '优惠券类型', { sampleValues: ['full_reduction', 'percentage_off', 'free_shipping'] }),
+      c.varchar('coupon_type', '优惠券类型', {
+        sampleValues: ['full_reduction', 'percentage_off', 'free_shipping'],
+      }),
       c.decimal('face_value', '面值'),
       c.decimal('min_order_amount', '最低使用金额'),
       c.date('valid_start', '生效开始日期'),
@@ -642,7 +703,9 @@ const dimTables: TableDef[] = [
       c.pk('id', '仓库ID'),
       c.varchar('warehouse_name', '仓库名称'),
       c.varchar('display_name', '显示名称'),
-      c.varchar('warehouse_type', '仓库类型', { sampleValues: ['central', 'regional', 'bonded', 'return'] }),
+      c.varchar('warehouse_type', '仓库类型', {
+        sampleValues: ['central', 'regional', 'bonded', 'return'],
+      }),
       c.varchar('province', '所在省份'),
       c.varchar('city', '所在城市'),
       c.varchar('contact_person', '联系人'),
@@ -658,7 +721,9 @@ const dimTables: TableDef[] = [
     domain: 'trade',
     columns: [
       c.pk('id', '服务商ID'),
-      c.varchar('provider_name', '服务商名称', { sampleValues: ['顺丰速运', '中通快递', '圆通速递', '韵达快递', '京东物流'] }),
+      c.varchar('provider_name', '服务商名称', {
+        sampleValues: ['顺丰速运', '中通快递', '圆通速递', '韵达快递', '京东物流'],
+      }),
       c.varchar('display_name', '显示名称'),
       c.varchar('provider_code', '服务商编码'),
       c.varchar('service_level', '服务等级', { sampleValues: ['standard', 'express', 'same_day'] }),
@@ -678,10 +743,14 @@ const dimTables: TableDef[] = [
       c.pk('id', '规则ID'),
       c.varchar('rule_name', '规则名称'),
       c.varchar('display_name', '显示名称'),
-      c.varchar('rule_type', '规则类型', { sampleValues: ['frequency', 'amount', 'behavior', 'device', 'geo'] }),
+      c.varchar('rule_type', '规则类型', {
+        sampleValues: ['frequency', 'amount', 'behavior', 'device', 'geo'],
+      }),
       c.varchar('risk_level', '风险等级', { sampleValues: ['low', 'medium', 'high', 'critical'] }),
       c.text('rule_expression', '规则表达式'),
-      c.varchar('action_type', '处置类型', { sampleValues: ['pass', 'captcha', 'sms_verify', 'block', 'manual_review'] }),
+      c.varchar('action_type', '处置类型', {
+        sampleValues: ['pass', 'captcha', 'sms_verify', 'block', 'manual_review'],
+      }),
       c.int('priority', '优先级'),
       c.tinyint('status', '状态: 1-启用 0-停用', ['0', '1']),
       c.datetime('created_at', '创建时间'),
@@ -718,7 +787,17 @@ const dimTables: TableDef[] = [
       c.int('month', '月'),
       c.int('week_of_year', '年中第几周'),
       c.int('day_of_week', '周几: 1-7'),
-      c.varchar('day_name', '星期名称', { sampleValues: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] }),
+      c.varchar('day_name', '星期名称', {
+        sampleValues: [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday',
+        ],
+      }),
       c.tinyint('is_weekend', '是否周末', ['0', '1']),
       c.tinyint('is_holiday', '是否节假日', ['0', '1']),
       c.varchar('holiday_name', '节假日名称'),
@@ -731,7 +810,9 @@ const dimTables: TableDef[] = [
     domain: 'trade',
     columns: [
       c.pk('id', '时段ID'),
-      c.varchar('period_name', '时段名称', { sampleValues: ['凌晨', '早间', '上午', '中午', '下午', '傍晚', '晚间', '深夜'] }),
+      c.varchar('period_name', '时段名称', {
+        sampleValues: ['凌晨', '早间', '上午', '中午', '下午', '傍晚', '晚间', '深夜'],
+      }),
       c.varchar('display_name', '显示名称'),
       c.int('start_hour', '起始小时'),
       c.int('end_hour', '结束小时'),
@@ -747,7 +828,9 @@ const dimTables: TableDef[] = [
     domain: 'trade',
     columns: [
       c.pk('id', '促销类型ID'),
-      c.varchar('type_code', '类型编码', { sampleValues: ['flash_sale', 'group_buy', 'full_reduction', 'gift', 'bundle'] }),
+      c.varchar('type_code', '类型编码', {
+        sampleValues: ['flash_sale', 'group_buy', 'full_reduction', 'gift', 'bundle'],
+      }),
       c.varchar('type_name', '类型名称'),
       c.varchar('display_name', '显示名称'),
       c.text('description', '促销类型描述'),
@@ -763,10 +846,14 @@ const dimTables: TableDef[] = [
     domain: 'user',
     columns: [
       c.pk('id', '操作类型ID'),
-      c.varchar('type_code', '类型编码', { sampleValues: ['browse', 'add_cart', 'order', 'pay', 'review', 'share', 'collect'] }),
+      c.varchar('type_code', '类型编码', {
+        sampleValues: ['browse', 'add_cart', 'order', 'pay', 'review', 'share', 'collect'],
+      }),
       c.varchar('type_name', '类型名称'),
       c.varchar('display_name', '显示名称'),
-      c.varchar('type_group', '类型分组', { sampleValues: ['browse', 'transaction', 'interaction'] }),
+      c.varchar('type_group', '类型分组', {
+        sampleValues: ['browse', 'transaction', 'interaction'],
+      }),
       c.tinyint('status', '状态: 1-启用 0-停用', ['0', '1']),
       c.datetime('created_at', '创建时间'),
       c.datetime('updated_at', '更新时间'),
@@ -791,13 +878,17 @@ const dwdTables: TableDef[] = [
       c.bigint('sku_id', 'SKU ID'),
       c.bigint('product_id', '商品ID'),
       c.bigint('category_id', '类目ID'),
-      c.varchar('order_status', '订单状态', { sampleValues: ['paid', 'shipped', 'completed', 'cancelled'] }),
+      c.varchar('order_status', '订单状态', {
+        sampleValues: ['paid', 'shipped', 'completed', 'cancelled'],
+      }),
       c.int('quantity', '购买数量'),
       c.decimal('unit_price', '单价'),
       c.decimal('discount_amount', '优惠金额'),
       c.decimal('actual_amount', '实付金额'),
       c.varchar('channel', '下单渠道', { sampleValues: ['app', 'h5', 'mini_program', 'web'] }),
-      c.varchar('payment_method', '支付方式', { sampleValues: ['alipay', 'wechat_pay', 'credit_card'] }),
+      c.varchar('payment_method', '支付方式', {
+        sampleValues: ['alipay', 'wechat_pay', 'credit_card'],
+      }),
       c.datetime('order_time', '下单时间'),
       c.date('ds', '数据分区日期'),
     ],
@@ -812,7 +903,9 @@ const dwdTables: TableDef[] = [
       c.bigint('payment_id', '支付ID'),
       c.bigint('order_id', '订单ID'),
       c.bigint('user_id', '用户ID'),
-      c.varchar('payment_method', '支付方式', { sampleValues: ['alipay', 'wechat_pay', 'credit_card', 'balance'] }),
+      c.varchar('payment_method', '支付方式', {
+        sampleValues: ['alipay', 'wechat_pay', 'credit_card', 'balance'],
+      }),
       c.decimal('payment_amount', '支付金额'),
       c.varchar('payment_status', '支付状态', { sampleValues: ['success', 'failed', 'refunded'] }),
       c.datetime('payment_time', '支付时间'),
@@ -827,7 +920,9 @@ const dwdTables: TableDef[] = [
     columns: [
       c.pk('id', '行为ID'),
       c.bigint('user_id', '用户ID'),
-      c.varchar('behavior_type', '行为类型', { sampleValues: ['browse', 'add_cart', 'collect', 'share', 'search'] }),
+      c.varchar('behavior_type', '行为类型', {
+        sampleValues: ['browse', 'add_cart', 'collect', 'share', 'search'],
+      }),
       c.bigint('target_id', '行为对象ID'),
       c.varchar('target_type', '对象类型', { sampleValues: ['product', 'store', 'article'] }),
       c.varchar('page_name', '页面名称'),
@@ -846,7 +941,9 @@ const dwdTables: TableDef[] = [
     columns: [
       c.pk('id', '明细ID'),
       c.bigint('user_id', '用户ID'),
-      c.varchar('login_method', '登录方式', { sampleValues: ['password', 'sms', 'wechat', 'fingerprint'] }),
+      c.varchar('login_method', '登录方式', {
+        sampleValues: ['password', 'sms', 'wechat', 'fingerprint'],
+      }),
       c.varchar('device_type', '设备类型', { sampleValues: ['ios', 'android', 'web'] }),
       c.varchar('device_model', '设备型号'),
       c.varchar('os_version', '操作系统版本'),
@@ -872,7 +969,9 @@ const dwdTables: TableDef[] = [
       c.bigint('category_id', '类目ID'),
       c.int('rating', '评分'),
       c.double('sentiment_score', '情感分析得分'),
-      c.varchar('sentiment_label', '情感标签', { sampleValues: ['positive', 'neutral', 'negative'] }),
+      c.varchar('sentiment_label', '情感标签', {
+        sampleValues: ['positive', 'neutral', 'negative'],
+      }),
       c.int('word_count', '评价字数'),
       c.tinyint('has_image', '是否有图', ['0', '1']),
       c.datetime('review_time', '评价时间'),
@@ -890,9 +989,13 @@ const dwdTables: TableDef[] = [
       c.bigint('order_id', '订单ID'),
       c.bigint('user_id', '用户ID'),
       c.bigint('merchant_id', '商家ID'),
-      c.varchar('refund_reason', '退款原因', { sampleValues: ['商品质量问题', '发错货', '不想要了'] }),
+      c.varchar('refund_reason', '退款原因', {
+        sampleValues: ['商品质量问题', '发错货', '不想要了'],
+      }),
       c.decimal('refund_amount', '退款金额'),
-      c.varchar('refund_status', '退款状态', { sampleValues: ['approved', 'rejected', 'completed'] }),
+      c.varchar('refund_status', '退款状态', {
+        sampleValues: ['approved', 'rejected', 'completed'],
+      }),
       c.datetime('apply_time', '申请时间'),
       c.datetime('complete_time', '完成时间'),
       c.date('ds', '数据分区日期'),
@@ -908,7 +1011,9 @@ const dwdTables: TableDef[] = [
       c.bigint('event_id', '事件ID'),
       c.bigint('user_id', '用户ID'),
       c.bigint('rule_id', '规则ID'),
-      c.varchar('event_type', '事件类型', { sampleValues: ['login_anomaly', 'payment_fraud', 'bot_attack'] }),
+      c.varchar('event_type', '事件类型', {
+        sampleValues: ['login_anomaly', 'payment_fraud', 'bot_attack'],
+      }),
       c.varchar('risk_level', '风险等级', { sampleValues: ['low', 'medium', 'high', 'critical'] }),
       c.int('risk_score', '风险评分'),
       c.varchar('action_taken', '处置动作', { sampleValues: ['pass', 'captcha', 'block'] }),
@@ -929,7 +1034,9 @@ const dwdTables: TableDef[] = [
       c.bigint('sku_id', 'SKU ID'),
       c.bigint('product_id', '商品ID'),
       c.bigint('warehouse_id', '仓库ID'),
-      c.varchar('change_type', '变动类型', { sampleValues: ['purchase', 'sale', 'return', 'adjust'] }),
+      c.varchar('change_type', '变动类型', {
+        sampleValues: ['purchase', 'sale', 'return', 'adjust'],
+      }),
       c.int('change_quantity', '变动数量'),
       c.int('stock_before', '变动前库存'),
       c.int('stock_after', '变动后库存'),
@@ -1189,7 +1296,8 @@ const metrics: MetricDef[] = [
 const glossary: GlossaryDef[] = [
   {
     term: 'GMV',
-    sqlExpression: "SUM(actual_amount) FROM dwd_trade_order_detail_di WHERE order_status != 'cancelled'",
+    sqlExpression:
+      "SUM(actual_amount) FROM dwd_trade_order_detail_di WHERE order_status != 'cancelled'",
     description: 'Gross Merchandise Volume，交易总额，指实际成交金额（排除取消订单）',
   },
   {

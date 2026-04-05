@@ -1494,7 +1494,8 @@ const glossary: GlossaryDef[] = [
   },
   {
     term: '转化漏斗',
-    sqlExpression: "SELECT step_name, user_count, conversion_rate FROM ads_trade_conversion_funnel WHERE ds = '${ds}'",
+    sqlExpression:
+      "SELECT step_name, user_count, conversion_rate FROM ads_trade_conversion_funnel WHERE ds = '${ds}'",
     description: '用户从浏览→加购→下单→支付的逐步转化过程，每步计算转化率',
   },
   {
@@ -1514,7 +1515,8 @@ const glossary: GlossaryDef[] = [
   },
   {
     term: '队列分析(Cohort)',
-    sqlExpression: "SELECT cohort_date, retention_1d, retention_7d, retention_30d FROM ads_user_retention_report WHERE ds = '${ds}'",
+    sqlExpression:
+      "SELECT cohort_date, retention_1d, retention_7d, retention_30d FROM ads_user_retention_report WHERE ds = '${ds}'",
     description: '按用户注册日期分组，追踪同一批用户在后续各时间点的留存表现',
   },
 ];

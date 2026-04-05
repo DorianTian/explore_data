@@ -12,7 +12,11 @@ function pk(comment: string) {
   return { name: 'id', dataType: 'BIGINT', comment, isPrimaryKey: true } as const;
 }
 
-function bigint(name: string, comment: string, opts: { referencesTable?: string; referencesColumn?: string } = {}) {
+function bigint(
+  name: string,
+  comment: string,
+  opts: { referencesTable?: string; referencesColumn?: string } = {},
+) {
   return { name, dataType: 'BIGINT', comment, ...opts };
 }
 
@@ -53,7 +57,14 @@ function map(name: string, comment: string) {
 }
 
 function fk(name: string, refTable: string, comment: string) {
-  return { name, dataType: 'BIGINT', comment, isNullable: false, referencesTable: refTable, referencesColumn: 'id' };
+  return {
+    name,
+    dataType: 'BIGINT',
+    comment,
+    isNullable: false,
+    referencesTable: refTable,
+    referencesColumn: 'id',
+  };
 }
 
 function ds() {
@@ -1227,7 +1238,8 @@ const sparkGlossary: GlossaryDef[] = [
   {
     term: 'Feature Store（特征仓库）',
     sqlExpression: 'SELECT * FROM dim_feature_store_registry WHERE is_online_serving = true',
-    description: '统一管理离线/在线特征的存储层，保证训练与推理使用相同特征口径，消除 training-serving skew',
+    description:
+      '统一管理离线/在线特征的存储层，保证训练与推理使用相同特征口径，消除 training-serving skew',
   },
   {
     term: 'Model Serving（模型服务化）',
@@ -1241,27 +1253,33 @@ const sparkGlossary: GlossaryDef[] = [
   },
   {
     term: 'Feature Drift（特征漂移）',
-    sqlExpression: 'SELECT model_name, feature_drift_score FROM ads_risk_model_performance_tracker WHERE feature_drift_score > 0.3',
+    sqlExpression:
+      'SELECT model_name, feature_drift_score FROM ads_risk_model_performance_tracker WHERE feature_drift_score > 0.3',
     description: '线上特征分布相对训练集发生显著偏移，可能导致模型效果衰退，需要触发重训练',
   },
   {
     term: 'A/B Test Lift（实验提升效果）',
-    sqlExpression: 'SELECT experiment_id, variant_name, lift_pct, p_value FROM ads_product_ab_test_result WHERE is_significant = true',
+    sqlExpression:
+      'SELECT experiment_id, variant_name, lift_pct, p_value FROM ads_product_ab_test_result WHERE is_significant = true',
     description: '实验组相对对照组在核心指标上的提升幅度，需通过统计显著性检验（p < 0.05）确认',
   },
   {
     term: 'Churn Prediction（流失预测）',
-    sqlExpression: "SELECT user_id, churn_probability, recommended_action FROM ads_user_churn_prediction WHERE churn_risk_level = 'high'",
+    sqlExpression:
+      "SELECT user_id, churn_probability, recommended_action FROM ads_user_churn_prediction WHERE churn_risk_level = 'high'",
     description: '基于用户行为特征预测未来N天内流失概率，驱动精准挽回策略',
   },
   {
     term: 'Spark Shuffle（Spark 数据重分布）',
-    sqlExpression: "SELECT job_name, spark_config FROM dim_spark_job_config WHERE job_type = 'batch'",
-    description: 'Spark 执行宽依赖算子（JOIN/GROUP BY/REPARTITION）时的数据网络传输过程，是性能优化的核心瓶颈',
+    sqlExpression:
+      "SELECT job_name, spark_config FROM dim_spark_job_config WHERE job_type = 'batch'",
+    description:
+      'Spark 执行宽依赖算子（JOIN/GROUP BY/REPARTITION）时的数据网络传输过程，是性能优化的核心瓶颈',
   },
   {
     term: 'Supply-Demand Ratio（供需比）',
-    sqlExpression: "SELECT product_id, supply_demand_ratio, risk_flag FROM ads_product_supply_demand_forecast WHERE risk_flag = 'shortage'",
+    sqlExpression:
+      "SELECT product_id, supply_demand_ratio, risk_flag FROM ads_product_supply_demand_forecast WHERE risk_flag = 'shortage'",
     description: '当前供应量与预测需求量的比值，低于 1.0 表示供不应求，触发补货/调价策略',
   },
 ];

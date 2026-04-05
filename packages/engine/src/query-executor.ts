@@ -81,7 +81,11 @@ export class QueryExecutor {
       };
     } finally {
       // Reset session state before returning connection to pool
-      try { await client.query('RESET ALL'); } catch { /* best-effort */ }
+      try {
+        await client.query('RESET ALL');
+      } catch {
+        /* best-effort */
+      }
       client.release();
     }
   }

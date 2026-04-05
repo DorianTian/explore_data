@@ -1,5 +1,12 @@
 import { eq, desc, sql } from 'drizzle-orm';
-import { metrics, glossaryEntries, schemaTables, datasources, queryHistory, type DbClient } from '@nl2sql/db';
+import {
+  metrics,
+  glossaryEntries,
+  schemaTables,
+  datasources,
+  queryHistory,
+  type DbClient,
+} from '@nl2sql/db';
 import { SchemaLinker } from './schema-linker.js';
 import { SqlGenerator } from './sql-generator.js';
 import { QueryDecomposer } from './query-decomposer.js';
@@ -238,7 +245,11 @@ export class NL2SqlPipeline {
 
     progress('metric_resolution', `Matched metric: ${matchedMetric.displayName}`, {
       thinking: `Metric: ${matchedMetric.displayName} (${matchedMetric.name})\nExpression: ${matchedMetric.expression}\nSource table: ${schemaPrefix ? `${schemaPrefix}.` : ''}${sourceTable.name}\nDimensions matched: ${groupByParts.length > 0 ? groupByParts.join(', ') : 'none'}\nFilters: ${whereParts.length > 0 ? whereParts.join(' AND ') : 'none'}`,
-      data: { metricName: matchedMetric.name, table: sourceTable.name, schemaPrefix: schemaPrefix || null },
+      data: {
+        metricName: matchedMetric.name,
+        table: sourceTable.name,
+        schemaPrefix: schemaPrefix || null,
+      },
     });
 
     return {
@@ -336,7 +347,10 @@ export class NL2SqlPipeline {
     // Resolve schema prefix from datasource connection config
     let schemaPrefix: string | undefined;
     try {
-      const [ds] = await this.db.select().from(datasources).where(eq(datasources.id, input.datasourceId));
+      const [ds] = await this.db
+        .select()
+        .from(datasources)
+        .where(eq(datasources.id, input.datasourceId));
       const connConfig = ds?.connectionConfig as { schema?: string } | null;
       if (connConfig?.schema) {
         schemaPrefix = connConfig.schema;
@@ -397,9 +411,10 @@ export class NL2SqlPipeline {
         result = {
           ...result,
           sql: loopResult.finalSql,
-          explanation: issuesSummary.length > 0
-            ? `${result.explanation}\n（已自动修正：${issuesSummary.slice(0, 3).join('；')}）`
-            : result.explanation,
+          explanation:
+            issuesSummary.length > 0
+              ? `${result.explanation}\n（已自动修正：${issuesSummary.slice(0, 3).join('；')}）`
+              : result.explanation,
         };
       }
 

@@ -110,7 +110,10 @@ export async function runVerificationLoop(
 
     // Emit detailed progress
     const dimensionBreakdown = semantic.dimensions
-      .map((d) => `${d.name}: ${d.score}/${d.weight}${d.issues.length > 0 ? ` [${d.issues.join('; ')}]` : ''}`)
+      .map(
+        (d) =>
+          `${d.name}: ${d.score}/${d.weight}${d.issues.length > 0 ? ` [${d.issues.join('; ')}]` : ''}`,
+      )
       .join('\n');
 
     onProgress(`verification_${round}`, `第 ${round} 轮评分: ${score.total}/100`, {

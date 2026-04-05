@@ -164,7 +164,10 @@ export function createQueryRouter(db: DbClient): Router {
       'X-Accel-Buffering': 'no',
       // CORS: reflect Origin when present (with credentials), fallback to * without credentials
       ...(ctx.get('Origin')
-        ? { 'Access-Control-Allow-Origin': ctx.get('Origin'), 'Access-Control-Allow-Credentials': 'true' }
+        ? {
+            'Access-Control-Allow-Origin': ctx.get('Origin'),
+            'Access-Control-Allow-Credentials': 'true',
+          }
         : { 'Access-Control-Allow-Origin': '*' }),
     });
     res.flushHeaders();
@@ -195,7 +198,8 @@ export function createQueryRouter(db: DbClient): Router {
         userQuery: parsed.data.query,
         conversationHistory: parsed.data.conversationHistory,
         dialect: parsed.data.dialect,
-        onProgress: (step, message, detail) => sendSSE(res, 'status', { step, message, thinking: detail?.thinking, data: detail?.data }),
+        onProgress: (step, message, detail) =>
+          sendSSE(res, 'status', { step, message, thinking: detail?.thinking, data: detail?.data }),
         onToken: (token) => sendSSE(res, 'token', { text: token }),
       });
 
@@ -360,7 +364,11 @@ export function createQueryRouter(db: DbClient): Router {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       if (!res.writableEnded) {
-        try { sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId }); } catch { /* socket closed */ }
+        try {
+          sendSSE(res, 'error', { code: 'PIPELINE_ERROR', message, requestId });
+        } catch {
+          /* socket closed */
+        }
       }
     } finally {
       res.end();

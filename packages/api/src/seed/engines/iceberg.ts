@@ -101,7 +101,8 @@ const dwdTables: TableDef[] = [
       str('currency', '币种'),
       str('status', '订单状态: created/paid/shipped/completed/cancelled'),
       ts('order_time', '下单时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -121,7 +122,8 @@ const dwdTables: TableDef[] = [
       str('currency', '币种'),
       str('status', '结算状态: pending/processing/completed/failed'),
       ts('settle_time', '结算时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -140,7 +142,8 @@ const dwdTables: TableDef[] = [
       str('status', '支付状态: init/success/fail/refund'),
       ts('pay_time', '支付时间'),
       str('third_party_no', '第三方流水号'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -158,7 +161,8 @@ const dwdTables: TableDef[] = [
       str('status', '退款状态: applied/approved/completed/rejected'),
       ts('apply_time', '申请时间'),
       ts('complete_time', '完成时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -176,7 +180,8 @@ const dwdTables: TableDef[] = [
       ts('ship_time', '发货时间'),
       ts('deliver_time', '签收时间'),
       int('transit_days', '运输天数'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -193,7 +198,8 @@ const dwdTables: TableDef[] = [
       dec('unit_price', '单价'),
       str('source', '来源页面'),
       ts('event_time', '事件时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   /* ---- user domain ---- */
@@ -214,7 +220,8 @@ const dwdTables: TableDef[] = [
       str('ip', '客户端IP', { isPii: true }),
       ts('event_time', '事件时间'),
       bigint('duration_ms', '停留时长（毫秒）'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -232,7 +239,8 @@ const dwdTables: TableDef[] = [
       str('city', '登录城市'),
       bool('is_new_device', '是否新设备'),
       ts('login_time', '登录时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -248,7 +256,8 @@ const dwdTables: TableDef[] = [
       str('device_type', '设备类型'),
       str('invite_code', '邀请码'),
       ts('register_time', '注册时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -264,7 +273,8 @@ const dwdTables: TableDef[] = [
       str('new_value', '变更后值', { isPii: true }),
       str('change_source', '变更来源: user/admin/system'),
       ts('change_time', '变更时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -281,7 +291,8 @@ const dwdTables: TableDef[] = [
       int('rating', '评分 1-5'),
       str('status', '处理状态: pending/processing/resolved/closed'),
       ts('submit_time', '提交时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -301,7 +312,8 @@ const dwdTables: TableDef[] = [
       str('exit_page', '退出页面'),
       ts('start_time', '会话开始时间'),
       ts('end_time', '会话结束时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   /* ---- product domain ---- */
@@ -319,7 +331,8 @@ const dwdTables: TableDef[] = [
       str('device_type', '设备类型'),
       ts('click_time', '点击时间'),
       str('referrer', '来源页'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -336,7 +349,8 @@ const dwdTables: TableDef[] = [
       bigint('stay_ms', '可见停留毫秒'),
       bool('is_visible', '是否有效曝光'),
       ts('exposure_time', '曝光时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -355,7 +369,8 @@ const dwdTables: TableDef[] = [
       bool('is_top', '是否置顶'),
       str('sentiment', '情感标签: positive/neutral/negative'),
       ts('review_time', '评价时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -370,7 +385,8 @@ const dwdTables: TableDef[] = [
       str('action', '操作: collect/cancel'),
       str('source', '来源: detail_page/list/recommendation'),
       ts('action_time', '操作时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -387,7 +403,8 @@ const dwdTables: TableDef[] = [
       str('reason', '调价原因: promotion/cost/competitor/clearance'),
       str('operator', '操作人'),
       ts('change_time', '变动时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   /* ---- risk domain ---- */
@@ -406,7 +423,8 @@ const dwdTables: TableDef[] = [
       str('action', '处置动作: pass/review/block/freeze'),
       str('hit_detail', '命中明细 JSON'),
       ts('detect_time', '检测时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -425,7 +443,8 @@ const dwdTables: TableDef[] = [
       bool('is_proxy', '是否代理IP'),
       bool('is_new_device', '是否新设备'),
       ts('login_time', '登录时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -444,7 +463,8 @@ const dwdTables: TableDef[] = [
       dbl('score', '规则得分'),
       str('action', '处置动作: alert/block/freeze'),
       ts('hit_time', '命中时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -462,7 +482,8 @@ const dwdTables: TableDef[] = [
       str('operator', '操作人'),
       ts('effective_time', '生效时间'),
       ts('expire_time', '过期时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -481,7 +502,8 @@ const dwdTables: TableDef[] = [
       str('handler', '处理人'),
       ts('report_time', '上报时间'),
       ts('close_time', '结案时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -502,7 +524,8 @@ const dwdTables: TableDef[] = [
       bool('is_emulator', '是否模拟器'),
       bool('is_rooted', '是否 Root/越狱'),
       ts('collect_time', '采集时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -519,7 +542,8 @@ const dwdTables: TableDef[] = [
       dec('face_value', '面值'),
       dec('actual_deduction', '实际抵扣'),
       ts('use_time', '使用时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
   {
@@ -536,7 +560,8 @@ const dwdTables: TableDef[] = [
       str('sort_type', '排序方式: relevance/price_asc/price_desc/sales'),
       bool('has_click', '是否有点击'),
       ts('search_time', '搜索时间'),
-      ds, etl,
+      ds,
+      etl,
     ],
   },
 ];
@@ -1244,32 +1269,28 @@ const glossary: GlossaryDef[] = [
   {
     term: '时间旅行 (Time Travel)',
     sqlExpression: "SELECT * FROM table TIMESTAMP AS OF '2024-01-01 00:00:00'",
-    description:
-      'Iceberg 支持通过快照ID或时间戳查询历史版本数据，用于数据回溯和审计',
+    description: 'Iceberg 支持通过快照ID或时间戳查询历史版本数据，用于数据回溯和审计',
   },
   {
     term: '快照 (Snapshot)',
     sqlExpression: 'SELECT * FROM iceberg_table.snapshots',
-    description:
-      '每次写入操作生成一个不可变快照，记录表在某一时刻的完整状态，支持原子性读写',
+    description: '每次写入操作生成一个不可变快照，记录表在某一时刻的完整状态，支持原子性读写',
   },
   {
     term: '分区演化 (Partition Evolution)',
-    sqlExpression: "ALTER TABLE t SET PARTITION SPEC (days(ts), bucket(16, user_id))",
+    sqlExpression: 'ALTER TABLE t SET PARTITION SPEC (days(ts), bucket(16, user_id))',
     description:
       'Iceberg 支持在不重写历史数据的前提下变更分区策略，新数据按新分区写入，旧数据保持原分区',
   },
   {
     term: '隐式分区 (Hidden Partitioning)',
     sqlExpression: 'PARTITIONED BY (days(order_time), bucket(32, user_id))',
-    description:
-      '用户查询时无需感知分区列，Iceberg 自动根据分区规范进行剪裁，避免手动指定分区过滤',
+    description: '用户查询时无需感知分区列，Iceberg 自动根据分区规范进行剪裁，避免手动指定分区过滤',
   },
   {
     term: '写时复制 (Copy-on-Write)',
     sqlExpression: "TBLPROPERTIES ('write.update.mode'='copy-on-write')",
-    description:
-      '更新时重写整个数据文件，读取性能最优，适合读多写少场景',
+    description: '更新时重写整个数据文件，读取性能最优，适合读多写少场景',
   },
   {
     term: '读时合并 (Merge-on-Read)',
@@ -1280,14 +1301,12 @@ const glossary: GlossaryDef[] = [
   {
     term: 'ACID 事务',
     sqlExpression: 'INSERT OVERWRITE TABLE t PARTITION (ds) SELECT ...',
-    description:
-      'Iceberg 通过乐观并发控制保证多写者场景下的原子性、一致性、隔离性和持久性',
+    description: 'Iceberg 通过乐观并发控制保证多写者场景下的原子性、一致性、隔离性和持久性',
   },
   {
     term: 'Schema 演化 (Schema Evolution)',
     sqlExpression: 'ALTER TABLE t ADD COLUMNS (new_col STRING COMMENT "新字段")',
-    description:
-      '支持安全地添加、删除、重命名、重排列，通过列ID追踪保证兼容性，无需重写数据文件',
+    description: '支持安全地添加、删除、重命名、重排列，通过列ID追踪保证兼容性，无需重写数据文件',
   },
 ];
 
@@ -1298,8 +1317,7 @@ const glossary: GlossaryDef[] = [
 export const icebergSeed: EngineSeedDefinition = {
   engineType: 'iceberg',
   name: 'Iceberg 湖仓',
-  description:
-    'Apache Iceberg 湖仓一体存储，支持 ACID 事务和时间旅行，承载核心明细数据',
+  description: 'Apache Iceberg 湖仓一体存储，支持 ACID 事务和时间旅行，承载核心明细数据',
   dialect: 'sparksql',
   pgSchema: 'dw_iceberg',
   tables: [...dwdTables, ...dwsTables, ...dimTables, ...adsTables],
