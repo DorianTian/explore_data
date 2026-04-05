@@ -768,7 +768,8 @@ export function generateColumns(layer: Layer, domain: Domain, area: string): Col
   if (layer === 'dws' || layer === 'ads') {
     /* Keep first 3 domain columns for context, replace rest with agg columns */
     const contextCols = domainCols.slice(0, 3);
-    const aggCols = pickAggColumns(area, 3);
+    const usedNames = new Set([...base, ...contextCols].map((col) => col.name));
+    const aggCols = pickAggColumns(area, 3).filter((col) => !usedNames.has(col.name));
     return [...base, ...contextCols, ...aggCols];
   }
 
