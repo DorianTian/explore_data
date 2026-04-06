@@ -1,5 +1,5 @@
 import { eq, and, desc } from 'drizzle-orm';
-import { conversations, messages, queryHistory, type DbClient } from '@nl2sql/db';
+import { conversations, messages, queryHistory, accounts, type DbClient } from '@nl2sql/db';
 
 interface CreateMessageInput {
   conversationId: string;
@@ -17,6 +17,14 @@ export class ConversationService {
   constructor(private db: DbClient) {}
 
   async createConversation(projectId: string, title?: string, userId?: string) {
+    // Ensure user exists before FK insert
+    if (userId) {
+      await this.db
+        .insert(accounts)
+        .values({ id: userId, name: `user_${userId.slice(0, 8)}` })
+        .onConflictDoNothing();
+    }
+
     const [row] = await this.db
       .insert(conversations)
       .values({ projectId, title: title ?? null, userId: userId ?? null })
